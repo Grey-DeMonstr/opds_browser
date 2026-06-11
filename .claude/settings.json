@@ -17,7 +17,8 @@
       "Bash(flutter *)",
       "Bash(dart *)",
       "PowerShell(flutter *)",
-      "PowerShell(dart *)"
+      "PowerShell(dart *)",
+      "WebFetch(domain:pub.dev)"
     ]
   },
   "enabledPlugins": {
