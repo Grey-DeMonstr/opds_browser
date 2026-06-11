@@ -140,4 +140,95 @@ void main() {
       expect(restored.seriesIndex, 1.0);
     });
   });
+
+  group('FeedEntry.fromJson', () {
+    test('dispatches to NavigationEntry for type "nav"', () {
+      final nav = NavigationEntry(
+        title: 'Test Nav',
+        subtitle: null,
+        url: Uri.parse('https://example.com/nav'),
+      );
+      final restored = FeedEntry.fromJson(nav.toJson());
+      expect(restored, isA<NavigationEntry>());
+      expect((restored as NavigationEntry).title, 'Test Nav');
+    });
+
+    test('dispatches to BookEntry for type "book"', () {
+      final book = BookEntry(
+        title: 'Test Book',
+        authors: const ['Author'],
+        series: null,
+        seriesIndex: null,
+        summary: null,
+        coverUrl: null,
+        acquisitionLinks: [
+          AcquisitionLink(
+            url: Uri.parse('https://example.com/book.fb2'),
+            mimeType: 'application/fb2',
+            formatLabel: 'FB2',
+          ),
+        ],
+      );
+      final restored = FeedEntry.fromJson(book.toJson());
+      expect(restored, isA<BookEntry>());
+    });
+
+    test('throws FormatException for unknown type', () {
+      expect(
+        () => FeedEntry.fromJson({'type': 'unknown'}),
+        throwsA(isA<FormatException>()),
+      );
+    });
+  });
+
+  group('ParsedFeed', () {
+    test('toJson / fromJson roundtrip — mixed entries and pagination', () {
+      final feed = ParsedFeed(
+        title: 'Test Feed',
+        entries: [
+          NavigationEntry(
+            title: 'Nav Entry',
+            subtitle: null,
+            url: Uri.parse('https://example.com/nav'),
+          ),
+          BookEntry(
+            title: 'Book Entry',
+            authors: const ['Auth'],
+            series: null,
+            seriesIndex: null,
+            summary: null,
+            coverUrl: null,
+            acquisitionLinks: [
+              AcquisitionLink(
+                url: Uri.parse('https://example.com/book.fb2'),
+                mimeType: 'application/fb2',
+                formatLabel: 'FB2',
+              ),
+            ],
+          ),
+        ],
+        nextPageUrl: Uri.parse('https://example.com/feed?page=2'),
+      );
+      final restored = ParsedFeed.fromJson(feed.toJson());
+      expect(restored.title, 'Test Feed');
+      expect(restored.entries.length, 2);
+      expect(restored.entries[0], isA<NavigationEntry>());
+      expect(restored.entries[1], isA<BookEntry>());
+      expect(restored.nextPageUrl, Uri.parse('https://example.com/feed?page=2'));
+    });
+
+    test('toJson omits nextPageUrl when null; fromJson restores null', () {
+      final feed = ParsedFeed(
+        title: 'Last Page',
+        entries: const [],
+        nextPageUrl: null,
+      );
+      final json = feed.toJson();
+      expect(json.containsKey('nextPageUrl'), isFalse);
+      expect(json['entries'], isEmpty);
+      final restored = ParsedFeed.fromJson(json);
+      expect(restored.nextPageUrl, isNull);
+      expect(restored.entries, isEmpty);
+    });
+  });
 }

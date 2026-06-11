@@ -22,11 +22,18 @@ class AcquisitionLink {
       );
 }
 
-/// Sealed base for feed entries. [fromJson] is added in Task 6
-/// once all subclasses exist.
 sealed class FeedEntry {
   const FeedEntry();
   Map<String, dynamic> toJson();
+
+  static FeedEntry fromJson(Map<String, dynamic> json) {
+    final type = json['type'] as String;
+    return switch (type) {
+      'nav' => NavigationEntry.fromJson(json),
+      'book' => BookEntry.fromJson(json),
+      _ => throw FormatException('unknown FeedEntry type: $type'),
+    };
+  }
 }
 
 class NavigationEntry extends FeedEntry {
@@ -104,9 +111,41 @@ class BookEntry extends FeedEntry {
 }
 
 class ParsedFeed {
-  const ParsedFeed();
+  final String title;
+  final List<FeedEntry> entries;
+  final Uri? nextPageUrl;
+
+  const ParsedFeed({
+    required this.title,
+    required this.entries,
+    this.nextPageUrl,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'title': title,
+        'entries': entries.map((e) => e.toJson()).toList(),
+        if (nextPageUrl != null) 'nextPageUrl': nextPageUrl.toString(),
+      };
+
+  factory ParsedFeed.fromJson(Map<String, dynamic> json) => ParsedFeed(
+        title: json['title'] as String,
+        entries: (json['entries'] as List<dynamic>)
+            .map((e) => FeedEntry.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        nextPageUrl: json['nextPageUrl'] != null
+            ? Uri.parse(json['nextPageUrl'] as String)
+            : null,
+      );
 }
 
 class CachedFeed {
-  const CachedFeed();
+  final ParsedFeed feed;
+  final DateTime fetchedAt;
+  final bool fromCache;
+
+  const CachedFeed({
+    required this.feed,
+    required this.fetchedAt,
+    required this.fromCache,
+  });
 }
