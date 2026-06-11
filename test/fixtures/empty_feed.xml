@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <id>urn:example:empty</id>
+  <title>Empty Feed</title>
+  <updated>2024-01-01T00:00:00Z</updated>
+</feed>
