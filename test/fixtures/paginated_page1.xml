@@ -30,4 +30,20 @@
     <link rel="http://opds-spec.org/acquisition" type="application/epub+zip"
           href="https://example.com/books/p1e3.epub"/>
   </entry>
+  <entry>
+    <id>urn:example:book-p1-4</id>
+    <title>Book Page 1 — Entry 4</title>
+    <updated>2024-01-01T00:00:00Z</updated>
+    <author><name>Author Four</name></author>
+    <link rel="http://opds-spec.org/acquisition" type="application/fb2"
+          href="https://example.com/books/p1e4.fb2"/>
+  </entry>
+  <entry>
+    <id>urn:example:book-p1-5</id>
+    <title>Book Page 1 — Entry 5</title>
+    <updated>2024-01-01T00:00:00Z</updated>
+    <author><name>Author Five</name></author>
+    <link rel="http://opds-spec.org/acquisition" type="application/pdf"
+          href="https://example.com/books/p1e5.pdf"/>
+  </entry>
 </feed>
