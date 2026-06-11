@@ -1,1 +1,8 @@
+# Static analysis configuration. See https://dart.dev/lints.
 include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-raw-types: true
+    strict-inference: true
