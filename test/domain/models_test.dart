@@ -19,4 +19,35 @@ void main() {
       expect(restored.formatLabel, link.formatLabel);
     });
   });
+
+  group('NavigationEntry', () {
+    test('toJson / fromJson roundtrip — with subtitle', () {
+      final entry = NavigationEntry(
+        title: 'Science Fiction',
+        subtitle: 'Explore the cosmos',
+        url: Uri.parse('https://example.com/sci-fi'),
+      );
+      final json = entry.toJson();
+      expect(json['type'], 'nav');
+      expect(json['title'], 'Science Fiction');
+      expect(json['subtitle'], 'Explore the cosmos');
+      expect(json['url'], 'https://example.com/sci-fi');
+      final restored = NavigationEntry.fromJson(json);
+      expect(restored.title, entry.title);
+      expect(restored.subtitle, entry.subtitle);
+      expect(restored.url, entry.url);
+    });
+
+    test('toJson omits subtitle when null; fromJson restores null', () {
+      final entry = NavigationEntry(
+        title: 'Fantasy',
+        subtitle: null,
+        url: Uri.parse('https://example.com/fantasy'),
+      );
+      final json = entry.toJson();
+      expect(json.containsKey('subtitle'), isFalse);
+      final restored = NavigationEntry.fromJson(json);
+      expect(restored.subtitle, isNull);
+    });
+  });
 }
