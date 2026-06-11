@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="windows-1251"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <id>urn:example:windows1251</id>
+  <title>Кириллический каталог</title>
+  <updated>2024-01-01T00:00:00Z</updated>
+  <entry>
+    <id>urn:example:w1251-book</id>
+    <title>Мастер и Маргарита</title>
+    <updated>2024-01-01T00:00:00Z</updated>
+    <author><name>Михаил Булгаков</name></author>
+    <link rel="http://opds-spec.org/acquisition" type="application/fb2"
+          href="https://example.com/books/master.fb2"/>
+  </entry>
+</feed>
