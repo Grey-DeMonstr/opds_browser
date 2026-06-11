@@ -2,6 +2,9 @@ import 'package:opds_browser/domain/models.dart';
 
 abstract interface class OpdsClient {
   Future<ParsedFeed> fetchFeed(Uri url);
+
+  /// Returns true if [url] responds with a valid OPDS feed, false if reachable
+  /// but not OPDS. Throws [NetworkException] on connection failure.
   Future<bool> probe(Uri url);
 }
 
@@ -20,6 +23,9 @@ class NetworkException extends OpdsException {
 class HttpStatusException extends OpdsException {
   final int statusCode;
   const HttpStatusException(this.statusCode, super.message);
+
+  @override
+  String toString() => 'HttpStatusException($statusCode): $message';
 }
 
 class ParseException extends OpdsException {
