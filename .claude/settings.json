@@ -15,8 +15,9 @@
       "Bash(wc *)",
       "Skill(superpowers:*)",
       "Bash(flutter *)",
+      "Bash(dart *)",
       "PowerShell(flutter *)",
-      "PowerShell(*)"
+      "PowerShell(dart *)"
     ]
   },
   "enabledPlugins": {
