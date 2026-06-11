@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(awk *)",
+      "Bash(bash -n *)",
+      "Bash(cat *)",
+      "Bash(curl *)",
+      "Bash(echo *)",
+      "Bash(git add *)",
+      "Bash(git branch *)",
+      "Bash(git checkout *)",
+      "Bash(git check-ignore *)",
+      "Bash(git commit *)",
+      "Bash(git diff *)",
+      "Bash(git fetch *)",
+      "Bash(git log *)",
+      "Bash(git ls-remote *)",
+      "Bash(git ls-tree *)",
+      "Bash(git merge *)",
+      "Bash(git restore *)",
+      "Bash(git rm *)",
+      "Bash(git show *)",
+      "Bash(git stash *)",
+      "Bash(git worktree *)",
+      "Bash(grep *)",
+      "Bash(ls *)",
+      "Bash(sed *)",
+      "Bash(tee *)",
+      "Bash(wc *)",
+      "Skill(superpowers:*)"
+    ]
+  },
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true
+  }
+}
