@@ -11,6 +11,10 @@ The `Bash` tool calls Cygwin bash, which inherits Windows paths. Cygwin cannot r
 `flutter.bat` through Windows `PATH`, so `flutter`, `dart`, `git`, and `make` calls
 from `Bash` fail silently or with confusing errors. Always use `PowerShell` instead.
 
+# Repository
+
+Repository is local only, all development happens in the `master` branch. No merges / pushes needed.
+
 ## Commands
 
 ```powershell
