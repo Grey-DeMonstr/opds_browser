@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:opds="http://opds-spec.org/2010/catalog"
+      xml:base="https://example.com/catalog/">
+  <id>urn:example:relative</id>
+  <title>Relative Hrefs Feed</title>
+  <updated>2024-01-01T00:00:00Z</updated>
+  <entry>
+    <id>urn:example:nav-rel</id>
+    <title>Sub-category</title>
+    <updated>2024-01-01T00:00:00Z</updated>
+    <link rel="subsection"
+          type="application/atom+xml;profile=opds-catalog"
+          href="sub/"/>
+  </entry>
+  <entry>
+    <id>urn:example:book-rel</id>
+    <title>Relative Book</title>
+    <updated>2024-01-01T00:00:00Z</updated>
+    <author><name>Dave Dev</name></author>
+    <link rel="http://opds-spec.org/acquisition" type="application/epub+zip"
+          href="../books/rel.epub"/>
+  </entry>
+</feed>

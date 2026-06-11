@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:dcterms="http://purl.org/dc/terms/"
+      xmlns:opds="http://opds-spec.org/2010/catalog">
+  <id>urn:example:series-link</id>
+  <title>Series (dcterms) Feed</title>
+  <updated>2024-01-01T00:00:00Z</updated>
+  <entry>
+    <id>urn:example:book-series-link</id>
+    <title>The Two Towers</title>
+    <updated>2024-01-01T00:00:00Z</updated>
+    <author><name>J.R.R. Tolkien</name></author>
+    <dcterms:isPartOf>The Lord of the Rings</dcterms:isPartOf>
+    <link rel="http://opds-spec.org/acquisition" type="application/fb2"
+          href="https://example.com/books/ttt.fb2"/>
+  </entry>
+</feed>

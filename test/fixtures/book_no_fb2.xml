@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:opds="http://opds-spec.org/2010/catalog">
+  <id>urn:example:no-fb2</id>
+  <title>No-FB2 Book Feed</title>
+  <updated>2024-01-01T00:00:00Z</updated>
+  <entry>
+    <id>urn:example:book-nofb2</id>
+    <title>EPUB Only Book</title>
+    <updated>2024-01-01T00:00:00Z</updated>
+    <author><name>Carol Writer</name></author>
+    <summary>This book has no FB2 format.</summary>
+    <link rel="http://opds-spec.org/acquisition" type="application/epub+zip"
+          href="https://example.com/books/epub-only.epub"/>
+    <link rel="http://opds-spec.org/acquisition" type="application/pdf"
+          href="https://example.com/books/epub-only.pdf"/>
+  </entry>
+</feed>

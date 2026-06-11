@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:opds="http://opds-spec.org/2010/catalog">
+  <id>urn:example:minimal-nav</id>
+  <title>Test Navigation Feed</title>
+  <updated>2024-01-01T00:00:00Z</updated>
+  <link rel="self" type="application/atom+xml;profile=opds-catalog"
+        href="https://example.com/opds"/>
+  <entry>
+    <id>urn:example:nav-1</id>
+    <title>Science Fiction</title>
+    <updated>2024-01-01T00:00:00Z</updated>
+    <content type="text">Sci-fi books</content>
+    <link rel="subsection"
+          type="application/atom+xml;profile=opds-catalog;kind=navigation"
+          href="https://example.com/opds/sci-fi"/>
+  </entry>
+  <entry>
+    <id>urn:example:nav-2</id>
+    <title>Fantasy</title>
+    <updated>2024-01-01T00:00:00Z</updated>
+    <link rel="subsection"
+          type="application/atom+xml;profile=opds-catalog;kind=navigation"
+          href="https://example.com/opds/fantasy"/>
+  </entry>
+  <entry>
+    <id>urn:example:nav-3</id>
+    <title>Mystery</title>
+    <updated>2024-01-01T00:00:00Z</updated>
+    <link rel="subsection"
+          type="application/atom+xml;profile=opds-catalog;kind=navigation"
+          href="https://example.com/opds/mystery"/>
+  </entry>
+</feed>

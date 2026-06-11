@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:opds="http://opds-spec.org/2010/catalog">
+  <id>urn:example:multi-format</id>
+  <title>Multi-Format Book Feed</title>
+  <updated>2024-01-01T00:00:00Z</updated>
+  <entry>
+    <id>urn:example:book-multiformat</id>
+    <title>Sample Book</title>
+    <updated>2024-01-01T00:00:00Z</updated>
+    <author><name>Alice Author</name></author>
+    <author><name>Bob Coauthor</name></author>
+    <summary>A book available in multiple formats.</summary>
+    <link rel="http://opds-spec.org/image/thumbnail" type="image/jpeg"
+          href="https://example.com/covers/sample-thumb.jpg"/>
+    <link rel="http://opds-spec.org/image" type="image/jpeg"
+          href="https://example.com/covers/sample-full.jpg"/>
+    <link rel="http://opds-spec.org/acquisition" type="application/fb2"
+          href="https://example.com/books/sample.fb2"/>
+    <link rel="http://opds-spec.org/acquisition" type="application/fb2+zip"
+          href="https://example.com/books/sample.fb2.zip"/>
+    <link rel="http://opds-spec.org/acquisition" type="application/epub+zip"
+          href="https://example.com/books/sample.epub"/>
+    <link rel="http://opds-spec.org/acquisition" type="application/pdf"
+          href="https://example.com/books/sample.pdf"/>
+  </entry>
+</feed>

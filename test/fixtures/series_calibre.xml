@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:calibre="http://calibre.kovidgoyal.net/2009/#"
+      xmlns:opds="http://opds-spec.org/2010/catalog">
+  <id>urn:example:series-calibre</id>
+  <title>Calibre Series Feed</title>
+  <updated>2024-01-01T00:00:00Z</updated>
+  <entry>
+    <id>urn:example:book-calibre-series</id>
+    <title>The Fellowship of the Ring</title>
+    <updated>2024-01-01T00:00:00Z</updated>
+    <author><name>J.R.R. Tolkien</name></author>
+    <calibre:series>The Lord of the Rings</calibre:series>
+    <calibre:series_index>1.0</calibre:series_index>
+    <link rel="http://opds-spec.org/acquisition" type="application/fb2"
+          href="https://example.com/books/fotr.fb2"/>
+  </entry>
+</feed>

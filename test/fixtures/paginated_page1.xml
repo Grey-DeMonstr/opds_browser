@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:opds="http://opds-spec.org/2010/catalog">
+  <id>urn:example:paginated</id>
+  <title>Paginated Feed — Page 1</title>
+  <updated>2024-01-01T00:00:00Z</updated>
+  <link rel="next" type="application/atom+xml;profile=opds-catalog"
+        href="https://example.com/opds/books?page=2"/>
+  <entry>
+    <id>urn:example:book-p1-1</id>
+    <title>Book Page 1 — Entry 1</title>
+    <updated>2024-01-01T00:00:00Z</updated>
+    <author><name>Author One</name></author>
+    <link rel="http://opds-spec.org/acquisition" type="application/fb2"
+          href="https://example.com/books/p1e1.fb2"/>
+  </entry>
+  <entry>
+    <id>urn:example:book-p1-2</id>
+    <title>Book Page 1 — Entry 2</title>
+    <updated>2024-01-01T00:00:00Z</updated>
+    <author><name>Author Two</name></author>
+    <link rel="http://opds-spec.org/acquisition" type="application/fb2"
+          href="https://example.com/books/p1e2.fb2"/>
+  </entry>
+  <entry>
+    <id>urn:example:book-p1-3</id>
+    <title>Book Page 1 — Entry 3</title>
+    <updated>2024-01-01T00:00:00Z</updated>
+    <author><name>Author Three</name></author>
+    <link rel="http://opds-spec.org/acquisition" type="application/epub+zip"
+          href="https://example.com/books/p1e3.epub"/>
+  </entry>
+</feed>

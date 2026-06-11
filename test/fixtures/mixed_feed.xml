@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:opds="http://opds-spec.org/2010/catalog">
+  <id>urn:example:mixed</id>
+  <title>Mixed Feed</title>
+  <updated>2024-01-01T00:00:00Z</updated>
+  <entry>
+    <id>urn:example:nav-new</id>
+    <title>New Arrivals</title>
+    <updated>2024-01-01T00:00:00Z</updated>
+    <link rel="subsection"
+          type="application/atom+xml;profile=opds-catalog"
+          href="https://example.com/opds/new"/>
+  </entry>
+  <entry>
+    <id>urn:example:book-dart</id>
+    <title>The Dart Programming Language</title>
+    <updated>2024-01-01T00:00:00Z</updated>
+    <author><name>John Doe</name></author>
+    <summary>A book about Dart.</summary>
+    <link rel="http://opds-spec.org/image/thumbnail" type="image/jpeg"
+          href="https://example.com/covers/dart-thumb.jpg"/>
+    <link rel="http://opds-spec.org/acquisition" type="application/epub+zip"
+          href="https://example.com/books/dart.epub"/>
+  </entry>
+  <entry>
+    <id>urn:example:nav-top</id>
+    <title>Top Rated</title>
+    <updated>2024-01-01T00:00:00Z</updated>
+    <link rel="subsection"
+          type="application/atom+xml;profile=opds-catalog"
+          href="https://example.com/opds/top"/>
+  </entry>
+  <entry>
+    <id>urn:example:book-flutter</id>
+    <title>Flutter in Action</title>
+    <updated>2024-01-01T00:00:00Z</updated>
+    <author><name>Jane Smith</name></author>
+    <link rel="http://opds-spec.org/acquisition" type="application/fb2"
+          href="https://example.com/books/flutter.fb2"/>
+  </entry>
+</feed>
