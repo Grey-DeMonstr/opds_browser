@@ -55,11 +55,52 @@ class NavigationEntry extends FeedEntry {
       );
 }
 
-// Stubs — replaced in Tasks 5 and 6.
 class BookEntry extends FeedEntry {
-  const BookEntry();
+  final String title;
+  final List<String> authors;
+  final String? series;
+  final double? seriesIndex;
+  final String? summary;
+  final Uri? coverUrl;
+  final List<AcquisitionLink> acquisitionLinks;
+
+  const BookEntry({
+    required this.title,
+    required this.authors,
+    this.series,
+    this.seriesIndex,
+    this.summary,
+    this.coverUrl,
+    required this.acquisitionLinks,
+  });
+
   @override
-  Map<String, dynamic> toJson() => const {};
+  Map<String, dynamic> toJson() => {
+        'type': 'book',
+        'title': title,
+        'authors': authors,
+        if (series != null) 'series': series,
+        if (seriesIndex != null) 'seriesIndex': seriesIndex,
+        if (summary != null) 'summary': summary,
+        if (coverUrl != null) 'coverUrl': coverUrl.toString(),
+        'acquisitionLinks': acquisitionLinks.map((l) => l.toJson()).toList(),
+      };
+
+  factory BookEntry.fromJson(Map<String, dynamic> json) => BookEntry(
+        title: json['title'] as String,
+        authors: (json['authors'] as List<dynamic>)
+            .map((e) => e as String)
+            .toList(),
+        series: json['series'] as String?,
+        seriesIndex: (json['seriesIndex'] as num?)?.toDouble(),
+        summary: json['summary'] as String?,
+        coverUrl: json['coverUrl'] != null
+            ? Uri.parse(json['coverUrl'] as String)
+            : null,
+        acquisitionLinks: (json['acquisitionLinks'] as List<dynamic>)
+            .map((l) => AcquisitionLink.fromJson(l as Map<String, dynamic>))
+            .toList(),
+      );
 }
 
 class ParsedFeed {
