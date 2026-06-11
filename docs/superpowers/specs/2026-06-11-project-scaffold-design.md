@@ -87,7 +87,7 @@ Strict modes are mandated by parent spec §2. Keep the lint set at `flutter_lint
 
 - `minSdkVersion 29` — per parent spec §10.1, avoids legacy storage permissions entirely.
 - `compileSdkVersion` / `targetSdkVersion` — latest stable.
-- `applicationId`: `com.example.opds_browser` (placeholder; changeable before any release).
+- `applicationId`: `monster.greyde.opds_browser`.
 - App label: "OPDS Browser" (placeholder per parent spec §15.2).
 - Android-only: do not add iOS/web/desktop platform folders beyond what `flutter create` generates; no platform conditional branches (parent spec §1.2).
 
