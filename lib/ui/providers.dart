@@ -6,6 +6,7 @@ import 'package:opds_browser/data/opds1/opds1_client.dart';
 import 'package:opds_browser/data/shared_prefs_settings_repository.dart';
 import 'package:opds_browser/data/sqflite_catalog_repository.dart';
 import 'package:opds_browser/data/sqflite_favorites_repository.dart';
+import 'package:opds_browser/domain/entities.dart';
 import 'package:opds_browser/domain/opds_client.dart';
 import 'package:opds_browser/domain/repositories.dart';
 
@@ -39,3 +40,32 @@ final feedRepositoryProvider = Provider<FeedRepository>(
 final settingsRepositoryProvider = Provider<SettingsRepository>(
   (ref) => SharedPrefsSettingsRepository(),
 );
+
+class CatalogsNotifier extends AsyncNotifier<List<Catalog>> {
+  @override
+  Future<List<Catalog>> build() async {
+    return ref.watch(catalogRepositoryProvider).getAll();
+  }
+
+  Future<void> add(String title, Uri rootUrl) async {
+    final repo = ref.read(catalogRepositoryProvider);
+    await repo.add(title, rootUrl);
+    state = AsyncData(await repo.getAll());
+  }
+
+  Future<void> updateCatalog(Catalog catalog) async {
+    final repo = ref.read(catalogRepositoryProvider);
+    await repo.update(catalog);
+    state = AsyncData(await repo.getAll());
+  }
+
+  Future<void> delete(int catalogId) async {
+    final repo = ref.read(catalogRepositoryProvider);
+    await repo.delete(catalogId);
+    state = AsyncData(await repo.getAll());
+  }
+}
+
+final catalogsProvider =
+    AsyncNotifierProvider<CatalogsNotifier, List<Catalog>>(
+        CatalogsNotifier.new);
