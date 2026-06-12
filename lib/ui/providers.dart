@@ -69,3 +69,20 @@ class CatalogsNotifier extends AsyncNotifier<List<Catalog>> {
 final catalogsProvider =
     AsyncNotifierProvider<CatalogsNotifier, List<Catalog>>(
         CatalogsNotifier.new);
+
+class FavoritesNotifier extends AsyncNotifier<List<Favorite>> {
+  @override
+  Future<List<Favorite>> build() async {
+    return ref.watch(favoritesRepositoryProvider).getAll();
+  }
+
+  Future<void> remove(int favoriteId) async {
+    final repo = ref.read(favoritesRepositoryProvider);
+    await repo.remove(favoriteId);
+    state = AsyncData(await repo.getAll());
+  }
+}
+
+final favoritesProvider =
+    AsyncNotifierProvider<FavoritesNotifier, List<Favorite>>(
+        FavoritesNotifier.new);
