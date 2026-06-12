@@ -194,4 +194,16 @@ void main() {
     expect(find.text('Favourites'), findsOneWidget);
     expect(find.text('Science'), findsOneWidget);
   });
+
+  testWidgets('FAB opens Add dialog with Title and URL fields', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add catalogue'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.widgetWithText(TextFormField, 'Title'), findsOneWidget);
+    expect(find.widgetWithText(TextFormField, 'URL'), findsOneWidget);
+  });
 }
