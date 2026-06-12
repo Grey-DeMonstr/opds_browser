@@ -32,7 +32,7 @@ class OpdsBrowserApp extends ConsumerWidget {
   const OpdsBrowserApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context, WidgetRef _) {
     return MaterialApp.router(
       title: 'OPDS Browser',
       routerConfig: _router,
