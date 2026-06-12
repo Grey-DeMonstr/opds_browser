@@ -134,4 +134,27 @@ void main() {
     expect(find.text('No catalogues yet. Tap + to add one.'), findsOneWidget);
     expect(find.text('Add catalogue'), findsOneWidget); // FAB label
   });
+
+  testWidgets('catalog list: renders two catalogs with titles', (tester) async {
+    final catalogs = [
+      Catalog(
+          id: 1,
+          title: 'Project Gutenberg',
+          rootUrl: Uri.parse('https://gutenberg.org/opds'),
+          protocol: 'opds1'),
+      Catalog(
+          id: 2,
+          title: 'Standard Ebooks',
+          rootUrl: Uri.parse('https://standardebooks.org/opds'),
+          protocol: 'opds1'),
+    ];
+    await tester.pumpWidget(buildApp(catalogs: catalogs));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Project Gutenberg'), findsOneWidget);
+    expect(find.text('Standard Ebooks'), findsOneWidget);
+    // Hint text must NOT appear when list is non-empty
+    expect(
+        find.text('No catalogues yet. Tap + to add one.'), findsNothing);
+  });
 }
