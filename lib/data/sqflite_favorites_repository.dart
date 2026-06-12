@@ -20,7 +20,7 @@ class SqfliteFavoritesRepository implements FavoritesRepository {
     final result = await db.rawQuery(
       'SELECT COALESCE(MAX(sort_order) + 1, 0) AS next FROM favorites',
     );
-    final nextOrder = result.first['next'] as int;
+    final nextOrder = (result.first['next'] as num).toInt();
     await db.insert(
       'favorites',
       {
