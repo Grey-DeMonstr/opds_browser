@@ -322,4 +322,28 @@ void main() {
       expect(book.authors, ['Михаил Булгаков']);
     });
   });
+
+  group('Opds1FeedParser.parse — pagination', () {
+    final parser = Opds1FeedParser();
+    final base = Uri.parse('https://example.com/opds/books');
+
+    test('page 1 — nextPageUrl points to page 2', () {
+      final bytes =
+          File('test/fixtures/paginated_page1.xml').readAsBytesSync();
+      final feed = parser.parse(bytes, base);
+      expect(feed.title, 'Paginated Feed — Page 1');
+      expect(feed.entries.length, 5);
+      expect(feed.nextPageUrl,
+          Uri.parse('https://example.com/opds/books?page=2'));
+    });
+
+    test('page 2 — nextPageUrl is null (last page)', () {
+      final bytes =
+          File('test/fixtures/paginated_page2.xml').readAsBytesSync();
+      final feed = parser.parse(bytes, base);
+      expect(feed.title, 'Paginated Feed — Page 2');
+      expect(feed.entries.length, 5);
+      expect(feed.nextPageUrl, isNull);
+    });
+  });
 }
