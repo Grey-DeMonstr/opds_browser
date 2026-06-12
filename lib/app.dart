@@ -1,14 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:opds_browser/ui/browse_screen.dart';
+import 'package:opds_browser/ui/settings_screen.dart';
+import 'package:opds_browser/ui/start_screen.dart';
 
-/// Root application widget. A minimal placeholder for the scaffold step;
-/// theming, Riverpod, and go_router are wired up in later steps.
-class OpdsBrowserApp extends StatelessWidget {
+final _router = GoRouter(
+  routes: [
+    GoRoute(
+      path: '/',
+      builder: (context, state) => const StartScreen(),
+    ),
+    GoRoute(
+      path: '/browse',
+      builder: (context, state) {
+        final params = state.uri.queryParameters;
+        return BrowseScreen(
+          catalogId: int.parse(params['catalogId']!),
+          url: Uri.parse(params['url']!),
+        );
+      },
+    ),
+    GoRoute(
+      path: '/settings',
+      builder: (context, state) => const SettingsScreen(),
+    ),
+  ],
+);
+
+class OpdsBrowserApp extends ConsumerWidget {
   const OpdsBrowserApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
+  Widget build(BuildContext context, WidgetRef ref) {
+    return MaterialApp.router(
       title: 'OPDS Browser',
+      routerConfig: _router,
       theme: ThemeData(
         colorSchemeSeed: Colors.indigo,
         brightness: Brightness.light,
@@ -18,9 +45,6 @@ class OpdsBrowserApp extends StatelessWidget {
         colorSchemeSeed: Colors.indigo,
         brightness: Brightness.dark,
         useMaterial3: true,
-      ),
-      home: const Scaffold(
-        body: Center(child: Text('OPDS Browser')),
       ),
     );
   }
