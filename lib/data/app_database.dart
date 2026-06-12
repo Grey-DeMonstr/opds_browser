@@ -17,8 +17,8 @@ class AppDatabase {
       path,
       options: OpenDatabaseOptions(
         version: 1,
+        onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
         onCreate: (db, _) => _createSchema(db),
-        onOpen: (db) => db.execute('PRAGMA foreign_keys = ON'),
       ),
     );
   }
@@ -54,5 +54,8 @@ class AppDatabase {
     ''');
   }
 
-  Future<void> close() async => (await database).close();
+  Future<void> close() async {
+    await _db?.close();
+    _db = null;
+  }
 }
