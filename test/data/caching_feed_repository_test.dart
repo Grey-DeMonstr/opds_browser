@@ -131,4 +131,99 @@ void main() {
       expect(client.callCount, 1);
     });
   });
+
+  group('CachingFeedRepository — pagination', () {
+    test('multi-page feed merges all entries; nextPageUrl is null', () async {
+      final pages = [
+        ParsedFeed(
+          title: 'Feed',
+          entries: [NavigationEntry(title: 'A', url: Uri.parse('https://example.com/a'))],
+          nextPageUrl: Uri.parse('https://example.com/opds?page=2'),
+        ),
+        ParsedFeed(
+          title: 'Feed p2',
+          entries: [NavigationEntry(title: 'B', url: Uri.parse('https://example.com/b'))],
+          nextPageUrl: Uri.parse('https://example.com/opds?page=3'),
+        ),
+        ParsedFeed(
+          title: 'Feed p3',
+          entries: [NavigationEntry(title: 'C', url: Uri.parse('https://example.com/c'))],
+          nextPageUrl: null,
+        ),
+      ];
+      final client = _FakeOpdsClient(pages);
+      final repo = CachingFeedRepository(db, client);
+
+      final result = await repo.getFeed(catalogId, url);
+
+      expect(result.feed.title, 'Feed');
+      expect(result.feed.entries, hasLength(3));
+      expect(result.feed.nextPageUrl, isNull);
+      expect(client.callCount, 3);
+    });
+
+    test('uses first page title when merging', () async {
+      final pages = [
+        ParsedFeed(
+          title: 'Root Title',
+          entries: [],
+          nextPageUrl: Uri.parse('https://example.com/opds?page=2'),
+        ),
+        ParsedFeed(title: 'Page 2 Title', entries: [], nextPageUrl: null),
+      ];
+      final client = _FakeOpdsClient(pages);
+      final repo = CachingFeedRepository(db, client);
+
+      final result = await repo.getFeed(catalogId, url);
+
+      expect(result.feed.title, 'Root Title');
+    });
+
+    test('stops at 50-page cap; returns 50 entries', () async {
+      // 51 pages available; each has 1 entry and a nextPageUrl.
+      // The cap check fires after fetching page 50 (pageCount reaches 50).
+      final feeds = List.generate(
+        51,
+        (i) => ParsedFeed(
+          title: 'Feed',
+          entries: [
+            NavigationEntry(title: 'E$i', url: Uri.parse('https://example.com/$i')),
+          ],
+          nextPageUrl: Uri.parse('https://example.com/opds?page=${i + 2}'),
+        ),
+      );
+      final client = _FakeOpdsClient(feeds);
+      final repo = CachingFeedRepository(db, client);
+
+      final result = await repo.getFeed(catalogId, url);
+
+      expect(client.callCount, 50);
+      expect(result.feed.entries, hasLength(50));
+    });
+
+    test('stops at 5000-entry cap; returns 5000 entries', () async {
+      // 26 pages × 200 entries each; cap fires after page 25 (5000 entries total).
+      final feeds = List.generate(
+        26,
+        (i) => ParsedFeed(
+          title: 'Feed',
+          entries: List.generate(
+            200,
+            (j) => NavigationEntry(
+              title: 'E',
+              url: Uri.parse('https://example.com/$i/$j'),
+            ),
+          ),
+          nextPageUrl: Uri.parse('https://example.com/opds?page=${i + 2}'),
+        ),
+      );
+      final client = _FakeOpdsClient(feeds);
+      final repo = CachingFeedRepository(db, client);
+
+      final result = await repo.getFeed(catalogId, url);
+
+      expect(client.callCount, 25);
+      expect(result.feed.entries, hasLength(5000));
+    });
+  });
 }

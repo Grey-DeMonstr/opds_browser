@@ -42,7 +42,6 @@ class CachingFeedRepository implements FeedRepository {
 
     final feed = await _fetchAllPages(url);
     final nowMs = DateTime.now().millisecondsSinceEpoch;
-    final now = DateTime.fromMillisecondsSinceEpoch(nowMs);
     await db.insert(
       'feed_cache',
       {
@@ -53,11 +52,30 @@ class CachingFeedRepository implements FeedRepository {
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    return CachedFeed(feed: feed, fetchedAt: now, fromCache: false);
+    return CachedFeed(
+      feed: feed,
+      fetchedAt: DateTime.fromMillisecondsSinceEpoch(nowMs),
+      fromCache: false,
+    );
   }
 
-  // Minimal implementation: single-page only. Expanded in the next task.
   Future<ParsedFeed> _fetchAllPages(Uri startUrl) async {
-    return _client.fetchFeed(startUrl);
+    final allEntries = <FeedEntry>[];
+    var title = '';
+    var pageUrl = startUrl;
+    var pageCount = 0;
+
+    while (true) {
+      final feed = await _client.fetchFeed(pageUrl);
+      if (pageCount == 0) title = feed.title;
+      allEntries.addAll(feed.entries);
+      pageCount++;
+      if (feed.nextPageUrl == null) break;
+      if (pageCount >= 50) break;
+      if (allEntries.length >= 5000) break;
+      pageUrl = feed.nextPageUrl!;
+    }
+
+    return ParsedFeed(title: title, entries: allEntries, nextPageUrl: null);
   }
 }
