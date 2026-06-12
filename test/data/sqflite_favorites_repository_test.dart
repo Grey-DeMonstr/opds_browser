@@ -39,12 +39,13 @@ void main() {
       expect(await repo.isFavorite(catalogId, url), isTrue);
     });
 
-    test('add stores title, catalogId, and url', () async {
+    test('add stores title, catalogId, url, and sortOrder', () async {
       await repo.add(catalogId, url, title);
       final all = await repo.getAll();
       expect(all.single.title, title);
       expect(all.single.catalogId, catalogId);
       expect(all.single.url, url);
+      expect(all.single.sortOrder, 0); // first insert gets sort_order 0
     });
 
     test('duplicate add is a no-op — count stays 1', () async {
