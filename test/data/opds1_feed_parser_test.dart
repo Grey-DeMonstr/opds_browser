@@ -51,4 +51,44 @@ void main() {
       expect(result, contains('Михаил Булгаков'));
     });
   });
+
+  group('stripHtml', () {
+    test('removes tags and collapses whitespace', () {
+      expect(stripHtml('<p>Hello <b>world</b>.</p>'), 'Hello world.');
+    });
+    test('collapses internal whitespace', () {
+      expect(stripHtml('One  two\n  three'), 'One two three');
+    });
+    test('returns empty string for tag-only input', () {
+      expect(stripHtml('<br/>'), '');
+    });
+    test('passes plain text through untouched (trimmed)', () {
+      expect(stripHtml('  plain text  '), 'plain text');
+    });
+  });
+
+  group('resolveHref', () {
+    final base = Uri.parse('https://example.com/catalog/');
+
+    test('resolves relative path against base', () {
+      expect(
+        resolveHref('sub/', base),
+        Uri.parse('https://example.com/catalog/sub/'),
+      );
+    });
+
+    test('resolves parent-relative path against base', () {
+      expect(
+        resolveHref('../books/rel.epub', base),
+        Uri.parse('https://example.com/books/rel.epub'),
+      );
+    });
+
+    test('passes absolute href through unchanged', () {
+      expect(
+        resolveHref('https://other.com/feed', base),
+        Uri.parse('https://other.com/feed'),
+      );
+    });
+  });
 }
