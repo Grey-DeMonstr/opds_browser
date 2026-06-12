@@ -6,8 +6,12 @@ class AppDatabase {
   final String? _path;
   Database? _db;
 
-  AppDatabase({DatabaseFactory? factory, this._path})
-      : _factory = factory ?? databaseFactory;
+  /// The parameter is named 'path' (public) not '_path' (private) to match the API contract.
+  // ignore: prefer_initializing_formals
+  AppDatabase({DatabaseFactory? factory, String? path})
+      : _factory = factory ?? databaseFactory,
+        // ignore: prefer_initializing_formals
+        _path = path;
 
   Future<Database> get database async => _db ??= await _open();
 
