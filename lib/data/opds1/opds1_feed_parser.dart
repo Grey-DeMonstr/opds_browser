@@ -88,13 +88,9 @@ Uri resolveHref(String href, Uri base) => base.resolve(href);
 
 const _calibreNs = 'http://calibre.kovidgoyal.net/2009/#';
 const _dctermsNs = 'http://purl.org/dc/terms/';
-// ignore: unused_element
 const _xmlNs = 'http://www.w3.org/XML/1998/namespace';
-// ignore: unused_element
 const _acqRelPrefix = 'http://opds-spec.org/acquisition';
-// ignore: unused_element
 const _thumbRel = 'http://opds-spec.org/image/thumbnail';
-// ignore: unused_element
 const _imageRel = 'http://opds-spec.org/image';
 
 /// Extracts series name and index from an OPDS entry element.
@@ -183,8 +179,7 @@ class Opds1FeedParser implements OpdsFeedParser {
       final rel = l.getAttribute('rel') ?? '';
       return rel.startsWith(_acqRelPrefix);
     });
-    // Book entry implementation added in Task 8.
-    if (hasAcquisition) return null;
+    if (hasAcquisition) return _parseBookEntry(entry, links, base);
 
     final hasNav = links.any((l) {
       final type = l.getAttribute('type') ?? '';
@@ -193,6 +188,74 @@ class Opds1FeedParser implements OpdsFeedParser {
     if (hasNav) return _parseNavEntry(entry, links, base);
 
     return null;
+  }
+
+  BookEntry _parseBookEntry(
+      XmlElement entry, List<XmlElement> links, Uri base) {
+    final title = entry.childElements
+            .where((e) => e.localName == 'title')
+            .firstOrNull
+            ?.innerText
+            .trim() ??
+        '';
+
+    final authors = entry.childElements
+        .where((e) => e.localName == 'author')
+        .map((a) => a.childElements
+            .where((e) => e.localName == 'name')
+            .firstOrNull
+            ?.innerText
+            .trim())
+        .whereType<String>()
+        .where((n) => n.isNotEmpty)
+        .toList();
+
+    final summaryEl =
+        entry.childElements.where((e) => e.localName == 'summary').firstOrNull;
+    final summary =
+        summaryEl != null ? stripHtml(summaryEl.innerText) : null;
+
+    // Cover: prefer thumbnail, fall back to full image.
+    Uri? coverUrl;
+    final thumbLink =
+        links.where((l) => l.getAttribute('rel') == _thumbRel).firstOrNull;
+    if (thumbLink != null) {
+      final href = thumbLink.getAttribute('href');
+      if (href != null) coverUrl = resolveHref(href, base);
+    } else {
+      final imgLink =
+          links.where((l) => l.getAttribute('rel') == _imageRel).firstOrNull;
+      if (imgLink != null) {
+        final href = imgLink.getAttribute('href');
+        if (href != null) coverUrl = resolveHref(href, base);
+      }
+    }
+
+    final acquisitionLinks = links
+        .where((l) {
+          final rel = l.getAttribute('rel') ?? '';
+          return rel.startsWith(_acqRelPrefix);
+        })
+        .map((l) {
+          final href = l.getAttribute('href') ?? '';
+          final mimeType = l.getAttribute('type') ?? '';
+          return AcquisitionLink(
+            url: resolveHref(href, base),
+            mimeType: mimeType,
+            formatLabel: mimeToLabel(mimeType),
+          );
+        })
+        .toList();
+
+    return BookEntry(
+      title: title,
+      authors: authors,
+      series: null,
+      seriesIndex: null,
+      summary: summary?.isEmpty == true ? null : summary,
+      coverUrl: coverUrl,
+      acquisitionLinks: acquisitionLinks,
+    );
   }
 
   NavigationEntry _parseNavEntry(
