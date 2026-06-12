@@ -314,4 +314,114 @@ void main() {
       'Project Gutenberg',
     );
   });
+
+  testWidgets('delete: tapping Delete shows confirmation dialog', (tester) async {
+    final catalog = Catalog(
+        id: 1,
+        title: 'My Catalog',
+        rootUrl: Uri.parse('https://example.com/opds'),
+        protocol: 'opds1');
+    await tester.pumpWidget(buildApp(catalogs: [catalog]));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete catalogue?'), findsOneWidget);
+    expect(
+      find.text('This will also remove its favourites and cached feeds.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('delete: confirming removes catalog from list', (tester) async {
+    final catalog = Catalog(
+        id: 1,
+        title: 'My Catalog',
+        rootUrl: Uri.parse('https://example.com/opds'),
+        protocol: 'opds1');
+    await tester.pumpWidget(buildApp(catalogs: [catalog]));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    // Tap the destructive Delete button inside the confirmation dialog
+    final deleteButtons = find.widgetWithText(TextButton, 'Delete');
+    await tester.tap(deleteButtons.last); // confirmation dialog's Delete
+    await tester.pumpAndSettle();
+
+    expect(find.text('My Catalog'), findsNothing);
+    expect(find.text('No catalogues yet. Tap + to add one.'), findsOneWidget);
+  });
+
+  testWidgets('catalog row tap navigates to /browse with correct params',
+      (tester) async {
+    final catalog = Catalog(
+        id: 42,
+        title: 'My Library',
+        rootUrl: Uri.parse('https://library.example.com/opds'),
+        protocol: 'opds1');
+
+    String? capturedUri;
+    final router = GoRouter(
+      routes: [
+        GoRoute(path: '/', builder: (_, _) => const StartScreen()),
+        GoRoute(
+          path: '/browse',
+          builder: (_, state) {
+            capturedUri = state.uri.toString();
+            return const SizedBox();
+          },
+        ),
+        GoRoute(path: '/settings', builder: (_, _) => const SizedBox()),
+      ],
+    );
+
+    await tester.pumpWidget(buildApp(catalogs: [catalog], router: router));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('My Library'));
+    await tester.pumpAndSettle();
+
+    expect(capturedUri, isNotNull);
+    expect(capturedUri, contains('catalogId=42'));
+    expect(capturedUri, contains('url='));
+  });
+
+  testWidgets('remove favourite: item disappears after Remove tapped',
+      (tester) async {
+    final catalog = Catalog(
+        id: 1,
+        title: 'Gutenberg',
+        rootUrl: Uri.parse('https://gutenberg.org/opds'),
+        protocol: 'opds1');
+    final favorite = Favorite(
+        id: 1,
+        catalogId: 1,
+        url: Uri.parse('https://gutenberg.org/opds/science'),
+        title: 'Science',
+        sortOrder: 0);
+
+    await tester.pumpWidget(
+        buildApp(catalogs: [catalog], favorites: [favorite]));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Science'), findsOneWidget);
+
+    // Tap the PopupMenuButton on the favorite tile (first one on screen)
+    await tester.tap(find.byIcon(Icons.more_vert).first);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Remove from favourites'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Science'), findsNothing);
+  });
 }
