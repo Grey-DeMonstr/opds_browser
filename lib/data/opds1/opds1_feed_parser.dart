@@ -74,6 +74,7 @@ String mimeToLabel(String mimeType) => switch (mimeType) {
       'application/epub+zip' => 'EPUB',
       'application/pdf' => 'PDF',
       'application/x-mobipocket-ebook' => 'MOBI',
+      '' => 'FILE',
       _ => mimeType.split('/').last.toUpperCase(),
     };
 
@@ -129,10 +130,12 @@ const _imageRel = 'http://opds-spec.org/image';
 class Opds1FeedParser implements OpdsFeedParser {
   @override
   ParsedFeed parse(List<int> bytes, Uri feedUrl) {
-    final xmlString = decodeXmlBytes(bytes);
     final XmlDocument doc;
     try {
+      final xmlString = decodeXmlBytes(bytes);
       doc = XmlDocument.parse(xmlString);
+    } on FormatException catch (e) {
+      throw ParseException('Encoding error: $e');
     } on XmlException catch (e) {
       throw ParseException('XML parse error: $e');
     }
@@ -156,8 +159,10 @@ class Opds1FeedParser implements OpdsFeedParser {
         in feed.childElements.where((e) => e.localName == 'link')) {
       if (link.getAttribute('rel') == 'next') {
         final href = link.getAttribute('href');
-        if (href != null) nextPageUrl = resolveHref(href, base);
-        break;
+        if (href != null) {
+          nextPageUrl = resolveHref(href, base);
+          break;
+        }
       }
     }
 
@@ -236,8 +241,12 @@ class Opds1FeedParser implements OpdsFeedParser {
           final rel = l.getAttribute('rel') ?? '';
           return rel.startsWith(_acqRelPrefix);
         })
+        .where((l) {
+          final href = l.getAttribute('href');
+          return href != null && href.isNotEmpty;
+        })
         .map((l) {
-          final href = l.getAttribute('href') ?? '';
+          final href = l.getAttribute('href')!;
           final mimeType = l.getAttribute('type') ?? '';
           return AcquisitionLink(
             url: resolveHref(href, base),

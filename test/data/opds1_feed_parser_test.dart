@@ -27,6 +27,7 @@ void main() {
         expect(mimeToLabel('application/djvu'), 'DJVU'));
     test('maps application/x-cb7 → X-CB7 (uppercase subtype)', () =>
         expect(mimeToLabel('application/x-cb7'), 'X-CB7'));
+    test('maps empty string → FILE', () => expect(mimeToLabel(''), 'FILE'));
   });
 
   group('decodeXmlBytes', () {
