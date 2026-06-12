@@ -67,6 +67,34 @@ class _StartScreenContent extends ConsumerWidget {
       ),
       body: CustomScrollView(
         slivers: [
+          if (favorites.isNotEmpty) ...[
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
+                child: Text(
+                  'Favourites',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) =>
+                    _FavoriteTile(favorite: favorites[index], catalogs: catalogs),
+                childCount: favorites.length,
+              ),
+            ),
+          ],
+          if (catalogs.isNotEmpty)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
+                child: Text(
+                  'Catalogues',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
           if (catalogs.isEmpty)
             const SliverFillRemaining(
               hasScrollBody: false,
@@ -77,7 +105,8 @@ class _StartScreenContent extends ConsumerWidget {
           else
             SliverList(
               delegate: SliverChildBuilderDelegate(
-                (context, index) => _CatalogTile(catalog: catalogs[index]),
+                (context, index) =>
+                    _CatalogTile(catalog: catalogs[index]),
                 childCount: catalogs.length,
               ),
             ),
@@ -137,6 +166,40 @@ class _CatalogTile extends ConsumerWidget {
 }
 
 enum _CatalogMenuAction { edit, delete }
+
+class _FavoriteTile extends ConsumerWidget {
+  final Favorite favorite;
+  final List<Catalog> catalogs;
+
+  const _FavoriteTile({required this.favorite, required this.catalogs});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final parentTitle = catalogs
+        .where((c) => c.id == favorite.catalogId)
+        .map((c) => c.title)
+        .firstOrNull ?? '';
+
+    return ListTile(
+      title: Text(favorite.title),
+      subtitle: Text(parentTitle),
+      onTap: () => context.go(
+        '/browse?catalogId=${favorite.catalogId}&url=${Uri.encodeComponent(favorite.url.toString())}',
+      ),
+      trailing: PopupMenuButton<String>(
+        onSelected: (_) async {
+          await ref.read(favoritesProvider.notifier).remove(favorite.id);
+        },
+        itemBuilder: (_) => const [
+          PopupMenuItem(
+            value: 'remove',
+            child: Text('Remove from favourites'),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _DeleteCatalogDialog extends ConsumerWidget {
   final Catalog catalog;

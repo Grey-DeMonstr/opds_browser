@@ -157,4 +157,41 @@ void main() {
     expect(
         find.text('No catalogues yet. Tap + to add one.'), findsNothing);
   });
+
+  testWidgets('favorites section: hidden when list is empty', (tester) async {
+    final catalogs = [
+      Catalog(
+          id: 1,
+          title: 'Gutenberg',
+          rootUrl: Uri.parse('https://gutenberg.org/opds'),
+          protocol: 'opds1'),
+    ];
+    await tester.pumpWidget(buildApp(catalogs: catalogs, favorites: []));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Favourites'), findsNothing);
+  });
+
+  testWidgets('favorites section: shows when non-empty', (tester) async {
+    final catalogs = [
+      Catalog(
+          id: 1,
+          title: 'Gutenberg',
+          rootUrl: Uri.parse('https://gutenberg.org/opds'),
+          protocol: 'opds1'),
+    ];
+    final favorites = [
+      Favorite(
+          id: 1,
+          catalogId: 1,
+          url: Uri.parse('https://gutenberg.org/opds/science'),
+          title: 'Science',
+          sortOrder: 0),
+    ];
+    await tester.pumpWidget(buildApp(catalogs: catalogs, favorites: favorites));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Favourites'), findsOneWidget);
+    expect(find.text('Science'), findsOneWidget);
+  });
 }
