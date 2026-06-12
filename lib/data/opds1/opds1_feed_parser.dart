@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:xml/xml.dart';
 import 'package:opds_browser/data/opds_feed_parser.dart';
 import 'package:opds_browser/domain/models.dart';
+import 'package:opds_browser/domain/opds_client.dart';
 
 // Windows-1251 Unicode code points for bytes 0x80–0xFF (128 entries).
 const _win1251 = <int>[
@@ -131,6 +132,94 @@ const _imageRel = 'http://opds-spec.org/image';
 
 class Opds1FeedParser implements OpdsFeedParser {
   @override
-  ParsedFeed parse(List<int> bytes, Uri feedUrl) =>
-      throw UnimplementedError('parse not yet implemented');
+  ParsedFeed parse(List<int> bytes, Uri feedUrl) {
+    final xmlString = decodeXmlBytes(bytes);
+    final XmlDocument doc;
+    try {
+      doc = XmlDocument.parse(xmlString);
+    } on XmlException catch (e) {
+      throw ParseException('XML parse error: $e');
+    }
+
+    final feed = doc.rootElement;
+    if (feed.localName != 'feed') {
+      throw ParseException('Root element is not <feed>');
+    }
+
+    // Effective base URL: xml:base on <feed> takes precedence over feedUrl.
+    final baseAttr = feed.getAttribute('base', namespaceUri: _xmlNs);
+    final base = baseAttr != null ? feedUrl.resolve(baseAttr) : feedUrl;
+
+    final titleEl =
+        feed.childElements.where((e) => e.localName == 'title').firstOrNull;
+    final title = titleEl?.innerText.trim() ?? '';
+
+    // Feed-level rel="next" link → nextPageUrl.
+    Uri? nextPageUrl;
+    for (final link
+        in feed.childElements.where((e) => e.localName == 'link')) {
+      if (link.getAttribute('rel') == 'next') {
+        final href = link.getAttribute('href');
+        if (href != null) nextPageUrl = resolveHref(href, base);
+        break;
+      }
+    }
+
+    final entries = <FeedEntry>[];
+    for (final entry
+        in feed.childElements.where((e) => e.localName == 'entry')) {
+      final parsed = _parseEntry(entry, base);
+      if (parsed != null) entries.add(parsed);
+    }
+
+    return ParsedFeed(title: title, entries: entries, nextPageUrl: nextPageUrl);
+  }
+
+  FeedEntry? _parseEntry(XmlElement entry, Uri base) {
+    final links =
+        entry.childElements.where((e) => e.localName == 'link').toList();
+
+    final hasAcquisition = links.any((l) {
+      final rel = l.getAttribute('rel') ?? '';
+      return rel.startsWith(_acqRelPrefix);
+    });
+    // Book entry implementation added in Task 8.
+    if (hasAcquisition) return null;
+
+    final hasNav = links.any((l) {
+      final type = l.getAttribute('type') ?? '';
+      return type.contains('application/atom+xml');
+    });
+    if (hasNav) return _parseNavEntry(entry, links, base);
+
+    return null;
+  }
+
+  NavigationEntry _parseNavEntry(
+      XmlElement entry, List<XmlElement> links, Uri base) {
+    final title = entry.childElements
+            .where((e) => e.localName == 'title')
+            .firstOrNull
+            ?.innerText
+            .trim() ??
+        '';
+
+    final subtitleRaw = entry.childElements
+        .where((e) => e.localName == 'content' || e.localName == 'summary')
+        .firstOrNull
+        ?.innerText
+        .trim();
+    final subtitle =
+        (subtitleRaw == null || subtitleRaw.isEmpty) ? null : subtitleRaw;
+
+    final navLink = links.firstWhere(
+      (l) => (l.getAttribute('type') ?? '').contains('application/atom+xml'),
+    );
+    final href = navLink.getAttribute('href') ?? '';
+    return NavigationEntry(
+      title: title,
+      subtitle: subtitle,
+      url: resolveHref(href, base),
+    );
+  }
 }
