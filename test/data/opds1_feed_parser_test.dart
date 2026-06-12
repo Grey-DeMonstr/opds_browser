@@ -201,4 +201,75 @@ void main() {
       );
     });
   });
+
+  group('Opds1FeedParser.parse — book entries', () {
+    final parser = Opds1FeedParser();
+    final base = Uri.parse('https://example.com/opds');
+
+    test('multi-format book — all 4 acquisition links, thumbnail cover', () {
+      final bytes =
+          File('test/fixtures/book_multi_format_fb2.xml').readAsBytesSync();
+      final feed = parser.parse(bytes, base);
+
+      expect(feed.entries.length, 1);
+      final book = feed.entries.first as BookEntry;
+      expect(book.title, 'Sample Book');
+      expect(book.authors, ['Alice Author', 'Bob Coauthor']);
+      expect(book.summary, 'A book available in multiple formats.');
+      expect(book.coverUrl,
+          Uri.parse('https://example.com/covers/sample-thumb.jpg'));
+
+      final labels = book.acquisitionLinks.map((l) => l.formatLabel).toList();
+      expect(labels, ['FB2', 'FB2.ZIP', 'EPUB', 'PDF']);
+
+      final urls = book.acquisitionLinks.map((l) => l.url.toString()).toList();
+      expect(urls, [
+        'https://example.com/books/sample.fb2',
+        'https://example.com/books/sample.fb2.zip',
+        'https://example.com/books/sample.epub',
+        'https://example.com/books/sample.pdf',
+      ]);
+    });
+
+    test('book with no FB2 — 2 links, EPUB and PDF labels', () {
+      final bytes = File('test/fixtures/book_no_fb2.xml').readAsBytesSync();
+      final feed = parser.parse(bytes, base);
+
+      final book = feed.entries.first as BookEntry;
+      expect(book.title, 'EPUB Only Book');
+      expect(book.authors, ['Carol Writer']);
+      expect(book.summary, 'This book has no FB2 format.');
+      expect(book.coverUrl, isNull);
+
+      final labels = book.acquisitionLinks.map((l) => l.formatLabel).toList();
+      expect(labels, ['EPUB', 'PDF']);
+    });
+
+    test('mixed feed — entries in feed order, nav and book interleaved', () {
+      final bytes = File('test/fixtures/mixed_feed.xml').readAsBytesSync();
+      final feed = parser.parse(bytes, base);
+
+      expect(feed.entries.length, 4);
+      expect(feed.entries[0], isA<NavigationEntry>());
+      expect((feed.entries[0] as NavigationEntry).title, 'New Arrivals');
+
+      expect(feed.entries[1], isA<BookEntry>());
+      final dart = feed.entries[1] as BookEntry;
+      expect(dart.title, 'The Dart Programming Language');
+      expect(dart.authors, ['John Doe']);
+      expect(dart.summary, 'A book about Dart.');
+      expect(dart.coverUrl,
+          Uri.parse('https://example.com/covers/dart-thumb.jpg'));
+      expect(dart.acquisitionLinks.first.formatLabel, 'EPUB');
+
+      expect(feed.entries[2], isA<NavigationEntry>());
+      expect((feed.entries[2] as NavigationEntry).title, 'Top Rated');
+
+      expect(feed.entries[3], isA<BookEntry>());
+      final flutter = feed.entries[3] as BookEntry;
+      expect(flutter.title, 'Flutter in Action');
+      expect(flutter.authors, ['Jane Smith']);
+      expect(flutter.acquisitionLinks.first.formatLabel, 'FB2');
+    });
+  });
 }
