@@ -1,5 +1,5 @@
-import 'dart:convert'; // ignore: unused_import
-import 'dart:io'; // ignore: unused_import
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:xml/xml.dart'; // ignore: unused_import
@@ -27,5 +27,28 @@ void main() {
         expect(mimeToLabel('application/djvu'), 'DJVU'));
     test('maps application/x-cb7 → X-CB7 (uppercase subtype)', () =>
         expect(mimeToLabel('application/x-cb7'), 'X-CB7'));
+  });
+
+  group('decodeXmlBytes', () {
+    test('passes through UTF-8 bytes unchanged', () {
+      const src = '<?xml version="1.0" encoding="UTF-8"?><root>Hello</root>';
+      final result = decodeXmlBytes(utf8.encode(src));
+      expect(result, src);
+    });
+
+    test('assumes UTF-8 when encoding attribute is absent', () {
+      const src = '<?xml version="1.0"?><root>Test</root>';
+      final result = decodeXmlBytes(utf8.encode(src));
+      expect(result, src);
+    });
+
+    test('decodes windows-1251 fixture to correct Cyrillic text', () {
+      final bytes =
+          File('test/fixtures/windows1251.xml').readAsBytesSync().toList();
+      final result = decodeXmlBytes(bytes);
+      expect(result, contains('Кириллический каталог'));
+      expect(result, contains('Мастер и Маргарита'));
+      expect(result, contains('Михаил Булгаков'));
+    });
   });
 }
