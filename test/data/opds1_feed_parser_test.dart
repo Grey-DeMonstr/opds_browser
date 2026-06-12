@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:xml/xml.dart';
 import 'package:opds_browser/data/opds1/opds1_feed_parser.dart';
-import 'package:opds_browser/domain/models.dart'; // ignore: unused_import
-import 'package:opds_browser/domain/opds_client.dart'; // ignore: unused_import
+import 'package:opds_browser/domain/models.dart';
+import 'package:opds_browser/domain/opds_client.dart';
 
 void main() {
   group('mimeToLabel', () {
@@ -154,6 +154,51 @@ void main() {
       final result = extractSeries(entry);
       expect(result.series, isNull);
       expect(result.seriesIndex, isNull);
+    });
+  });
+
+  group('Opds1FeedParser.parse — navigation feeds', () {
+    final parser = Opds1FeedParser();
+    final base = Uri.parse('https://example.com/opds');
+
+    test('parses minimal navigation feed — 3 entries in order', () {
+      final bytes =
+          File('test/fixtures/minimal_navigation_feed.xml').readAsBytesSync();
+      final feed = parser.parse(bytes, base);
+
+      expect(feed.title, 'Test Navigation Feed');
+      expect(feed.entries.length, 3);
+      expect(feed.nextPageUrl, isNull);
+
+      final first = feed.entries[0] as NavigationEntry;
+      expect(first.title, 'Science Fiction');
+      expect(first.subtitle, 'Sci-fi books');
+      expect(first.url, Uri.parse('https://example.com/opds/sci-fi'));
+
+      final second = feed.entries[1] as NavigationEntry;
+      expect(second.title, 'Fantasy');
+      expect(second.subtitle, isNull);
+      expect(second.url, Uri.parse('https://example.com/opds/fantasy'));
+
+      final third = feed.entries[2] as NavigationEntry;
+      expect(third.title, 'Mystery');
+      expect(third.url, Uri.parse('https://example.com/opds/mystery'));
+    });
+
+    test('parses empty feed — zero entries', () {
+      final bytes = File('test/fixtures/empty_feed.xml').readAsBytesSync();
+      final feed = parser.parse(bytes, base);
+      expect(feed.title, 'Empty Feed');
+      expect(feed.entries, isEmpty);
+      expect(feed.nextPageUrl, isNull);
+    });
+
+    test('malformed XML throws ParseException', () {
+      final bytes = File('test/fixtures/malformed.xml').readAsBytesSync();
+      expect(
+        () => parser.parse(bytes, base),
+        throwsA(isA<ParseException>()),
+      );
     });
   });
 }
