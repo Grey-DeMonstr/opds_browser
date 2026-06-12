@@ -247,11 +247,12 @@ class Opds1FeedParser implements OpdsFeedParser {
         })
         .toList();
 
+    final (:series, :seriesIndex) = extractSeries(entry);
     return BookEntry(
       title: title,
       authors: authors,
-      series: null,
-      seriesIndex: null,
+      series: series,
+      seriesIndex: seriesIndex,
       summary: summary?.isEmpty == true ? null : summary,
       coverUrl: coverUrl,
       acquisitionLinks: acquisitionLinks,

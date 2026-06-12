@@ -272,4 +272,54 @@ void main() {
       expect(flutter.acquisitionLinks.first.formatLabel, 'FB2');
     });
   });
+
+  group('Opds1FeedParser.parse — series + URL resolution + encoding', () {
+    final parser = Opds1FeedParser();
+    final base = Uri.parse('https://example.com/opds');
+
+    test('Calibre series — name and index extracted', () {
+      final bytes =
+          File('test/fixtures/series_calibre.xml').readAsBytesSync();
+      final feed = parser.parse(bytes, base);
+      final book = feed.entries.first as BookEntry;
+      expect(book.title, 'The Fellowship of the Ring');
+      expect(book.series, 'The Lord of the Rings');
+      expect(book.seriesIndex, 1.0);
+    });
+
+    test('dcterms:isPartOf series — name extracted, index null', () {
+      final bytes = File('test/fixtures/series_link.xml').readAsBytesSync();
+      final feed = parser.parse(bytes, base);
+      final book = feed.entries.first as BookEntry;
+      expect(book.title, 'The Two Towers');
+      expect(book.series, 'The Lord of the Rings');
+      expect(book.seriesIndex, isNull);
+    });
+
+    test('relative hrefs — resolved against xml:base', () {
+      final bytes =
+          File('test/fixtures/relative_hrefs.xml').readAsBytesSync();
+      // feedUrl is irrelevant here — xml:base="https://example.com/catalog/" overrides.
+      final feed =
+          parser.parse(bytes, Uri.parse('https://example.com/opds'));
+
+      final nav = feed.entries[0] as NavigationEntry;
+      expect(nav.url, Uri.parse('https://example.com/catalog/sub/'));
+
+      final book = feed.entries[1] as BookEntry;
+      expect(book.acquisitionLinks.first.url,
+          Uri.parse('https://example.com/books/rel.epub'));
+    });
+
+    test('windows-1251 feed — Cyrillic text decoded correctly', () {
+      final bytes =
+          File('test/fixtures/windows1251.xml').readAsBytesSync();
+      final feed = parser.parse(bytes, base);
+
+      expect(feed.title, 'Кириллический каталог');
+      final book = feed.entries.first as BookEntry;
+      expect(book.title, 'Мастер и Маргарита');
+      expect(book.authors, ['Михаил Булгаков']);
+    });
+  });
 }
