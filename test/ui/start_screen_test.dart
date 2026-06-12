@@ -206,4 +206,112 @@ void main() {
     expect(find.widgetWithText(TextFormField, 'Title'), findsOneWidget);
     expect(find.widgetWithText(TextFormField, 'URL'), findsOneWidget);
   });
+
+  testWidgets('dialog: shows validation error for empty title', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add catalogue'));
+    await tester.pumpAndSettle();
+
+    // Leave title empty, fill in URL
+    await tester.enterText(find.widgetWithText(TextFormField, 'URL'), 'example.com');
+    await tester.tap(find.widgetWithText(TextButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Title is required'), findsOneWidget);
+  });
+
+  testWidgets('dialog: add catalog when probe passes — catalog appears in list',
+      (tester) async {
+    await tester.pumpWidget(buildApp(probeResult: true));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add catalogue'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+        find.widgetWithText(TextFormField, 'Title'), 'My Library');
+    await tester.enterText(
+        find.widgetWithText(TextFormField, 'URL'), 'https://library.example.com/opds');
+    await tester.tap(find.widgetWithText(TextButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    // Dialog should be dismissed
+    expect(find.byType(AlertDialog), findsNothing);
+    // Catalog should appear in the list
+    expect(find.text('My Library'), findsOneWidget);
+  });
+
+  testWidgets('dialog: probe failure shows error and Save anyway button',
+      (tester) async {
+    await tester.pumpWidget(buildApp(probeResult: false));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add catalogue'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+        find.widgetWithText(TextFormField, 'Title'), 'Bad Feed');
+    await tester.enterText(
+        find.widgetWithText(TextFormField, 'URL'), 'https://notopds.example.com');
+    await tester.tap(find.widgetWithText(TextButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    // Dialog must stay open
+    expect(find.byType(AlertDialog), findsOneWidget);
+    // Error text must be shown
+    expect(find.text('Not a supported OPDS catalogue'), findsOneWidget);
+    // Save anyway button must be visible
+    expect(find.widgetWithText(TextButton, 'Save anyway'), findsOneWidget);
+  });
+
+  testWidgets('dialog: Save anyway saves without re-probing', (tester) async {
+    await tester.pumpWidget(buildApp(probeResult: false));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add catalogue'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+        find.widgetWithText(TextFormField, 'Title'), 'Force Save');
+    await tester.enterText(
+        find.widgetWithText(TextFormField, 'URL'), 'https://notopds.example.com');
+    await tester.tap(find.widgetWithText(TextButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(TextButton, 'Save anyway'));
+    await tester.pumpAndSettle();
+
+    // Dialog must be dismissed and catalog saved
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('Force Save'), findsOneWidget);
+  });
+
+  testWidgets('dialog: edit mode pre-fills title and URL', (tester) async {
+    final catalog = Catalog(
+        id: 1,
+        title: 'Project Gutenberg',
+        rootUrl: Uri.parse('https://gutenberg.org/opds'),
+        protocol: 'opds1');
+    await tester.pumpWidget(buildApp(catalogs: [catalog]));
+    await tester.pumpAndSettle();
+
+    // Tap the popup menu trailing button on the catalog tile
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    // Pre-filled title — check first EditableText controller
+    expect(
+      tester
+          .widget<EditableText>(find.byType(EditableText).first)
+          .controller
+          .text,
+      'Project Gutenberg',
+    );
+  });
 }
