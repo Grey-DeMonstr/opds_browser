@@ -34,7 +34,7 @@ void main() {
     test('foreign keys enforced — insert invalid catalog_id throws', () async {
       final d = await db.database;
       expect(
-        () => d.insert('favorites', {
+        () async => d.insert('favorites', {
           'catalog_id': 9999,
           'url': 'https://example.com',
           'title': 'Bad',
