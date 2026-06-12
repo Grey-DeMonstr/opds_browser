@@ -75,6 +75,15 @@ String mimeToLabel(String mimeType) => switch (mimeType) {
       _ => mimeType.split('/').last.toUpperCase(),
     };
 
+/// Strips HTML tags and collapses whitespace to single spaces.
+String stripHtml(String input) => input
+    .replaceAll(RegExp(r'<[^>]*>'), '')
+    .replaceAll(RegExp(r'\s+'), ' ')
+    .trim();
+
+/// Resolves [href] against [base] following RFC 3986.
+Uri resolveHref(String href, Uri base) => base.resolve(href);
+
 class Opds1FeedParser implements OpdsFeedParser {
   @override
   ParsedFeed parse(List<int> bytes, Uri feedUrl) =>
