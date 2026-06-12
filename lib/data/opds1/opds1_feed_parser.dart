@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:xml/xml.dart';
 import 'package:opds_browser/data/opds_feed_parser.dart';
 import 'package:opds_browser/domain/models.dart';
 
@@ -83,6 +84,50 @@ String stripHtml(String input) => input
 
 /// Resolves [href] against [base] following RFC 3986.
 Uri resolveHref(String href, Uri base) => base.resolve(href);
+
+const _calibreNs = 'http://calibre.kovidgoyal.net/2009/#';
+const _dctermsNs = 'http://purl.org/dc/terms/';
+// ignore: unused_element
+const _xmlNs = 'http://www.w3.org/XML/1998/namespace';
+// ignore: unused_element
+const _acqRelPrefix = 'http://opds-spec.org/acquisition';
+// ignore: unused_element
+const _thumbRel = 'http://opds-spec.org/image/thumbnail';
+// ignore: unused_element
+const _imageRel = 'http://opds-spec.org/image';
+
+/// Extracts series name and index from an OPDS entry element.
+/// Checks Calibre namespace first, then dcterms:isPartOf.
+/// Returns (series: null, seriesIndex: null) when no series metadata found.
+({String? series, double? seriesIndex}) extractSeries(XmlElement entry) {
+  // 1. Calibre namespace: <calibre:series> + <calibre:series_index>
+  final calibreSeries = entry.childElements
+      .where((e) => e.localName == 'series' && e.namespaceUri == _calibreNs)
+      .firstOrNull;
+  if (calibreSeries != null) {
+    final name = calibreSeries.innerText.trim();
+    if (name.isNotEmpty) {
+      final indexEl = entry.childElements
+          .where(
+              (e) => e.localName == 'series_index' && e.namespaceUri == _calibreNs)
+          .firstOrNull;
+      final index =
+          indexEl != null ? double.tryParse(indexEl.innerText.trim()) : null;
+      return (series: name, seriesIndex: index);
+    }
+  }
+
+  // 2. dcterms:isPartOf
+  final dcterms = entry.childElements
+      .where((e) => e.localName == 'isPartOf' && e.namespaceUri == _dctermsNs)
+      .firstOrNull;
+  if (dcterms != null) {
+    final name = dcterms.innerText.trim();
+    if (name.isNotEmpty) return (series: name, seriesIndex: null);
+  }
+
+  return (series: null, seriesIndex: null);
+}
 
 class Opds1FeedParser implements OpdsFeedParser {
   @override

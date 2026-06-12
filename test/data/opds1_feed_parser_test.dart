@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:xml/xml.dart'; // ignore: unused_import
+import 'package:xml/xml.dart';
 import 'package:opds_browser/data/opds1/opds1_feed_parser.dart';
 import 'package:opds_browser/domain/models.dart'; // ignore: unused_import
 import 'package:opds_browser/domain/opds_client.dart'; // ignore: unused_import
@@ -89,6 +89,71 @@ void main() {
         resolveHref('https://other.com/feed', base),
         Uri.parse('https://other.com/feed'),
       );
+    });
+  });
+
+  group('extractSeries', () {
+    // Helper: parse an <entry> element from a minimal feed string.
+    XmlElement parseEntry(String entryXml) => XmlDocument.parse(
+          '<feed xmlns="http://www.w3.org/2005/Atom" '
+          'xmlns:calibre="http://calibre.kovidgoyal.net/2009/#" '
+          'xmlns:dcterms="http://purl.org/dc/terms/">'
+          '$entryXml'
+          '</feed>',
+        ).rootElement.childElements.first;
+
+    test('extracts Calibre series and index', () {
+      final entry = parseEntry(
+        '<entry>'
+        '<calibre:series>My Series</calibre:series>'
+        '<calibre:series_index>2.5</calibre:series_index>'
+        '</entry>',
+      );
+      final result = extractSeries(entry);
+      expect(result.series, 'My Series');
+      expect(result.seriesIndex, 2.5);
+    });
+
+    test('Calibre series with integer index (1.0 stored as double)', () {
+      final entry = parseEntry(
+        '<entry>'
+        '<calibre:series>Lord of the Rings</calibre:series>'
+        '<calibre:series_index>1.0</calibre:series_index>'
+        '</entry>',
+      );
+      final result = extractSeries(entry);
+      expect(result.series, 'Lord of the Rings');
+      expect(result.seriesIndex, 1.0);
+    });
+
+    test('extracts dcterms:isPartOf series (no index)', () {
+      final entry = parseEntry(
+        '<entry>'
+        '<dcterms:isPartOf>My DC Series</dcterms:isPartOf>'
+        '</entry>',
+      );
+      final result = extractSeries(entry);
+      expect(result.series, 'My DC Series');
+      expect(result.seriesIndex, isNull);
+    });
+
+    test('Calibre takes precedence over dcterms when both present', () {
+      final entry = parseEntry(
+        '<entry>'
+        '<calibre:series>Calibre Series</calibre:series>'
+        '<calibre:series_index>3.0</calibre:series_index>'
+        '<dcterms:isPartOf>DC Series</dcterms:isPartOf>'
+        '</entry>',
+      );
+      final result = extractSeries(entry);
+      expect(result.series, 'Calibre Series');
+    });
+
+    test('returns null series and index when no series metadata present', () {
+      final entry = parseEntry('<entry><title>Plain Book</title></entry>');
+      final result = extractSeries(entry);
+      expect(result.series, isNull);
+      expect(result.seriesIndex, isNull);
     });
   });
 }
