@@ -145,8 +145,8 @@ class AcquisitionLink {
 - **Cover:** prefer link rel `http://opds-spec.org/image/thumbnail`, fall back to `http://opds-spec.org/image`; null if neither.
 - **Pagination:** `rel="next"` link of the feed → `nextPageUrl`.
 - **Acquisition mime → label** mapping (one pure function):
-  - `application/fb2`, `application/x-fictionbook+xml` → `FB2`
   - `application/fb2+zip`, `application/x-zip-compressed-fb2` → `FB2.ZIP`
+  - `application/fb2`, `application/x-fictionbook+xml` → `FB2`
   - `application/epub+zip` → `EPUB`
   - `application/pdf` → `PDF`
   - `application/x-mobipocket-ebook` → `MOBI`
@@ -325,7 +325,7 @@ App bar: title "OPDS Browser", actions: Settings icon. Floating action button: *
 Given `acquisitionLinks`:
 
 1. If exactly one link → download it directly on Download tap.
-2. If multiple links and one of them is FB2 (labels `FB2` or `FB2.ZIP`; prefer `FB2` over `FB2.ZIP` if both) → the Download button downloads that one directly; the other formats remain listed in the sheet as secondary tap-to-download rows.
+2. If multiple links and one of them is FB2 (labels `FB2` or `FB2.ZIP`; prefer `FB2.ZIP` over `FB2` if both) → the Download button downloads that one directly; the other formats remain listed in the sheet as secondary tap-to-download rows.
 3. If multiple links and none is FB2 → the Download button opens a format picker (simple dialog listing `formatLabel`s); the secondary rows behave the same.
 
 Implement choice logic as a pure function `AcquisitionLink? preferredLink(List<AcquisitionLink>)` (returns null when a picker is required) — unit-tested.
@@ -395,7 +395,7 @@ Algorithm (class `FolderDownloadJob`, pure-logic core unit-tested with fakes):
 1. BFS traversal starting at the current feed URL. Use `FeedRepository.getFeed` (cache-first — already-cached subfolders cost zero network).
 2. Safety limits: max depth 10, max 500 folders, max 2000 books per job; on hitting a limit, finish what was collected and report "Stopped at safety limit".
 3. Cycle protection: keep a set of normalized visited URLs.
-4. For every `BookEntry`: choose format via `preferredLink`; when a picker would be required (no FB2 among several), apply order of preference `FB2 > FB2.ZIP > EPUB > PDF > MOBI > first listed` instead of asking.
+4. For every `BookEntry`: choose format via `preferredLink`; when a picker would be required (no FB2 among several), apply order of preference `FB2.ZIP > FB2 > EPUB > PDF > MOBI > first listed` instead of asking.
 5. Download queue with concurrency 2. Skip files that already exist (§9.3).
 6. Progress UI: a persistent bottom banner (or simple dialog) on the BrowseScreen showing "Scanning folders… (N found)" then "Downloading X of Y", a Cancel button (cancels pending, lets in-flight finish), and a final summary: downloaded / skipped (already existed) / failed counts.
 7. Individual file failures don't abort the job; they increment the failed counter. The job survives screen rotation but MAY be cancelled if the user leaves the app (no foreground service in v1 — document this limitation in code comments).
