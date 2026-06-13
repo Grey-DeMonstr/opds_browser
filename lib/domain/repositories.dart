@@ -23,3 +23,16 @@ abstract interface class SettingsRepository {
   Future<AppSettings> load();
   Future<void> save(AppSettings settings);
 }
+
+abstract interface class DownloadStorage {
+  /// Returns true if a file with this path already exists.
+  Future<bool> exists(List<String> pathSegments, String fileName);
+
+  /// Streams [bytes] into the file, creating intermediate folders.
+  /// Returns an opaque locator usable by open_filex (content URI string).
+  Future<String> write(
+    List<String> pathSegments,
+    String fileName,
+    Stream<List<int>> bytes,
+  );
+}
