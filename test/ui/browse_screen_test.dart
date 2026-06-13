@@ -375,6 +375,27 @@ void main() {
     expect(favRepo.favorites, hasLength(1));
     expect(favRepo.favorites.first.url, _feedUrl);
   });
+
+  testWidgets('tapping navigation entry pushes /browse with catalogId and url',
+      (tester) async {
+    final subUrl = 'http://example.com/sub';
+    final feed = makeFeed(entries: [navEntry(title: 'Sub Folder', url: subUrl)]);
+
+    String? capturedUri;
+    await tester.pumpWidget(buildApp(
+      feed: feed,
+      catalogId: 1,
+      onBrowse: (state) => capturedUri = state.uri.toString(),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Sub Folder'));
+    await tester.pumpAndSettle();
+
+    expect(capturedUri, isNotNull);
+    expect(capturedUri, contains('catalogId=1'));
+    expect(capturedUri, contains(Uri.encodeComponent(subUrl)));
+  });
 }
 
 class _ThrowingFeedRepository implements FeedRepository {
