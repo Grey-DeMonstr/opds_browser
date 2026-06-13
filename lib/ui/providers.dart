@@ -1,7 +1,9 @@
 import 'dart:io';
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as p;
 import 'package:opds_browser/data/app_database.dart';
 import 'package:opds_browser/data/book_downloader.dart';
 import 'package:opds_browser/data/caching_feed_repository.dart';
@@ -182,6 +184,9 @@ final isFavoriteProvider =
 
 final safPermissionCheckerProvider =
     Provider<Future<bool> Function(String)>((ref) {
+  if (!Platform.isAndroid) {
+    return (path) => Directory(path).exists();
+  }
   return (uri) async =>
       (await Saf.isPersistedPermissionDirectoryFor(uri)) ?? false;
 });
@@ -207,6 +212,18 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
   }
 
   Future<bool> pickCustomFolder() async {
+    if (!Platform.isAndroid) {
+      final dirPath = await getDirectoryPath();
+      if (dirPath == null) return false;
+      final name = p.basename(dirPath);
+      final newSettings = (state.value ??
+              const AppSettings(target: SystemDownloads()))
+          .copyWith(
+              target: CustomSafFolder(dirPath, name.isEmpty ? dirPath : name));
+      await ref.read(settingsRepositoryProvider).save(newSettings);
+      state = AsyncData(newSettings);
+      return true;
+    }
     final uri = await saf_api.openDocumentTree();
     if (uri == null) return false;
     final doc = await DocumentFile.fromTreeUri(Uri.parse(uri));
@@ -254,7 +271,7 @@ final downloadStorageProvider = Provider<DownloadStorage?>((ref) {
     SystemDownloads() => FileSystemDownloadStorage.downloads(),
     CustomSafFolder(uriString: final uri) when Platform.isAndroid =>
       SafDownloadStorage(uri),
-    CustomSafFolder() => null,
+    CustomSafFolder(uriString: final path) => FileSystemDownloadStorage(path),
     null => null,
   };
 });
