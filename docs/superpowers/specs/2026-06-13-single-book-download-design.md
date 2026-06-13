@@ -159,17 +159,34 @@ class DownloadFailed   extends DownloadState { final String message; }
 
 ### `DownloadNotifier`
 
-`AutoDisposeNotifier<DownloadState>` family keyed by `Uri` (the `AcquisitionLink.url`).
-Starts in `DownloadIdle`. Exposes:
+`Notifier.family` (non-autoDispose) keyed by `Uri` (the `AcquisitionLink.url`). Must NOT be
+autoDispose: if the user dismisses the sheet mid-download, an autoDispose notifier would dispose
+before the download completes, silently dropping the `lastDownloadResultProvider` write and
+preventing the snackbar from firing. Non-autoDispose keeps the notifier alive for the lifetime of
+the `ProviderScope`.
+
+Riverpod 2.x no-codegen form (project forbids codegen):
 
 ```dart
-Future<void> start(BookEntry entry, AppSettings settings) async { ... }
+class DownloadNotifier extends FamilyNotifier<DownloadState, Uri> {
+  @override
+  DownloadState build(Uri arg) => DownloadIdle();
+
+  Future<void> start(BookEntry entry, AppSettings settings) async { ... }
+}
+
+final downloadNotifierProvider =
+    NotifierProvider.family<DownloadNotifier, DownloadState, Uri>(
+        DownloadNotifier.new);
 ```
 
-- Transitions to `DownloadInProgress`, calls `bookDownloaderProvider.download(...)`.
-- On success: sets `lastDownloadResultProvider` to a `DownloadDone`, transitions to `DownloadDone`.
-- On `OpdsException`: transitions to `DownloadFailed` with a user-facing message (using the error
-  mapping from spec §12).
+Behaviour of `start()`:
+- No-op if state is already `DownloadInProgress` (guard against double-tap).
+- Transitions to `DownloadInProgress`, calls `ref.read(bookDownloaderProvider).download(...)`.
+- On success: sets `lastDownloadResultProvider` to the `DownloadDone` result, then transitions
+  own state to `DownloadDone`.
+- On `OpdsException`: transitions to `DownloadFailed` with a user-facing message (error mapping
+  from spec §12).
 - `"already_exists"` sentinel → `DownloadDone(alreadyExisted: true, contentUri: "", fileName: ...)`.
 
 ### New providers
@@ -187,8 +204,10 @@ final bookDownloaderProvider = Provider<BookDownloader>((ref) =>
       ref.watch(downloadStorageProvider) ?? MediaStoreDownloadStorage(),
     ));
 
-final downloadNotifierProvider = AutoDisposeNotifierProvider
-    .family<DownloadNotifier, DownloadState, Uri>(...);
+// Non-autoDispose so downloads survive sheet dismissal.
+final downloadNotifierProvider =
+    NotifierProvider.family<DownloadNotifier, DownloadState, Uri>(
+        DownloadNotifier.new);
 
 final lastDownloadResultProvider = StateProvider<DownloadDone?>((ref) => null);
 ```
@@ -200,7 +219,19 @@ final lastDownloadResultProvider = StateProvider<DownloadDone?>((ref) => null);
 ### `BookDetailsSheet` (`lib/ui/book_details_sheet.dart`)
 
 Opened via `showModalBottomSheet(isScrollControlled: true, ...)` from `_BookEntryTile.onTap`.
-Receives a `BookEntry`. Watches `settingsProvider` for `AppSettings`.
+Receives a `BookEntry`. Must be a **`ConsumerStatefulWidget`** — it needs local `_activeDownloadUrl`
+state to track which `AcquisitionLink.url` was most recently tapped (Download button or any
+secondary row), so it watches the correct `downloadNotifierProvider` family instance. Without this,
+tapping a secondary row (different URL) would leave the sheet watching the wrong notifier.
+
+```dart
+class _BookDetailsSheetState extends ConsumerState<BookDetailsSheet> {
+  Uri? _activeDownloadUrl;
+  ...
+}
+```
+
+Watches `settingsProvider` for `AppSettings`.
 
 **Layout (scrollable `SingleChildScrollView` → `Column`):**
 1. Cover image: `CachedNetworkImage`, ~120×170, placeholder `Icon(Icons.book)`
@@ -210,13 +241,16 @@ Receives a `BookEntry`. Watches `settingsProvider` for `AppSettings`.
 5. Summary (scrollable within the column) if present
 6. `Divider`
 7. **Download button** (`ElevatedButton`, label `"Download"`):
-   - `preferredLink` returns a link → call `notifier.start(entry, settings)` immediately
-   - `preferredLink` returns null → `await _showFormatPicker(context, links)`, then call `notifier.start`
+   - `preferredLink` returns a link → set `_activeDownloadUrl = link.url`, call `notifier.start(entry, settings)`
+   - `preferredLink` returns null → `await _showFormatPicker(context, links)`, set `_activeDownloadUrl = chosen.url`, then call `notifier.start`
    - While `DownloadInProgress`: replace button with `CircularProgressIndicator()`
-8. **Secondary format rows**: one `ListTile` per `AcquisitionLink` (showing `formatLabel`); always visible; tapping calls `notifier.start(entry, settings)` with that specific link
+8. **Secondary format rows**: one `ListTile` per `AcquisitionLink` (showing `formatLabel`); always
+   visible; tapping sets `_activeDownloadUrl = link.url` then calls `notifier.start(entry, settings)`
+   with that specific link
 
-Download state is watched via `ref.watch(downloadNotifierProvider(link.url))` where `link` is the
-preferred link (or the first link when picker is needed).
+Download state is watched via
+`ref.watch(downloadNotifierProvider(_activeDownloadUrl ?? preferredOrFirstLink.url))` —
+falls back to the preferred/first link URL before any tap occurs.
 
 ### Format picker dialog
 
