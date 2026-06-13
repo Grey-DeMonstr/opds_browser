@@ -82,6 +82,20 @@ class FavoritesNotifier extends AsyncNotifier<List<Favorite>> {
     await repo.remove(favoriteId);
     state = AsyncData(await repo.getAll());
   }
+
+  Future<void> toggle(int catalogId, Uri url, String title) async {
+    final repo = ref.read(favoritesRepositoryProvider);
+    final currentFavorites = state.value;
+    final existing = currentFavorites?.where(
+      (f) => f.catalogId == catalogId && f.url == url,
+    ).firstOrNull;
+    if (existing != null) {
+      await repo.remove(existing.id);
+    } else {
+      await repo.add(catalogId, url, title);
+    }
+    state = AsyncData(await repo.getAll());
+  }
 }
 
 final favoritesProvider =
