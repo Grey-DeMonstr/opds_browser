@@ -9,9 +9,6 @@ class MediaStoreDownloadStorage implements DownloadStorage {
   // Actual file placement is controlled via explicit relativePath in each call.
   static const _appFolder = 'OPDS Browser';
 
-  // Call once at app start: await MediaStore.ensureInitialized()
-  // and set MediaStore.appFolder = _appFolder before first use.
-
   final _store = MediaStore();
 
   @override
