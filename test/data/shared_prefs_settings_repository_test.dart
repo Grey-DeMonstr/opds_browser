@@ -24,19 +24,26 @@ void main() {
       expect(loaded.target, isA<SystemDownloads>());
     });
 
-    test('save and load roundtrip CustomSafFolder', () async {
+    test('save and load roundtrip CustomSafFolder — uri and displayName',
+        () async {
       const uri = 'content://com.android.externalstorage/tree/primary';
       final repo = SharedPrefsSettingsRepository();
-      await repo.save(const AppSettings(target: CustomSafFolder(uri, '')));
+      await repo.save(
+        const AppSettings(target: CustomSafFolder(uri, 'Downloads')),
+      );
       final loaded = await repo.load();
       expect(loaded.target, isA<CustomSafFolder>());
       expect((loaded.target as CustomSafFolder).uriString, uri);
+      expect((loaded.target as CustomSafFolder).displayName, 'Downloads');
     });
 
-    test('switching from custom back to system clears stored URI', () async {
+    test('switching from custom back to system clears stored URI and displayName',
+        () async {
       const uri = 'content://com.android.externalstorage/tree/primary';
       final repo = SharedPrefsSettingsRepository();
-      await repo.save(const AppSettings(target: CustomSafFolder(uri, '')));
+      await repo.save(
+        const AppSettings(target: CustomSafFolder(uri, 'Folder')),
+      );
       await repo.save(const AppSettings(target: SystemDownloads()));
       final loaded = await repo.load();
       expect(loaded.target, isA<SystemDownloads>());
