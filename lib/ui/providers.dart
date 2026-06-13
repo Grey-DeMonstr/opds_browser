@@ -1,12 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:opds_browser/data/app_database.dart';
+import 'package:opds_browser/data/book_downloader.dart';
 import 'package:opds_browser/data/caching_feed_repository.dart';
+import 'package:opds_browser/data/media_store_download_storage.dart';
 import 'package:opds_browser/data/opds1/opds1_client.dart';
 import 'package:opds_browser/data/saf_download_storage.dart';
 import 'package:opds_browser/data/shared_prefs_settings_repository.dart';
 import 'package:opds_browser/data/sqflite_catalog_repository.dart';
 import 'package:opds_browser/data/sqflite_favorites_repository.dart';
+import 'package:opds_browser/domain/download_utils.dart';
 import 'package:opds_browser/domain/entities.dart';
 import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/domain/opds_client.dart';
@@ -244,7 +247,116 @@ final settingsProvider =
 final downloadStorageProvider = Provider<DownloadStorage?>((ref) {
   final target = ref.watch(settingsProvider).value?.target;
   return switch (target) {
+    SystemDownloads() => MediaStoreDownloadStorage(),
     CustomSafFolder(uriString: final uri) => SafDownloadStorage(uri),
-    _ => null,
+    null => null,
   };
 });
+
+// ── Download ──────────────────────────────────────────────────────────────────
+
+sealed class DownloadState {
+  const DownloadState();
+}
+
+class DownloadIdle extends DownloadState {
+  const DownloadIdle();
+}
+
+class DownloadInProgress extends DownloadState {
+  const DownloadInProgress();
+}
+
+class DownloadDone extends DownloadState {
+  const DownloadDone({
+    required this.contentUri,
+    required this.fileName,
+    required this.alreadyExisted,
+  });
+
+  final String contentUri;
+  final String fileName;
+  final bool alreadyExisted;
+}
+
+class DownloadFailed extends DownloadState {
+  const DownloadFailed(this.message);
+  final String message;
+}
+
+final httpClientProvider = Provider<http.Client>((ref) {
+  final client = http.Client();
+  ref.onDispose(client.close);
+  return client;
+});
+
+final bookDownloaderProvider = Provider<BookDownloader>((ref) => BookDownloader(
+      ref.watch(httpClientProvider),
+      ref.watch(downloadStorageProvider) ?? MediaStoreDownloadStorage(),
+    ));
+
+class _LastDownloadResultNotifier extends Notifier<DownloadDone?> {
+  @override
+  DownloadDone? build() => null;
+
+  // ignore: use_setters_to_change_properties
+  void set(DownloadDone value) => state = value;
+}
+
+final lastDownloadResultProvider =
+    NotifierProvider<_LastDownloadResultNotifier, DownloadDone?>(
+  _LastDownloadResultNotifier.new,
+);
+
+class DownloadNotifier extends Notifier<DownloadState> {
+  late Uri _linkUrl;
+
+  void _setUrl(Uri url) => _linkUrl = url;
+
+  @override
+  DownloadState build() => const DownloadIdle();
+
+  Future<void> start(BookEntry entry, AppSettings settings) async {
+    if (state is DownloadInProgress) return;
+    state = const DownloadInProgress();
+
+    final link = entry.acquisitionLinks.firstWhere((l) => l.url == _linkUrl);
+    final fileName = buildFileName(entry, link);
+
+    try {
+      final result = await ref
+          .read(bookDownloaderProvider)
+          .download(entry, link, settings);
+      final done = result == 'already_exists'
+          ? DownloadDone(contentUri: '', fileName: fileName, alreadyExisted: true)
+          : DownloadDone(
+              contentUri: result,
+              fileName: fileName,
+              alreadyExisted: false,
+            );
+      ref.read<_LastDownloadResultNotifier>(lastDownloadResultProvider.notifier).set(done);
+      state = done;
+    } on OpdsException catch (e) {
+      state = DownloadFailed(_mapError(e));
+    } catch (e) {
+      state = DownloadFailed('Unexpected error: $e');
+    }
+  }
+}
+
+final downloadNotifierProvider =
+    NotifierProvider.family<DownloadNotifier, DownloadState, Uri>(
+  (url) => DownloadNotifier().._setUrl(url),
+);
+
+String _mapError(OpdsException e) => switch (e) {
+      NetworkException() =>
+        'Network error. Check your connection and try again.',
+      HttpStatusException(statusCode: 404) =>
+        'The book file was not found on the server (HTTP 404).',
+      HttpStatusException(statusCode: 401 || 403) =>
+        'This catalogue requires authentication, which is not supported.',
+      HttpStatusException(statusCode: final code) => 'Server error (HTTP $code).',
+      ParseException() => 'The server response is not a valid OPDS feed.',
+      UnsupportedProtocolException() => 'Not a supported OPDS catalogue.',
+    };
