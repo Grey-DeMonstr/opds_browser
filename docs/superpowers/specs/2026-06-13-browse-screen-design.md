@@ -210,6 +210,10 @@ AppBar(
 )
 ```
 
+### `_BrowseContent` — constructor parameters
+
+`_BrowseContent` receives `args: BrowseArgs`, `state: BrowseState`, `isFavorite: bool`, and `onRefresh: Future<void> Function()` as constructor parameters. `args` is used to watch `isFavoriteProvider` and to pass `catalogId` down to navigation tiles.
+
 ### `_BrowseContent` — Body
 
 ```
@@ -217,13 +221,20 @@ Column
   if isRefreshing → LinearProgressIndicator (height: 2)
   Expanded
     RefreshIndicator (onRefresh: onRefresh)
-      if entries.isEmpty → Center('This folder is empty.')
-      else ListView.builder(entries)
-        NavigationEntry → _NavigationEntryTile
-        BookEntry       → _BookEntryTile
+      CustomScrollView (physics: AlwaysScrollableScrollPhysics())
+        if entries.isEmpty →
+          SliverFillRemaining(child: Center(child: Text('This folder is empty.')))
+        else →
+          SliverList.builder(entries)
+            NavigationEntry → _NavigationEntryTile(entry, catalogId, key: ValueKey(entry.url))
+            BookEntry       → _BookEntryTile(entry, key: ValueKey(entry.title))
 ```
 
+`CustomScrollView` is always rendered (even when empty) so that `RefreshIndicator` always has a scrollable descendant and pull-to-refresh works regardless of feed content.
+
 ### `_NavigationEntryTile`
+
+Constructor: `_NavigationEntryTile({required NavigationEntry entry, required int catalogId, super.key})`.
 
 `ListTile` with:
 - Leading: `const Icon(Icons.folder)`
@@ -232,6 +243,8 @@ Column
 - `onTap`: `context.push('/browse?catalogId=$catalogId&url=${Uri.encodeComponent(entry.url.toString())}')`
 
 ### `_BookEntryTile`
+
+Constructor: `_BookEntryTile({required BookEntry entry, super.key})`.
 
 `ListTile` with:
 - Leading: `SizedBox(width: 56, height: 80, child: CachedNetworkImage(...) or placeholder Icon(Icons.book))`
