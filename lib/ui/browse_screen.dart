@@ -2,8 +2,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/domain/time_formatter.dart';
+import 'package:opds_browser/ui/book_details_sheet.dart';
 import 'package:opds_browser/ui/providers.dart';
 
 class BrowseScreen extends ConsumerStatefulWidget {
@@ -80,6 +82,25 @@ class _BrowseContent extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final (catalogId, _) = args;
     final entries = state.feed.feed.entries;
+
+    ref.listen(lastDownloadResultProvider, (_, result) {
+      if (result == null) return;
+      ref.read(lastDownloadResultProvider.notifier).clear();
+      final msg = result.alreadyExisted
+          ? 'Already downloaded: ${result.fileName}'
+          : 'Downloaded: ${result.fileName}';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          action: result.alreadyExisted
+              ? null
+              : SnackBarAction(
+                  label: 'Open',
+                  onPressed: () => OpenFilex.open(result.contentUri),
+                ),
+        ),
+      );
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -204,6 +225,11 @@ class _BookEntryTile extends StatelessWidget {
     final hasSubtitle = authors.isNotEmpty || seriesText != null;
 
     return ListTile(
+      onTap: () => showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: (_) => BookDetailsSheet(entry: entry),
+      ),
       leading: SizedBox(
         width: 56,
         height: 80,

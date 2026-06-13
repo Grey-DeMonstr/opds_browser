@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:opds_browser/domain/entities.dart';
 import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/domain/repositories.dart';
+import 'package:opds_browser/ui/book_details_sheet.dart';
 import 'package:opds_browser/ui/browse_screen.dart';
 import 'package:opds_browser/ui/providers.dart';
 
@@ -144,6 +147,36 @@ Widget buildApp({
     overrides: [
       feedRepositoryProvider.overrideWithValue(feedRepo),
       favoritesRepositoryProvider.overrideWithValue(favRepo),
+    ],
+    child: MaterialApp.router(routerConfig: router),
+  );
+}
+
+Widget buildAppWithDownload({
+  required CachedFeed feed,
+  int catalogId = 1,
+  Uri? url,
+}) {
+  final feedRepo = FakeFeedRepository(initialFeed: feed);
+  final favRepo = FakeFavoritesRepository();
+  final router = GoRouter(
+    initialLocation: '/',
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (_, _) =>
+            BrowseScreen(catalogId: catalogId, url: url ?? _feedUrl),
+      ),
+    ],
+  );
+  return ProviderScope(
+    overrides: [
+      feedRepositoryProvider.overrideWithValue(feedRepo),
+      favoritesRepositoryProvider.overrideWithValue(favRepo),
+      httpClientProvider.overrideWith(
+        (ref) => MockClient((_) async => http.Response.bytes([1], 200)),
+      ),
+      downloadStorageProvider.overrideWith((ref) => null),
     ],
     child: MaterialApp.router(routerConfig: router),
   );
@@ -374,6 +407,17 @@ void main() {
 
     expect(favRepo.favorites, hasLength(1));
     expect(favRepo.favorites.first.url, _feedUrl);
+  });
+
+  testWidgets('tapping a book entry tile opens BookDetailsSheet', (tester) async {
+    final feed = makeFeed(entries: [bookEntry(title: 'My Book')]);
+    await tester.pumpWidget(buildAppWithDownload(feed: feed));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('My Book'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BookDetailsSheet), findsOneWidget);
   });
 
   testWidgets('tapping navigation entry pushes /browse with catalogId and url',
