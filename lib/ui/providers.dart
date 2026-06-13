@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:opds_browser/data/app_database.dart';
 import 'package:opds_browser/data/book_downloader.dart';
 import 'package:opds_browser/data/caching_feed_repository.dart';
+import 'package:opds_browser/data/file_system_download_storage.dart';
 import 'package:opds_browser/data/media_store_download_storage.dart';
 import 'package:opds_browser/data/opds1/opds1_client.dart';
 import 'package:opds_browser/data/saf_download_storage.dart';
@@ -247,8 +250,11 @@ final settingsProvider =
 final downloadStorageProvider = Provider<DownloadStorage?>((ref) {
   final target = ref.watch(settingsProvider).value?.target;
   return switch (target) {
-    SystemDownloads() => MediaStoreDownloadStorage(),
-    CustomSafFolder(uriString: final uri) => SafDownloadStorage(uri),
+    SystemDownloads() when Platform.isAndroid => MediaStoreDownloadStorage(),
+    SystemDownloads() => FileSystemDownloadStorage.downloads(),
+    CustomSafFolder(uriString: final uri) when Platform.isAndroid =>
+      SafDownloadStorage(uri),
+    CustomSafFolder() => null,
     null => null,
   };
 });
@@ -290,10 +296,11 @@ final httpClientProvider = Provider<http.Client>((ref) {
   return client;
 });
 
-final bookDownloaderProvider = Provider<BookDownloader>((ref) => BookDownloader(
-      ref.watch(httpClientProvider),
-      ref.watch(downloadStorageProvider) ?? MediaStoreDownloadStorage(),
-    ));
+final bookDownloaderProvider = Provider<BookDownloader?>((ref) {
+  final storage = ref.watch(downloadStorageProvider);
+  if (storage == null) return null;
+  return BookDownloader(ref.watch(httpClientProvider), storage);
+});
 
 class _LastDownloadResultNotifier extends Notifier<DownloadDone?> {
   @override
@@ -322,13 +329,17 @@ class DownloadNotifier extends Notifier<DownloadState> {
     if (state is DownloadInProgress) return;
     state = const DownloadInProgress();
 
+    final downloader = ref.read(bookDownloaderProvider);
+    if (downloader == null) {
+      state = const DownloadFailed('Downloads are not supported on this platform.');
+      return;
+    }
+
     final link = entry.acquisitionLinks.firstWhere((l) => l.url == _linkUrl);
     final fileName = buildFileName(entry, link);
 
     try {
-      final result = await ref
-          .read(bookDownloaderProvider)
-          .download(entry, link, settings);
+      final result = await downloader.download(entry, link, settings);
       final done = result == 'already_exists'
           ? DownloadDone(contentUri: '', fileName: fileName, alreadyExisted: true)
           : DownloadDone(
