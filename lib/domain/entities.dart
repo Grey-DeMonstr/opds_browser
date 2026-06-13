@@ -8,7 +8,8 @@ class SystemDownloads extends DownloadTarget {
 
 class CustomSafFolder extends DownloadTarget {
   final String uriString;
-  const CustomSafFolder(this.uriString);
+  final String displayName;
+  const CustomSafFolder(this.uriString, this.displayName);
 }
 
 class Catalog {
@@ -51,4 +52,15 @@ class AppSettings {
     this.createAuthorFolder = false,
     this.createSeriesFolder = false,
   });
+
+  AppSettings copyWith({
+    DownloadTarget? target,
+    bool? createAuthorFolder,
+    bool? createSeriesFolder,
+  }) =>
+      AppSettings(
+        target: target ?? this.target,
+        createAuthorFolder: createAuthorFolder ?? this.createAuthorFolder,
+        createSeriesFolder: createSeriesFolder ?? this.createSeriesFolder,
+      );
 }
