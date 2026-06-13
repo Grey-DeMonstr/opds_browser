@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -261,6 +263,66 @@ void main() {
     expect(folderA.dy < bookB.dy, true);
     expect(bookB.dy < folderC.dy, true);
   });
+
+  testWidgets('refresh keeps content visible while loading', (tester) async {
+    final initial = makeFeed(title: 'Initial');
+    // refreshFeed=null → throws; we just need to see isRefreshing=true
+    // Use a slow fake that never resolves to catch mid-refresh state.
+    final slowRepo = _SlowFeedRepository(initialFeed: initial);
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, s) =>
+              BrowseScreen(catalogId: 1, url: _feedUrl),
+        ),
+      ],
+    );
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        feedRepositoryProvider.overrideWithValue(slowRepo),
+        favoritesRepositoryProvider
+            .overrideWithValue(FakeFavoritesRepository()),
+      ],
+      child: MaterialApp.router(routerConfig: router),
+    ));
+    await tester.pumpAndSettle();
+
+    // Trigger refresh — do NOT await (we want mid-refresh state)
+    final refreshIcon = find.byIcon(Icons.refresh);
+    await tester.tap(refreshIcon);
+    await tester.pump(); // one frame — refresh in progress
+
+    // Old content still visible
+    expect(find.text('Initial'), findsOneWidget);
+    // Progress indicator visible
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+
+    // Let refresh complete
+    slowRepo.complete(makeFeed(title: 'Refreshed'));
+    await tester.pumpAndSettle();
+    expect(find.text('Refreshed'), findsOneWidget);
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+  });
+
+  testWidgets('refresh failure shows snackbar and keeps old content',
+      (tester) async {
+    final initial = makeFeed(title: 'Initial');
+    // refreshFeed=null → throws on forceRefresh
+    await tester.pumpWidget(
+        buildApp(feed: initial, refreshFeed: null));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.refresh));
+    await tester.pumpAndSettle();
+
+    // Old content preserved
+    expect(find.text('Initial'), findsOneWidget);
+    // Snackbar shown
+    expect(find.byType(SnackBar), findsOneWidget);
+    expect(find.textContaining('Refresh failed'), findsOneWidget);
+  });
 }
 
 class _ThrowingFeedRepository implements FeedRepository {
@@ -268,4 +330,23 @@ class _ThrowingFeedRepository implements FeedRepository {
   Future<CachedFeed> getFeed(int catalogId, Uri url,
           {bool forceRefresh = false}) async =>
       throw Exception('no connection');
+}
+
+class _SlowFeedRepository implements FeedRepository {
+  final CachedFeed initialFeed;
+  Completer<CachedFeed>? _refreshCompleter;
+
+  _SlowFeedRepository({required this.initialFeed});
+
+  void complete(CachedFeed feed) => _refreshCompleter?.complete(feed);
+
+  @override
+  Future<CachedFeed> getFeed(int catalogId, Uri url,
+      {bool forceRefresh = false}) async {
+    if (forceRefresh) {
+      _refreshCompleter = Completer<CachedFeed>();
+      return _refreshCompleter!.future;
+    }
+    return initialFeed;
+  }
 }
