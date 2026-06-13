@@ -323,6 +323,58 @@ void main() {
     expect(find.byType(SnackBar), findsOneWidget);
     expect(find.textContaining('Refresh failed'), findsOneWidget);
   });
+
+  testWidgets('star icon is unfilled when URL is not a favorite', (tester) async {
+    await tester.pumpWidget(buildApp(feed: makeFeed(), favorites: []));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.star_border), findsOneWidget);
+    expect(find.byIcon(Icons.star), findsNothing);
+  });
+
+  testWidgets('star icon is filled when URL is a favorite', (tester) async {
+    final fav = Favorite(
+      id: 1,
+      catalogId: 1,
+      url: _feedUrl,
+      title: 'Test Feed',
+      sortOrder: 0,
+    );
+    await tester.pumpWidget(buildApp(feed: makeFeed(), favorites: [fav]));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.star), findsOneWidget);
+    expect(find.byIcon(Icons.star_border), findsNothing);
+  });
+
+  testWidgets('tapping star when not favorited adds to favorites', (tester) async {
+    // Use a repo we can inspect afterward.
+    final favRepo = FakeFavoritesRepository();
+    final feedRepo = FakeFeedRepository(initialFeed: makeFeed());
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, _) => BrowseScreen(catalogId: 1, url: _feedUrl),
+        ),
+      ],
+    );
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        feedRepositoryProvider.overrideWithValue(feedRepo),
+        favoritesRepositoryProvider.overrideWithValue(favRepo),
+      ],
+      child: MaterialApp.router(routerConfig: router),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.star_border));
+    await tester.pumpAndSettle();
+
+    expect(favRepo.favorites, hasLength(1));
+    expect(favRepo.favorites.first.url, _feedUrl);
+  });
 }
 
 class _ThrowingFeedRepository implements FeedRepository {
