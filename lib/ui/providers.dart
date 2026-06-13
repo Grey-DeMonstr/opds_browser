@@ -301,6 +301,8 @@ class _LastDownloadResultNotifier extends Notifier<DownloadDone?> {
 
   // ignore: use_setters_to_change_properties
   void set(DownloadDone value) => state = value;
+
+  void clear() => state = null;
 }
 
 final lastDownloadResultProvider =
