@@ -7,6 +7,7 @@ import 'package:opds_browser/data/shared_prefs_settings_repository.dart';
 import 'package:opds_browser/data/sqflite_catalog_repository.dart';
 import 'package:opds_browser/data/sqflite_favorites_repository.dart';
 import 'package:opds_browser/domain/entities.dart';
+import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/domain/opds_client.dart';
 import 'package:opds_browser/domain/repositories.dart';
 
@@ -86,3 +87,67 @@ class FavoritesNotifier extends AsyncNotifier<List<Favorite>> {
 final favoritesProvider =
     AsyncNotifierProvider<FavoritesNotifier, List<Favorite>>(
         FavoritesNotifier.new);
+
+// ── Browse screen ─────────────────────────────────────────────────────────────
+
+class BrowseState {
+  final CachedFeed feed;
+  final bool isRefreshing;
+
+  const BrowseState({required this.feed, this.isRefreshing = false});
+
+  BrowseState copyWith({CachedFeed? feed, bool? isRefreshing}) => BrowseState(
+        feed: feed ?? this.feed,
+        isRefreshing: isRefreshing ?? this.isRefreshing,
+      );
+}
+
+typedef BrowseArgs = (int, Uri);
+
+class BrowseNotifier extends AsyncNotifier<BrowseState> {
+  late BrowseArgs _args;
+
+  void _setArgs(BrowseArgs args) {
+    _args = args;
+  }
+
+  @override
+  Future<BrowseState> build() async {
+    final (catalogId, url) = _args;
+    final feed =
+        await ref.read(feedRepositoryProvider).getFeed(catalogId, url);
+    return BrowseState(feed: feed);
+  }
+
+  Future<void> refresh() async {
+    final currentState = state;
+    if (currentState is! AsyncData<BrowseState>) return;
+    final old = currentState.value;
+    state = AsyncData(old.copyWith(isRefreshing: true));
+    try {
+      final (catalogId, url) = _args;
+      final feed = await ref
+          .read(feedRepositoryProvider)
+          .getFeed(catalogId, url, forceRefresh: true);
+      state = AsyncData(BrowseState(feed: feed));
+    } catch (_) {
+      state = AsyncData(old.copyWith(isRefreshing: false));
+      rethrow;
+    }
+  }
+}
+
+final browseProvider = AsyncNotifierProvider.autoDispose
+    .family<BrowseNotifier, BrowseState, BrowseArgs>((args) {
+  return BrowseNotifier().._setArgs(args);
+});
+
+final isFavoriteProvider =
+    Provider.autoDispose.family<bool, BrowseArgs>((ref, args) {
+  final (catalogId, url) = args;
+  final favoritesAsync = ref.watch(favoritesProvider);
+  return favoritesAsync.whenData((favorites) {
+        return favorites.any((f) => f.catalogId == catalogId && f.url == url);
+      }).value ??
+      false;
+});
