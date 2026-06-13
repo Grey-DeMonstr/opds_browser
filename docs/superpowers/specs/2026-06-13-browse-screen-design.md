@@ -341,9 +341,8 @@ Note: navigation tests (#14) wrap with `MaterialApp.router` + `GoRouter` with a 
 
 ## Navigation notes
 
-- Sub-folder navigation uses `context.push(...)` — adds to the go_router stack, preserving back navigation.
+- Navigation uses `context.push(...)` — adds to the go_router stack, preserving back navigation.
 - `browseProvider` is `autoDispose` — when a screen is popped off the stack, its provider is disposed. Re-entering the screen re-runs `build()`, which hits the cache immediately (no network).
-- `context.go(...)` is reserved for StartScreen and SettingsScreen (stack-replacing navigation from the AppBar).
 
 ---
 
