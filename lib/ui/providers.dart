@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:opds_browser/data/app_database.dart';
 import 'package:opds_browser/data/caching_feed_repository.dart';
 import 'package:opds_browser/data/opds1/opds1_client.dart';
+import 'package:opds_browser/data/saf_download_storage.dart';
 import 'package:opds_browser/data/shared_prefs_settings_repository.dart';
 import 'package:opds_browser/data/sqflite_catalog_repository.dart';
 import 'package:opds_browser/data/sqflite_favorites_repository.dart';
@@ -10,6 +11,11 @@ import 'package:opds_browser/domain/entities.dart';
 import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/domain/opds_client.dart';
 import 'package:opds_browser/domain/repositories.dart';
+import 'package:saf/saf.dart';
+// ignore: implementation_imports
+import 'package:saf/src/storage_access_framework/api.dart' as saf_api;
+// ignore: implementation_imports
+import 'package:saf/src/storage_access_framework/document_file.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
@@ -164,4 +170,81 @@ final isFavoriteProvider =
         return favorites.any((f) => f.catalogId == catalogId && f.url == url);
       }).value ??
       false;
+});
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+
+final safPermissionCheckerProvider =
+    Provider<Future<bool> Function(String)>((ref) {
+  return (uri) async =>
+      (await Saf.isPersistedPermissionDirectoryFor(uri)) ?? false;
+});
+
+class SettingsNotifier extends AsyncNotifier<AppSettings> {
+  bool permissionRevoked = false;
+
+  @override
+  Future<AppSettings> build() async {
+    final repo = ref.read(settingsRepositoryProvider);
+    final checker = ref.read(safPermissionCheckerProvider);
+    var settings = await repo.load();
+    if (settings.target is CustomSafFolder) {
+      final uri = (settings.target as CustomSafFolder).uriString;
+      final hasPermission = await checker(uri);
+      if (!hasPermission) {
+        settings = settings.copyWith(target: const SystemDownloads());
+        await repo.save(settings);
+        permissionRevoked = true;
+      }
+    }
+    return settings;
+  }
+
+  Future<bool> pickCustomFolder() async {
+    final uri = await saf_api.openDocumentTree();
+    if (uri == null) return false;
+    final doc = await DocumentFile.fromTreeUri(Uri.parse(uri));
+    final name = doc?.name ?? uri;
+    final newSettings = (state.value ??
+            const AppSettings(target: SystemDownloads()))
+        .copyWith(target: CustomSafFolder(uri, name));
+    await ref.read(settingsRepositoryProvider).save(newSettings);
+    state = AsyncData(newSettings);
+    return true;
+  }
+
+  Future<void> setSystemDownloads() async {
+    final current = state.value;
+    if (current == null) return;
+    final newSettings = current.copyWith(target: const SystemDownloads());
+    await ref.read(settingsRepositoryProvider).save(newSettings);
+    state = AsyncData(newSettings);
+  }
+
+  Future<void> setCreateAuthorFolder(bool value) async {
+    final current = state.value;
+    if (current == null) return;
+    final newSettings = current.copyWith(createAuthorFolder: value);
+    await ref.read(settingsRepositoryProvider).save(newSettings);
+    state = AsyncData(newSettings);
+  }
+
+  Future<void> setCreateSeriesFolder(bool value) async {
+    final current = state.value;
+    if (current == null) return;
+    final newSettings = current.copyWith(createSeriesFolder: value);
+    await ref.read(settingsRepositoryProvider).save(newSettings);
+    state = AsyncData(newSettings);
+  }
+}
+
+final settingsProvider =
+    AsyncNotifierProvider<SettingsNotifier, AppSettings>(SettingsNotifier.new);
+
+final downloadStorageProvider = Provider<DownloadStorage?>((ref) {
+  final target = ref.watch(settingsProvider).value?.target;
+  return switch (target) {
+    CustomSafFolder(uriString: final uri) => SafDownloadStorage(uri),
+    _ => null,
+  };
 });
