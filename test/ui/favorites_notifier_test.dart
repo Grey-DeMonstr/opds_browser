@@ -80,4 +80,38 @@ void main() {
     final favorites = container.read(favoritesProvider).value!;
     expect(favorites, isEmpty);
   });
+
+  test('toggle() adds favorite when not present', () async {
+    final container = makeContainer();
+    addTearDown(container.dispose);
+
+    await container.read(favoritesProvider.future);
+    await container.read(favoritesProvider.notifier).toggle(
+          1, Uri.parse('https://a.com/feed'), 'Science',
+        );
+
+    final favorites = container.read(favoritesProvider).value!;
+    expect(favorites, hasLength(1));
+    expect(favorites.first.title, 'Science');
+    expect(favorites.first.catalogId, 1);
+  });
+
+  test('toggle() removes favorite when already present', () async {
+    final seed = Favorite(
+        id: 1,
+        catalogId: 1,
+        url: Uri.parse('https://a.com/feed'),
+        title: 'Science',
+        sortOrder: 0);
+    final container = makeContainer(initial: [seed]);
+    addTearDown(container.dispose);
+
+    await container.read(favoritesProvider.future);
+    await container.read(favoritesProvider.notifier).toggle(
+          1, Uri.parse('https://a.com/feed'), 'Science',
+        );
+
+    final favorites = container.read(favoritesProvider).value!;
+    expect(favorites, isEmpty);
+  });
 }
