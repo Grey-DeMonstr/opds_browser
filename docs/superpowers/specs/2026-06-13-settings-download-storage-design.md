@@ -72,6 +72,22 @@ class CustomSafFolder extends DownloadTarget {
 
 `SharedPrefsSettingsRepository` gains key `download_target_display_name` to persist the display name alongside the URI. Existing tests updated; roundtrip test gains a `displayName` assertion.
 
+### `AppSettings.copyWith`
+
+`SettingsNotifier` methods need to produce updated `AppSettings` values. Add `copyWith` to `AppSettings` in `lib/domain/entities.dart`:
+
+```dart
+AppSettings copyWith({
+  DownloadTarget? target,
+  bool? createAuthorFolder,
+  bool? createSeriesFolder,
+}) => AppSettings(
+  target: target ?? this.target,
+  createAuthorFolder: createAuthorFolder ?? this.createAuthorFolder,
+  createSeriesFolder: createSeriesFolder ?? this.createSeriesFolder,
+);
+```
+
 ---
 
 ## Section 2: Data layer
@@ -126,13 +142,26 @@ class SafDownloadStorage implements DownloadStorage {
 
 ## Section 3: State layer
 
+### `safPermissionCheckerProvider` (added to `lib/ui/providers.dart`)
+
+The permission check calls `Saf.isPersistedPermissionDirectoryFor()`, a platform channel call that throws `MissingPluginException` in host tests. Make it injectable:
+
+```dart
+final safPermissionCheckerProvider = Provider<Future<bool> Function(String)>(
+  (ref) => (uri) async =>
+      (await Saf.isPersistedPermissionDirectoryFor(uri)) ?? false,
+);
+```
+
+Tests override this with a simple `(uri) async => true/false` function.
+
 ### `SettingsNotifier` (added to `lib/ui/providers.dart`)
 
 `AsyncNotifier<AppSettings>`.
 
 **`build()`:**
 1. Load settings from `settingsRepositoryProvider`.
-2. If target is `CustomSafFolder`, check `Saf.isPersistedPermissionDirectoryFor(uriString)`.
+2. If target is `CustomSafFolder`, call `ref.read(safPermissionCheckerProvider)(uriString)`.
 3. If permission is revoked → silently revert to `SystemDownloads()`, save, set `permissionRevoked = true` on the notifier.
 
 **Methods:**
@@ -195,11 +224,32 @@ Downloads/[Jane Doe/][Great Series/]Jane Doe - Great Series #1 - Book Title.fb2
 
 Folder segments appear only when the corresponding checkbox is on.
 
-**Permission-revoked snackbar** — `ref.listen(settingsProvider, ...)` checks `notifier.permissionRevoked` after each state change; if true, shows:
+**Permission-revoked snackbar** — `SettingsScreen` must be a `ConsumerStatefulWidget`. In `initState`, register with `ref.listenManual(settingsProvider, ..., fireImmediately: true)`. The `fireImmediately: true` flag fires the callback with the *current* state immediately, so the snackbar appears whether the provider loaded before or after the screen opened:
 
-> "Custom downloads folder is no longer accessible — reverted to system Downloads."
+```dart
+@override
+void initState() {
+  super.initState();
+  ref.listenManual(settingsProvider, (_, next) {
+    if (next is AsyncData) {
+      final notifier = ref.read(settingsProvider.notifier);
+      if (notifier.permissionRevoked) {
+        notifier.permissionRevoked = false;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+              'Custom downloads folder is no longer accessible — reverted to system Downloads.',
+            ),
+          ));
+        });
+      }
+    }
+  }, fireImmediately: true);
+}
+```
 
-Then resets the flag.
+Without `fireImmediately: true`, if `settingsProvider` is already in `AsyncData` when the screen opens (a different widget watched it earlier), the `AsyncLoading → AsyncData` transition already happened and `ref.listen` never fires — the snackbar would be silently lost.
 
 **Radio grouping note:** `RadioListTile` requires a comparable group value. Because `SystemDownloads` and `CustomSafFolder` have different types (and `CustomSafFolder` carries state that varies), the radio group value is `settings.target is CustomSafFolder` (bool) rather than the target itself, avoiding equality issues.
 
@@ -213,20 +263,48 @@ Then resets the flag.
 - Add: switching to custom then back to system clears display name key.
 
 ### `test/ui/settings_screen_test.dart` (new)
-- Fake `SettingsRepository` via Riverpod override (same pattern as `start_screen_test.dart`).
+
+Widget tests cannot call `pickCustomFolder()` (it calls SAF platform code). Override `settingsProvider` with a `FakeSettingsNotifier` that replaces both `build()` and `pickCustomFolder()`:
+
+```dart
+class FakeSettingsNotifier extends SettingsNotifier {
+  final AppSettings _initial;
+  FakeSettingsNotifier(this._initial);
+
+  @override
+  Future<AppSettings> build() async => _initial; // no SAF call
+
+  @override
+  Future<bool> pickCustomFolder() async {
+    state = AsyncData(state.value!.copyWith(
+      target: const CustomSafFolder('content://fake/tree', 'Downloads'),
+    ));
+    return true;
+  }
+}
+```
+
+Wire it up: `settingsProvider.overrideWith(() => FakeSettingsNotifier(initialSettings))`.
+
 - Test: both radios render; current target is reflected.
-- Test: tapping "Custom folder" radio calls `pickCustomFolder()` (verify via fake).
-- Test: subtitle shows display name when `CustomSafFolder` is set.
+- Test: tapping "Custom folder" radio triggers `FakeSettingsNotifier.pickCustomFolder()`; subtitle updates to show display name.
+- Test: tapping "System Downloads" radio calls `setSystemDownloads()`.
 - Test: author checkbox toggles; series checkbox toggles.
 - Test: path caption updates when checkboxes change.
-- Test: permission-revoked snackbar appears when notifier flag is set.
+- Test: permission-revoked snackbar appears — set `notifier.permissionRevoked = true` on the fake notifier before pump, verify snackbar text after `pumpAndSettle()`.
 
 ### `test/ui/settings_notifier_test.dart` (new)
-- `SettingsNotifier` with fake `SettingsRepository`.
+Override both `settingsRepositoryProvider` (fake) and `safPermissionCheckerProvider` (inline function):
+
+```dart
+settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository(...)),
+safPermissionCheckerProvider.overrideWithValue((uri) async => false), // simulate revoked
+```
+
 - Test: `build()` loads settings correctly.
 - Test: `setSystemDownloads()` saves and updates state.
 - Test: `setCreateAuthorFolder(true)` saves and updates state.
-- Test: permission revoked → state reverts to SystemDownloads, `permissionRevoked` is true.
+- Test: permission revoked → state reverts to `SystemDownloads`, `notifier.permissionRevoked` is true (use `safPermissionCheckerProvider` override returning `false`).
   *(The `pickCustomFolder()` method cannot be unit-tested — it calls platform SAF code.)*
 
 ### `test/ui/settings_screen_test.dart` — pure function
@@ -246,12 +324,13 @@ Then resets the flag.
 
 | File | Change |
 |------|--------|
-| `lib/domain/entities.dart` | Add `displayName` to `CustomSafFolder` |
+| `lib/domain/entities.dart` | Add `displayName` to `CustomSafFolder`; add `AppSettings.copyWith` |
 | `lib/domain/repositories.dart` | Add `DownloadStorage` interface |
 | `lib/data/saf_download_storage.dart` | New: `SafDownloadStorage` |
 | `lib/data/shared_prefs_settings_repository.dart` | Persist `displayName` |
-| `lib/ui/providers.dart` | Add `SettingsNotifier`, `settingsProvider`, `downloadStorageProvider` |
+| `lib/ui/providers.dart` | Add `safPermissionCheckerProvider`, `SettingsNotifier`, `settingsProvider`, `downloadStorageProvider` |
 | `lib/ui/settings_screen.dart` | Full implementation (replaces stub) |
+| `test/domain/entities_test.dart` | Update `CustomSafFolder` construction to include `displayName` |
 | `test/data/shared_prefs_settings_repository_test.dart` | Update + extend |
 | `test/ui/settings_notifier_test.dart` | New |
 | `test/ui/settings_screen_test.dart` | New |
