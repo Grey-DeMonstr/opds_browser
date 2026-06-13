@@ -798,7 +798,7 @@ class _StartScreenContent extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
-            onPressed: () => context.go('/settings'),
+            onPressed: () => context.push('/settings'),
           ),
         ],
       ),
@@ -845,7 +845,7 @@ class _CatalogTile extends ConsumerWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      onTap: () => context.go(
+      onTap: () => context.push(
         '/browse?catalogId=${catalog.id}&url=${Uri.encodeComponent(catalog.rootUrl.toString())}',
       ),
       trailing: PopupMenuButton<_CatalogMenuAction>(
@@ -1132,7 +1132,7 @@ class _FavoriteTile extends ConsumerWidget {
     return ListTile(
       title: Text(favorite.title),
       subtitle: Text(parentTitle),
-      onTap: () => context.go(
+      onTap: () => context.push(
         '/browse?catalogId=${favorite.catalogId}&url=${Uri.encodeComponent(favorite.url.toString())}',
       ),
       trailing: PopupMenuButton<String>(

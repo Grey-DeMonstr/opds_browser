@@ -14,23 +14,15 @@ class StartScreen extends ConsumerWidget {
     final favoritesAsync = ref.watch(favoritesProvider);
 
     return catalogsAsync.when(
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
-      error: (e, _) => Scaffold(
-        body: Center(child: Text('Error: $e')),
-      ),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (e, _) => Scaffold(body: Center(child: Text('Error: $e'))),
       data: (catalogs) => favoritesAsync.when(
-        loading: () => const Scaffold(
-          body: Center(child: CircularProgressIndicator()),
-        ),
-        error: (e, _) => Scaffold(
-          body: Center(child: Text('Error: $e')),
-        ),
-        data: (favorites) => _StartScreenContent(
-          catalogs: catalogs,
-          favorites: favorites,
-        ),
+        loading: () =>
+            const Scaffold(body: Center(child: CircularProgressIndicator())),
+        error: (e, _) => Scaffold(body: Center(child: Text('Error: $e'))),
+        data: (favorites) =>
+            _StartScreenContent(catalogs: catalogs, favorites: favorites),
       ),
     );
   }
@@ -40,10 +32,7 @@ class _StartScreenContent extends ConsumerWidget {
   final List<Catalog> catalogs;
   final List<Favorite> favorites;
 
-  const _StartScreenContent({
-    required this.catalogs,
-    required this.favorites,
-  });
+  const _StartScreenContent({required this.catalogs, required this.favorites});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -53,7 +42,7 @@ class _StartScreenContent extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
-            onPressed: () => context.go('/settings'),
+            onPressed: () => context.push('/settings'),
           ),
         ],
       ),
@@ -79,8 +68,10 @@ class _StartScreenContent extends ConsumerWidget {
             ),
             SliverList(
               delegate: SliverChildBuilderDelegate(
-                (context, index) =>
-                    _FavoriteTile(favorite: favorites[index], catalogs: catalogs),
+                (context, index) => _FavoriteTile(
+                  favorite: favorites[index],
+                  catalogs: catalogs,
+                ),
                 childCount: favorites.length,
               ),
             ),
@@ -105,8 +96,7 @@ class _StartScreenContent extends ConsumerWidget {
           else
             SliverList(
               delegate: SliverChildBuilderDelegate(
-                (context, index) =>
-                    _CatalogTile(catalog: catalogs[index]),
+                (context, index) => _CatalogTile(catalog: catalogs[index]),
                 childCount: catalogs.length,
               ),
             ),
@@ -135,10 +125,7 @@ class _CatalogTile extends ConsumerWidget {
       trailing: PopupMenuButton<_CatalogMenuAction>(
         onSelected: (action) => _onMenuAction(context, ref, action),
         itemBuilder: (_) => const [
-          PopupMenuItem(
-            value: _CatalogMenuAction.edit,
-            child: Text('Edit'),
-          ),
+          PopupMenuItem(value: _CatalogMenuAction.edit, child: Text('Edit')),
           PopupMenuItem(
             value: _CatalogMenuAction.delete,
             child: Text('Delete'),
@@ -149,7 +136,10 @@ class _CatalogTile extends ConsumerWidget {
   }
 
   void _onMenuAction(
-      BuildContext context, WidgetRef ref, _CatalogMenuAction action) {
+    BuildContext context,
+    WidgetRef ref,
+    _CatalogMenuAction action,
+  ) {
     switch (action) {
       case _CatalogMenuAction.edit:
         showDialog<void>(
@@ -175,10 +165,12 @@ class _FavoriteTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final parentTitle = catalogs
-        .where((c) => c.id == favorite.catalogId)
-        .map((c) => c.title)
-        .firstOrNull ?? '';
+    final parentTitle =
+        catalogs
+            .where((c) => c.id == favorite.catalogId)
+            .map((c) => c.title)
+            .firstOrNull ??
+        '';
 
     return ListTile(
       title: Text(favorite.title),
@@ -191,10 +183,7 @@ class _FavoriteTile extends ConsumerWidget {
           await ref.read(favoritesProvider.notifier).remove(favorite.id);
         },
         itemBuilder: (_) => const [
-          PopupMenuItem(
-            value: 'remove',
-            child: Text('Remove from favourites'),
-          ),
+          PopupMenuItem(value: 'remove', child: Text('Remove from favourites')),
         ],
       ),
     );
