@@ -6,11 +6,14 @@ import 'package:opds_browser/ui/providers.dart';
 String buildPathExample(AppSettings settings) {
   const author = 'Jane Doe';
   const series = 'Great Series';
-  const fileName = 'Jane Doe - Great Series #1 - Book Title.fb2';
-  final parts = <String>['Downloads'];
-  if (settings.createAuthorFolder) parts.add(author);
-  if (settings.createSeriesFolder) parts.add(series);
-  return '${parts.join('/')}/$fileName';
+  final folders = <String>['Downloads'];
+  if (settings.createAuthorFolder) folders.add(author);
+  if (settings.createSeriesFolder) folders.add(series);
+  final fileParts = <String>[];
+  if (!settings.createAuthorFolder) fileParts.add(author);
+  if (!settings.createSeriesFolder) fileParts.add('$series #1');
+  fileParts.add('Book Title');
+  return '${folders.join('/')}/${fileParts.join(' - ')}.fb2';
 }
 
 class SettingsScreen extends ConsumerStatefulWidget {

@@ -82,25 +82,25 @@ void main() {
       );
     });
 
-    test('author folder enabled', () {
+    test('author folder enabled — author omitted from filename', () {
       const s = AppSettings(
           target: SystemDownloads(), createAuthorFolder: true);
       expect(
         buildPathExample(s),
-        'Downloads/Jane Doe/Jane Doe - Great Series #1 - Book Title.fb2',
+        'Downloads/Jane Doe/Great Series #1 - Book Title.fb2',
       );
     });
 
-    test('series folder enabled', () {
+    test('series folder enabled — series omitted from filename', () {
       const s = AppSettings(
           target: SystemDownloads(), createSeriesFolder: true);
       expect(
         buildPathExample(s),
-        'Downloads/Great Series/Jane Doe - Great Series #1 - Book Title.fb2',
+        'Downloads/Great Series/Jane Doe - Book Title.fb2',
       );
     });
 
-    test('both folders enabled', () {
+    test('both folders enabled — author and series omitted from filename', () {
       const s = AppSettings(
         target: SystemDownloads(),
         createAuthorFolder: true,
@@ -108,7 +108,7 @@ void main() {
       );
       expect(
         buildPathExample(s),
-        'Downloads/Jane Doe/Great Series/Jane Doe - Great Series #1 - Book Title.fb2',
+        'Downloads/Jane Doe/Great Series/Book Title.fb2',
       );
     });
   });
@@ -212,8 +212,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text(
-            'Downloads/Jane Doe/Jane Doe - Great Series #1 - Book Title.fb2'),
+        find.text('Downloads/Jane Doe/Great Series #1 - Book Title.fb2'),
         findsOneWidget,
       );
     });
