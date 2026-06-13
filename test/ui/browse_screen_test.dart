@@ -201,6 +201,66 @@ void main() {
     expect(find.textContaining('Error'), findsOneWidget);
     expect(find.widgetWithText(TextButton, 'Retry'), findsOneWidget);
   });
+
+  testWidgets('navigation entry renders folder icon and title', (tester) async {
+    final feed = makeFeed(entries: [navEntry(title: 'Sub Folder')]);
+    await tester.pumpWidget(buildApp(feed: feed));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.folder), findsOneWidget);
+    expect(find.text('Sub Folder'), findsOneWidget);
+  });
+
+  testWidgets('navigation entry renders subtitle when present', (tester) async {
+    final feed = makeFeed(
+        entries: [navEntry(title: 'Science', subtitle: 'Physics and more')]);
+    await tester.pumpWidget(buildApp(feed: feed));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Science'), findsOneWidget);
+    expect(find.text('Physics and more'), findsOneWidget);
+  });
+
+  testWidgets('book entry renders title and author', (tester) async {
+    final feed = makeFeed(
+        entries: [bookEntry(title: 'Dune', authors: ['Frank Herbert'])]);
+    await tester.pumpWidget(buildApp(feed: feed));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Dune'), findsOneWidget);
+    expect(find.text('Frank Herbert'), findsOneWidget);
+    // No cover URL → placeholder book icon
+    expect(find.byIcon(Icons.book), findsOneWidget);
+  });
+
+  testWidgets('book entry renders series line when present', (tester) async {
+    final feed = makeFeed(entries: [
+      bookEntry(title: 'Dune', series: 'Dune Chronicles', seriesIndex: 1)
+    ]);
+    await tester.pumpWidget(buildApp(feed: feed));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Dune Chronicles #1'), findsOneWidget);
+  });
+
+  testWidgets('mixed feed preserves entry order', (tester) async {
+    final feed = makeFeed(entries: [
+      navEntry(title: 'Folder A'),
+      bookEntry(title: 'Book B'),
+      navEntry(title: 'Folder C'),
+    ]);
+    await tester.pumpWidget(buildApp(feed: feed));
+    await tester.pumpAndSettle();
+
+    final tiles = tester.widgetList(find.byType(ListTile)).toList();
+    expect(tiles.length, 3);
+    // Folder A first, Book B second, Folder C third — verify by text position.
+    final folderA = tester.getTopLeft(find.text('Folder A'));
+    final bookB = tester.getTopLeft(find.text('Book B'));
+    final folderC = tester.getTopLeft(find.text('Folder C'));
+    expect(folderA.dy < bookB.dy, true);
+    expect(bookB.dy < folderC.dy, true);
+  });
 }
 
 class _ThrowingFeedRepository implements FeedRepository {
