@@ -85,7 +85,7 @@ void main() {
     final result = await downloader.download(_book, _link, _settings);
 
     expect(result, 'content://uri/123');
-    expect(storage.writtenFileName, buildFileName(_book, _link));
+    expect(storage.writtenFileName, buildFileName(_book, _link, _settings));
     expect(storage.writtenSegments, isEmpty);
   });
 

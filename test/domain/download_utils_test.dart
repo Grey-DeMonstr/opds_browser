@@ -24,6 +24,17 @@ BookEntry _book({
       acquisitionLinks: links ?? [_link('FB2')],
     );
 
+const _noFolders = AppSettings(target: SystemDownloads());
+const _authorFolder =
+    AppSettings(target: SystemDownloads(), createAuthorFolder: true);
+const _seriesFolder =
+    AppSettings(target: SystemDownloads(), createSeriesFolder: true);
+const _bothFolders = AppSettings(
+  target: SystemDownloads(),
+  createAuthorFolder: true,
+  createSeriesFolder: true,
+);
+
 void main() {
   // ── preferredLink ──────────────────────────────────────────────────────────
 
@@ -61,7 +72,7 @@ void main() {
     test('single author, series with integer index', () {
       final book = _book(series: 'Great Series', seriesIndex: 1.0);
       expect(
-        buildFileName(book, _link('FB2')),
+        buildFileName(book, _link('FB2'), _noFolders),
         'Jane Doe - Great Series #1 - Book Title.fb2',
       );
     });
@@ -69,58 +80,91 @@ void main() {
     test('two authors joined with comma', () {
       final book = _book(authors: ['Jane Doe', 'John Smith']);
       expect(
-        buildFileName(book, _link('EPUB')),
+        buildFileName(book, _link('EPUB'), _noFolders),
         'Jane Doe, John Smith - Book Title.epub',
       );
     });
 
     test('three or more authors appends et al.', () {
       final book = _book(authors: ['A', 'B', 'C']);
-      expect(buildFileName(book, _link('PDF')), 'A et al. - Book Title.pdf');
+      expect(buildFileName(book, _link('PDF'), _noFolders), 'A et al. - Book Title.pdf');
     });
 
     test('no authors — author segment omitted entirely', () {
       final book = _book(authors: []);
-      expect(buildFileName(book, _link('FB2')), 'Book Title.fb2');
+      expect(buildFileName(book, _link('FB2'), _noFolders), 'Book Title.fb2');
     });
 
     test('no series — series segment omitted', () {
-      expect(buildFileName(_book(), _link('FB2')), 'Jane Doe - Book Title.fb2');
+      expect(buildFileName(_book(), _link('FB2'), _noFolders), 'Jane Doe - Book Title.fb2');
     });
 
     test('series with no index — no #index', () {
       final book = _book(series: 'My Series');
-      expect(buildFileName(book, _link('FB2')), 'Jane Doe - My Series - Book Title.fb2');
+      expect(buildFileName(book, _link('FB2'), _noFolders), 'Jane Doe - My Series - Book Title.fb2');
     });
 
     test('seriesIndex 1.0 formats as "1"', () {
       final book = _book(series: 'S', seriesIndex: 1.0);
-      expect(buildFileName(book, _link('FB2')), 'Jane Doe - S #1 - Book Title.fb2');
+      expect(buildFileName(book, _link('FB2'), _noFolders), 'Jane Doe - S #1 - Book Title.fb2');
     });
 
     test('seriesIndex 1.5 formats as "1.5"', () {
       final book = _book(series: 'S', seriesIndex: 1.5);
-      expect(buildFileName(book, _link('FB2')), 'Jane Doe - S #1.5 - Book Title.fb2');
+      expect(buildFileName(book, _link('FB2'), _noFolders), 'Jane Doe - S #1.5 - Book Title.fb2');
     });
 
     test('FB2.ZIP extension is fb2.zip', () {
-      expect(buildFileName(_book(), _link('FB2.ZIP')), 'Jane Doe - Book Title.fb2.zip');
+      expect(buildFileName(_book(), _link('FB2.ZIP'), _noFolders), 'Jane Doe - Book Title.fb2.zip');
     });
 
     test('EPUB extension is epub', () {
-      expect(buildFileName(_book(), _link('EPUB')), 'Jane Doe - Book Title.epub');
+      expect(buildFileName(_book(), _link('EPUB'), _noFolders), 'Jane Doe - Book Title.epub');
     });
 
     test('illegal chars in title replaced with _', () {
       final book = _book(title: 'Title: A/B*C');
-      expect(buildFileName(book, _link('FB2')), 'Jane Doe - Title_ A_B_C.fb2');
+      expect(buildFileName(book, _link('FB2'), _noFolders), 'Jane Doe - Title_ A_B_C.fb2');
     });
 
     test('filename capped at 200 chars, extension preserved', () {
       final book = _book(title: 'T' * 300);
-      final result = buildFileName(book, _link('FB2'));
+      final result = buildFileName(book, _link('FB2'), _noFolders);
       expect(result.length, lessThanOrEqualTo(200));
       expect(result.endsWith('.fb2'), isTrue);
+    });
+
+    test('author folder enabled — author omitted from filename', () {
+      final book = _book(series: 'Great Series', seriesIndex: 1.0);
+      expect(
+        buildFileName(book, _link('FB2'), _authorFolder),
+        'Great Series #1 - Book Title.fb2',
+      );
+    });
+
+    test('series folder enabled — series omitted from filename', () {
+      final book = _book(series: 'Great Series', seriesIndex: 1.0);
+      expect(
+        buildFileName(book, _link('FB2'), _seriesFolder),
+        'Jane Doe - Book Title.fb2',
+      );
+    });
+
+    test('both folders enabled — author and series omitted from filename', () {
+      final book = _book(series: 'Great Series', seriesIndex: 1.0);
+      expect(
+        buildFileName(book, _link('FB2'), _bothFolders),
+        'Book Title.fb2',
+      );
+    });
+
+    test('author folder enabled but no authors — title only', () {
+      final book = _book(authors: [], series: 'S', seriesIndex: 1.0);
+      expect(buildFileName(book, _link('FB2'), _authorFolder), 'S #1 - Book Title.fb2');
+    });
+
+    test('series folder enabled but no series — author still included', () {
+      expect(buildFileName(_book(), _link('FB2'), _seriesFolder), 'Jane Doe - Book Title.fb2');
     });
   });
 

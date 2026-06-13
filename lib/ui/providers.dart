@@ -353,7 +353,7 @@ class DownloadNotifier extends Notifier<DownloadState> {
     }
 
     final link = entry.acquisitionLinks.firstWhere((l) => l.url == _linkUrl);
-    final fileName = buildFileName(entry, link);
+    final fileName = buildFileName(entry, link, settings);
 
     try {
       final result = await downloader.download(entry, link, settings);

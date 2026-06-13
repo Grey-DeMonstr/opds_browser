@@ -22,7 +22,7 @@ class BookDownloader {
     AppSettings settings,
   ) async {
     final segments = buildPathSegments(settings, entry);
-    final fileName = buildFileName(entry, link);
+    final fileName = buildFileName(entry, link, settings);
 
     if (await _storage.exists(segments, fileName)) {
       return _alreadyExists;

@@ -14,13 +14,15 @@ AcquisitionLink? preferredLink(List<AcquisitionLink> links) {
 }
 
 /// Builds the sanitized download filename for [entry] in [link]'s format.
-/// Pattern: `<Authors> - [<Series> #<Index> - ]<Title>.<ext>`
+/// Author and series segments are omitted when [settings] indicates they are
+/// already encoded in the folder path (createAuthorFolder / createSeriesFolder).
+/// Pattern: `[<Authors> - ][<Series> #<Index> - ]<Title>.<ext>`
 /// Capped at 200 characters (truncates title segment, preserves extension).
-String buildFileName(BookEntry entry, AcquisitionLink link) {
+String buildFileName(BookEntry entry, AcquisitionLink link, AppSettings settings) {
   final parts = <String>[];
   final authors = _authorString(entry.authors);
-  if (authors != null) parts.add(authors);
-  if (entry.series != null) {
+  if (authors != null && !settings.createAuthorFolder) parts.add(authors);
+  if (entry.series != null && !settings.createSeriesFolder) {
     final idx = entry.seriesIndex;
     parts.add(idx != null
         ? '${entry.series} #${_formatIndex(idx)}'
