@@ -14,7 +14,7 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
     final kind = prefs.getString(_keyKind) ?? 'system';
     final uri = prefs.getString(_keyUri);
     final target = (kind == 'custom' && uri != null)
-        ? CustomSafFolder(uri)
+        ? CustomSafFolder(uri, '')
         : const SystemDownloads();
     return AppSettings(
       target: target,

@@ -41,9 +41,14 @@ void main() {
     });
 
     test('CustomSafFolder stores uriString', () {
-      const d = CustomSafFolder('content://com.example/tree/doc');
+      const d = CustomSafFolder('content://com.example/tree/doc', 'doc');
       expect(d, isA<DownloadTarget>());
       expect(d.uriString, 'content://com.example/tree/doc');
+    });
+
+    test('CustomSafFolder stores displayName', () {
+      const d = CustomSafFolder('content://com.example/tree/doc', 'My Downloads');
+      expect(d.displayName, 'My Downloads');
     });
   });
 
@@ -57,7 +62,7 @@ void main() {
 
     test('stores custom target and folder flags', () {
       const s = AppSettings(
-        target: CustomSafFolder('content://uri'),
+        target: CustomSafFolder('content://uri', 'Folder'),
         createAuthorFolder: true,
         createSeriesFolder: true,
       );
@@ -65,6 +70,21 @@ void main() {
       expect((s.target as CustomSafFolder).uriString, 'content://uri');
       expect(s.createAuthorFolder, isTrue);
       expect(s.createSeriesFolder, isTrue);
+    });
+
+    test('copyWith creates updated copy preserving unchanged fields', () {
+      const s = AppSettings(target: SystemDownloads());
+      final s2 = s.copyWith(createAuthorFolder: true);
+      expect(s2.createAuthorFolder, isTrue);
+      expect(s2.createSeriesFolder, isFalse);
+      expect(s2.target, isA<SystemDownloads>());
+    });
+
+    test('copyWith can change target', () {
+      const s = AppSettings(target: SystemDownloads(), createAuthorFolder: true);
+      final s2 = s.copyWith(target: const CustomSafFolder('u', 'F'));
+      expect(s2.target, isA<CustomSafFolder>());
+      expect(s2.createAuthorFolder, isTrue);
     });
   });
 }

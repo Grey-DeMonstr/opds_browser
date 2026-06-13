@@ -27,7 +27,7 @@ void main() {
     test('save and load roundtrip CustomSafFolder', () async {
       const uri = 'content://com.android.externalstorage/tree/primary';
       final repo = SharedPrefsSettingsRepository();
-      await repo.save(const AppSettings(target: CustomSafFolder(uri)));
+      await repo.save(const AppSettings(target: CustomSafFolder(uri, '')));
       final loaded = await repo.load();
       expect(loaded.target, isA<CustomSafFolder>());
       expect((loaded.target as CustomSafFolder).uriString, uri);
@@ -36,7 +36,7 @@ void main() {
     test('switching from custom back to system clears stored URI', () async {
       const uri = 'content://com.android.externalstorage/tree/primary';
       final repo = SharedPrefsSettingsRepository();
-      await repo.save(const AppSettings(target: CustomSafFolder(uri)));
+      await repo.save(const AppSettings(target: CustomSafFolder(uri, '')));
       await repo.save(const AppSettings(target: SystemDownloads()));
       final loaded = await repo.load();
       expect(loaded.target, isA<SystemDownloads>());
