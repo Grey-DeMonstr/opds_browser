@@ -111,7 +111,9 @@ class FolderDownloadJob {
       for (final entry in cached.feed.entries) {
         if (entry is NavigationEntry) {
           queue.add((entry.url, depth + 1));
-        } else if (entry is BookEntry && tasks.length < 2000) {
+        } else if (entry is BookEntry &&
+            entry.acquisitionLinks.isNotEmpty &&
+            tasks.length < 2000) {
           tasks.add((entry, folderPreferredLink(entry.acquisitionLinks)));
         }
       }
