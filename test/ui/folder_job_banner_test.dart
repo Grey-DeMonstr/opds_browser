@@ -91,6 +91,14 @@ void main() {
     expect(find.textContaining('Stopped at limit'), findsOneWidget);
   });
 
+  testWidgets('tapping CANCEL is accepted during FolderJobScanning', (tester) async {
+    await tester.pumpWidget(_wrap(const FolderJobScanning(foldersFound: 5)));
+    await tester.tap(find.widgetWithText(TextButton, 'CANCEL'));
+    await tester.pump();
+    // cancel() is a no-op when no job is running (_job is null in stub), but must not throw
+    expect(find.widgetWithText(TextButton, 'CANCEL'), findsOneWidget);
+  });
+
   testWidgets('tapping DISMISS calls dismiss() on notifier', (tester) async {
     FolderJobState? latestState;
     final stub = _StubNotifier(const FolderJobDone(

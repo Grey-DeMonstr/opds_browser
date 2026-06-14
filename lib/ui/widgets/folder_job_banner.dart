@@ -9,8 +9,6 @@ class FolderJobBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(folderDownloadProvider);
-    if (state is FolderJobIdle) return const SizedBox.shrink();
-
     final notifier = ref.read(folderDownloadProvider.notifier);
 
     final String message;
@@ -52,11 +50,11 @@ class FolderJobBanner extends ConsumerWidget {
           :final wasCancelled,
         ):
         final parts = <String>[
-          if (wasCancelled) 'Cancelled.',
+          if (wasCancelled) 'Cancelled',
           'Downloaded: $downloaded · Skipped: $skipped · Failed: $failed',
           if (stoppedAtLimit) 'Stopped at limit',
         ];
-        message = parts.join(' ');
+        message = parts.join(' · ');
         trailing = TextButton(
           onPressed: notifier.dismiss,
           child: const Text('DISMISS'),
