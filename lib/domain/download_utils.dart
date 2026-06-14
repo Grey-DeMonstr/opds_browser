@@ -17,12 +17,13 @@ AcquisitionLink? preferredLink(List<AcquisitionLink> links) {
 /// Unlike [preferredLink], never returns null — falls back to EPUB > PDF >
 /// MOBI > first listed when no FB2 variant is present.
 AcquisitionLink folderPreferredLink(List<AcquisitionLink> links) {
+  assert(links.isNotEmpty);
   final preferred = preferredLink(links);
   if (preferred != null) return preferred;
   const priority = ['EPUB', 'PDF', 'MOBI'];
   for (final label in priority) {
-    final m = links.where((l) => l.formatLabel == label).firstOrNull;
-    if (m != null) return m;
+    final match = links.where((l) => l.formatLabel == label).firstOrNull;
+    if (match != null) return match;
   }
   return links.first;
 }
