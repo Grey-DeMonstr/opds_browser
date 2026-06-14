@@ -13,6 +13,20 @@ AcquisitionLink? preferredLink(List<AcquisitionLink> links) {
   return fb2; // null when no FB2 variant → caller shows format picker
 }
 
+/// Selects the best [AcquisitionLink] for an automated folder download.
+/// Unlike [preferredLink], never returns null — falls back to EPUB > PDF >
+/// MOBI > first listed when no FB2 variant is present.
+AcquisitionLink folderPreferredLink(List<AcquisitionLink> links) {
+  final preferred = preferredLink(links);
+  if (preferred != null) return preferred;
+  const priority = ['EPUB', 'PDF', 'MOBI'];
+  for (final label in priority) {
+    final m = links.where((l) => l.formatLabel == label).firstOrNull;
+    if (m != null) return m;
+  }
+  return links.first;
+}
+
 /// Builds the sanitized download filename for [entry] in [link]'s format.
 /// Author and series segments are omitted when [settings] indicates they are
 /// already encoded in the folder path (createAuthorFolder / createSeriesFolder).
