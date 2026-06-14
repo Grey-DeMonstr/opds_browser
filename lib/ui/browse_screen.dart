@@ -95,6 +95,7 @@ class _BrowseContent extends ConsumerWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(msg),
+          showCloseIcon: true,
           action: result.alreadyExisted
               ? null
               : SnackBarAction(
