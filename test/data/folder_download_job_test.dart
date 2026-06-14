@@ -311,7 +311,7 @@ void main() {
 
       final done = states.last as FolderJobDone;
       expect(done.wasCancelled, isTrue);
-      expect(downloadCount, lessThan(10));
+      expect(downloadCount, lessThanOrEqualTo(4)); // 2 workers × up to 2 in-flight when cancel fires
     });
   });
 }
