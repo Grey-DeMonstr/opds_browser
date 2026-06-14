@@ -148,7 +148,7 @@ class FolderDownloadJob {
 
     Future<void> runWorker() async {
       while (!_cancelled) {
-        final i = index++;
+        final i = index++; // safe: no await between read and write (Dart single-isolate)
         if (i >= tasks.length) return;
         final (entry, link) = tasks[i];
         try {
