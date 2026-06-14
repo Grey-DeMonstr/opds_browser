@@ -192,6 +192,81 @@ void main() {
     });
   });
 
+  group('download phase', () {
+    test('successful download increments downloaded count', () async {
+      final repo = _FakeFeedRepository();
+      final root = Uri.parse('http://example.com/root');
+      repo.addFeed(root, [_book('1'), _book('2')]);
+
+      final states = <FolderJobState>[];
+      await _makeJob(repo,
+        download: (e, l, s) async => 'content://ok',
+        states: states,
+      ).run(1, root);
+
+      final done = states.last as FolderJobDone;
+      expect(done.downloaded, 2);
+      expect(done.skipped, 0);
+      expect(done.failed, 0);
+    });
+
+    test('already_exists sentinel increments skipped count', () async {
+      final repo = _FakeFeedRepository();
+      final root = Uri.parse('http://example.com/root');
+      repo.addFeed(root, [_book('1')]);
+
+      final states = <FolderJobState>[];
+      await _makeJob(repo,
+        download: (e, l, s) async => 'already_exists',
+        states: states,
+      ).run(1, root);
+
+      final done = states.last as FolderJobDone;
+      expect(done.skipped, 1);
+      expect(done.downloaded, 0);
+    });
+
+    test('download exception increments failed count, job continues', () async {
+      final repo = _FakeFeedRepository();
+      final root = Uri.parse('http://example.com/root');
+      repo.addFeed(root, [_book('bad'), _book('good')]);
+
+      var calls = 0;
+      final states = <FolderJobState>[];
+      await _makeJob(repo,
+        download: (e, l, s) async {
+          calls++;
+          if (e.title == 'Book bad') throw Exception('network error');
+          return 'content://ok';
+        },
+        states: states,
+      ).run(1, root);
+
+      final done = states.last as FolderJobDone;
+      expect(done.failed, 1);
+      expect(done.downloaded, 1);
+      expect(calls, 2); // both attempted
+    });
+
+    test('FolderJobDownloading progress emitted after each download', () async {
+      final repo = _FakeFeedRepository();
+      final root = Uri.parse('http://example.com/root');
+      repo.addFeed(root, [_book('1'), _book('2'), _book('3')]);
+
+      final states = <FolderJobState>[];
+      await _makeJob(repo,
+        download: (e, l, s) async => 'content://ok',
+        states: states,
+      ).run(1, root);
+
+      final downloading = states.whereType<FolderJobDownloading>().toList();
+      // At minimum: initial (0/3) + 3 updates (one per completed download)
+      // With 2 workers some may arrive out of order but total should be 3
+      expect(downloading.last.completed, 3);
+      expect(downloading.last.total, 3);
+    });
+  });
+
   group('cancellation', () {
     test('cancel during scan emits done with wasCancelled = true', () async {
       final repo = _CancellingFeedRepository(cancelAfterCalls: 2);
