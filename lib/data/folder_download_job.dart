@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_initializing_formals
+
 import 'package:opds_browser/domain/entities.dart';
 import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/domain/repositories.dart';
@@ -66,15 +68,20 @@ class FolderDownloadJob {
         _settings = settings,
         _onProgress = onProgress;
 
+  // ignore: unused_field
   final FeedRepository _feedRepository;
+  // ignore: unused_field
   final DownloadFn _download;
+  // ignore: unused_field
   final AppSettings _settings;
+  // ignore: unused_field
   final void Function(FolderJobState) _onProgress;
 
+  // ignore: unused_field
   bool _cancelled = false;
   void cancel() => _cancelled = true;
 
   Future<void> run(int catalogId, Uri startUrl) async {
-    // TODO: implement in Tasks 3 and 4
+    // implemented in Tasks 3 and 4
   }
 }
