@@ -131,23 +131,51 @@ class FolderDownloadJob {
       return;
     }
 
-    // ── Phase 2: Download (placeholder — full impl in Task 4) ─────────────
+    // ── Phase 2: download with concurrency 2 ─────────────────────────────
     var downloaded = 0;
+    var skipped = 0;
     var failed = 0;
 
-    for (final (entry, link) in tasks) {
-      if (_cancelled) break;
-      try {
-        await _download(entry, link, _settings);
-        downloaded++;
-      } catch (_) {
-        failed++;
+    _onProgress(FolderJobDownloading(
+      completed: 0,
+      total: tasks.length,
+      downloaded: 0,
+      skipped: 0,
+      failed: 0,
+    ));
+
+    var index = 0;
+
+    Future<void> runWorker() async {
+      while (!_cancelled) {
+        final i = index++;
+        if (i >= tasks.length) return;
+        final (entry, link) = tasks[i];
+        try {
+          final result = await _download(entry, link, _settings);
+          if (result == 'already_exists') {
+            skipped++;
+          } else {
+            downloaded++;
+          }
+        } catch (_) {
+          failed++;
+        }
+        _onProgress(FolderJobDownloading(
+          completed: downloaded + skipped + failed,
+          total: tasks.length,
+          downloaded: downloaded,
+          skipped: skipped,
+          failed: failed,
+        ));
       }
     }
 
+    await Future.wait([runWorker(), runWorker()]);
+
     _onProgress(FolderJobDone(
       downloaded: downloaded,
-      skipped: 0,
+      skipped: skipped,
       failed: failed,
       stoppedAtLimit: stoppedAtLimit,
       wasCancelled: _cancelled,
