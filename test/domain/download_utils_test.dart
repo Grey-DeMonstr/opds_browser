@@ -209,4 +209,43 @@ void main() {
       expect(buildPathSegments(s, _book()), isEmpty);
     });
   });
+
+  // ── folderPreferredLink ───────────────────────────────────────────────────
+
+  group('folderPreferredLink', () {
+    test('single link returned directly', () {
+      final link = _link('EPUB');
+      expect(folderPreferredLink([link]), same(link));
+    });
+
+    test('FB2.ZIP preferred over EPUB when present', () {
+      final fb2zip = _link('FB2.ZIP');
+      final epub = _link('EPUB');
+      expect(folderPreferredLink([epub, fb2zip]), same(fb2zip));
+    });
+
+    test('no FB2 variants — EPUB preferred over PDF', () {
+      final epub = _link('EPUB');
+      final pdf = _link('PDF');
+      expect(folderPreferredLink([pdf, epub]), same(epub));
+    });
+
+    test('no FB2, no EPUB — PDF preferred over MOBI', () {
+      final pdf = _link('PDF');
+      final mobi = _link('MOBI');
+      expect(folderPreferredLink([mobi, pdf]), same(pdf));
+    });
+
+    test('no FB2, no EPUB, no PDF — MOBI returned', () {
+      final mobi = _link('MOBI');
+      final djvu = _link('DJVU');
+      expect(folderPreferredLink([djvu, mobi]), same(mobi));
+    });
+
+    test('no priority match — first link returned', () {
+      final first = _link('DJVU');
+      final second = _link('AZW3');
+      expect(folderPreferredLink([first, second]), same(first));
+    });
+  });
 }
