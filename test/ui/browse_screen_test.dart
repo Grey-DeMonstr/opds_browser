@@ -6,12 +6,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:opds_browser/data/folder_download_job.dart';
 import 'package:opds_browser/domain/entities.dart';
 import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/domain/repositories.dart';
 import 'package:opds_browser/ui/book_details_sheet.dart';
 import 'package:opds_browser/ui/browse_screen.dart';
 import 'package:opds_browser/ui/providers.dart';
+import 'package:opds_browser/ui/widgets/folder_job_banner.dart';
 
 // ── Fakes ────────────────────────────────────────────────────────────────────
 
@@ -73,6 +75,13 @@ class FakeFavoritesRepository implements FavoritesRepository {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+class _FolderJobStub extends FolderDownloadNotifier {
+  _FolderJobStub(this._state);
+  final FolderJobState _state;
+  @override
+  FolderJobState build() => _state;
+}
+
 final _feedUrl = Uri.parse('http://example.com/feed');
 
 CachedFeed makeFeed({
@@ -120,6 +129,7 @@ Widget buildApp({
   int catalogId = 1,
   Uri? url,
   void Function(GoRouterState)? onBrowse,
+  FolderJobState folderJobState = const FolderJobIdle(),
 }) {
   final feedRepo =
       FakeFeedRepository(initialFeed: feed, refreshFeed: refreshFeed);
@@ -147,6 +157,7 @@ Widget buildApp({
     overrides: [
       feedRepositoryProvider.overrideWithValue(feedRepo),
       favoritesRepositoryProvider.overrideWithValue(favRepo),
+      folderDownloadProvider.overrideWith(() => _FolderJobStub(folderJobState)),
     ],
     child: MaterialApp.router(routerConfig: router),
   );
@@ -439,6 +450,107 @@ void main() {
     expect(capturedUri, isNotNull);
     expect(capturedUri, contains('catalogId=1'));
     expect(capturedUri, contains(Uri.encodeComponent(subUrl)));
+  });
+
+  group('folder download banner', () {
+    testWidgets('banner widget present and hidden when FolderJobIdle',
+        (tester) async {
+      await tester.pumpWidget(buildApp(
+        feed: makeFeed(),
+        folderJobState: const FolderJobIdle(),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.byType(FolderJobBanner), findsOneWidget);
+      expect(find.widgetWithText(TextButton, 'CANCEL'), findsNothing);
+      expect(find.widgetWithText(TextButton, 'DISMISS'), findsNothing);
+    });
+
+    testWidgets('banner shows scanning message during FolderJobScanning',
+        (tester) async {
+      await tester.pumpWidget(buildApp(
+        feed: makeFeed(),
+        folderJobState: const FolderJobScanning(foldersFound: 7),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Scanning'), findsOneWidget);
+      expect(find.textContaining('7'), findsWidgets);
+      expect(find.widgetWithText(TextButton, 'CANCEL'), findsOneWidget);
+    });
+
+    testWidgets('banner shows downloading progress during FolderJobDownloading',
+        (tester) async {
+      await tester.pumpWidget(buildApp(
+        feed: makeFeed(),
+        folderJobState: const FolderJobDownloading(
+          completed: 3,
+          total: 10,
+          downloaded: 2,
+          skipped: 1,
+          failed: 0,
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('3'), findsWidgets);
+      expect(find.textContaining('10'), findsWidgets);
+      expect(find.textContaining('1 skipped'), findsOneWidget);
+    });
+
+    testWidgets('banner shows summary with DISMISS button when done',
+        (tester) async {
+      await tester.pumpWidget(buildApp(
+        feed: makeFeed(),
+        folderJobState: const FolderJobDone(
+          downloaded: 5,
+          skipped: 2,
+          failed: 1,
+          stoppedAtLimit: false,
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Downloaded: 5'), findsOneWidget);
+      expect(find.widgetWithText(TextButton, 'DISMISS'), findsOneWidget);
+    });
+  });
+
+  group('Download-folder button', () {
+    testWidgets('button enabled when FolderJobIdle', (tester) async {
+      await tester.pumpWidget(buildApp(
+        feed: makeFeed(),
+        folderJobState: const FolderJobIdle(),
+      ));
+      await tester.pumpAndSettle();
+      final btn = tester.widget<IconButton>(
+        find.widgetWithIcon(IconButton, Icons.download_for_offline_outlined),
+      );
+      expect(btn.onPressed, isNotNull);
+    });
+
+    testWidgets('button disabled during FolderJobScanning', (tester) async {
+      await tester.pumpWidget(buildApp(
+        feed: makeFeed(),
+        folderJobState: const FolderJobScanning(foldersFound: 1),
+      ));
+      await tester.pumpAndSettle();
+      final btn = tester.widget<IconButton>(
+        find.widgetWithIcon(IconButton, Icons.download_for_offline_outlined),
+      );
+      expect(btn.onPressed, isNull);
+    });
+
+    testWidgets('tapping button shows confirmation dialog', (tester) async {
+      await tester.pumpWidget(buildApp(
+        feed: makeFeed(),
+        folderJobState: const FolderJobIdle(),
+      ));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.widgetWithIcon(IconButton, Icons.download_for_offline_outlined),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Download folder'), findsOneWidget);
+      expect(find.widgetWithText(TextButton, 'DOWNLOAD'), findsOneWidget);
+      expect(find.widgetWithText(TextButton, 'CANCEL'), findsOneWidget);
+    });
   });
 }
 
