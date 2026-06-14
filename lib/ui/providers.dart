@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
+import 'package:opds_browser/data/folder_download_job.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
@@ -390,3 +391,49 @@ String _mapError(OpdsException e) => switch (e) {
       ParseException() => 'The server response is not a valid OPDS feed.',
       UnsupportedProtocolException() => 'Not a supported OPDS catalogue.',
     };
+
+// ── Folder download ───────────────────────────────────────────────────────────
+
+class FolderDownloadNotifier extends Notifier<FolderJobState> {
+  FolderDownloadJob? _job;
+
+  @override
+  FolderJobState build() => const FolderJobIdle();
+
+  Future<void> start(int catalogId, Uri url) async {
+    if (state is! FolderJobIdle && state is! FolderJobDone) return;
+    state = const FolderJobScanning(foldersFound: 0);
+
+    final downloader = ref.read(bookDownloaderProvider);
+    if (downloader == null) {
+      state = const FolderJobDone(
+        downloaded: 0,
+        skipped: 0,
+        failed: 0,
+        stoppedAtLimit: false,
+        wasCancelled: true,
+      );
+      return;
+    }
+
+    _job = FolderDownloadJob(
+      feedRepository: ref.read(feedRepositoryProvider),
+      download: downloader.download,
+      settings: ref.read(settingsProvider).requireValue,
+      onProgress: (s) {
+        state = s;
+      },
+    );
+
+    await _job!.run(catalogId, url);
+    _job = null;
+  }
+
+  void cancel() => _job?.cancel();
+
+  void dismiss() => state = const FolderJobIdle();
+}
+
+final folderDownloadProvider =
+    NotifierProvider<FolderDownloadNotifier, FolderJobState>(
+        FolderDownloadNotifier.new);
