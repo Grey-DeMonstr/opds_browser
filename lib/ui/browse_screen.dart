@@ -14,8 +14,14 @@ import 'package:opds_browser/ui/widgets/folder_job_banner.dart';
 class BrowseScreen extends ConsumerStatefulWidget {
   final int catalogId;
   final Uri url;
+  final String? navTitle;
 
-  const BrowseScreen({required this.catalogId, required this.url, super.key});
+  const BrowseScreen({
+    required this.catalogId,
+    required this.url,
+    this.navTitle,
+    super.key,
+  });
 
   @override
   ConsumerState<BrowseScreen> createState() => _BrowseScreenState();
@@ -62,6 +68,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
         state: state,
         isFavorite: isFavorite,
         onRefresh: _refresh,
+        navTitle: widget.navTitle,
       ),
     );
   }
@@ -72,12 +79,14 @@ class _BrowseContent extends ConsumerWidget {
   final BrowseState state;
   final bool isFavorite;
   final Future<void> Function() onRefresh;
+  final String? navTitle;
 
   const _BrowseContent({
     required this.args,
     required this.state,
     required this.isFavorite,
     required this.onRefresh,
+    this.navTitle,
   });
 
   @override
@@ -127,7 +136,7 @@ class _BrowseContent extends ConsumerWidget {
             icon: Icon(isFavorite ? Icons.star : Icons.star_border),
             onPressed: () => ref
                 .read(favoritesProvider.notifier)
-                .toggle(catalogId, url, state.feed.feed.title),
+                .toggle(catalogId, url, navTitle ?? state.feed.feed.title),
           ),
           IconButton(
             icon: const Icon(Icons.download_for_offline_outlined),
@@ -240,7 +249,7 @@ class _NavigationEntryTile extends StatelessWidget {
           ? Text(entry.subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis)
           : null,
       onTap: () => context.push(
-        '/browse?catalogId=$catalogId&url=${Uri.encodeComponent(entry.url.toString())}',
+        '/browse?catalogId=$catalogId&url=${Uri.encodeComponent(entry.url.toString())}&title=${Uri.encodeComponent(entry.title)}',
       ),
     );
   }
