@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -28,9 +29,9 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       await ref.read(browseProvider(_args).notifier).refresh();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Refresh failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Refresh failed: $e')));
     }
   }
 
@@ -40,9 +41,8 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     final isFavorite = ref.watch(isFavoriteProvider(_args));
 
     return browseAsync.when(
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
         body: Center(
           child: Column(
@@ -125,9 +125,9 @@ class _BrowseContent extends ConsumerWidget {
           ),
           IconButton(
             icon: Icon(isFavorite ? Icons.star : Icons.star_border),
-            onPressed: () => ref.read(favoritesProvider.notifier).toggle(
-                  catalogId, url, state.feed.feed.title,
-                ),
+            onPressed: () => ref
+                .read(favoritesProvider.notifier)
+                .toggle(catalogId, url, state.feed.feed.title),
           ),
           IconButton(
             icon: const Icon(Icons.download_for_offline_outlined),
@@ -149,8 +149,7 @@ class _BrowseContent extends ConsumerWidget {
                             child: const Text('CANCEL'),
                           ),
                           TextButton(
-                            onPressed: () =>
-                                Navigator.pop(dialogContext, true),
+                            onPressed: () => Navigator.pop(dialogContext, true),
                             child: const Text('DOWNLOAD'),
                           ),
                         ],
@@ -168,6 +167,18 @@ class _BrowseContent extends ConsumerWidget {
       ),
       body: Column(
         children: [
+          if (kDebugMode)
+            Container(
+              width: double.infinity,
+              color: Colors.black,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: SelectableText(
+                url.toString(),
+                style: Theme.of(
+                  context,
+                ).textTheme.labelSmall?.copyWith(fontFamily: 'monospace'),
+              ),
+            ),
           if (state.isRefreshing) const LinearProgressIndicator(),
           Expanded(
             child: RefreshIndicator(
@@ -181,23 +192,20 @@ class _BrowseContent extends ConsumerWidget {
                     )
                   else
                     SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final entry = entries[index];
-                          return switch (entry) {
-                            NavigationEntry e => _NavigationEntryTile(
-                                entry: e,
-                                catalogId: catalogId,
-                                key: ValueKey(e.url),
-                              ),
-                            BookEntry e => _BookEntryTile(
-                                entry: e,
-                                key: ValueKey(e.title),
-                              ),
-                          };
-                        },
-                        childCount: entries.length,
-                      ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final entry = entries[index];
+                        return switch (entry) {
+                          NavigationEntry e => _NavigationEntryTile(
+                            entry: e,
+                            catalogId: catalogId,
+                            key: ValueKey(e.url),
+                          ),
+                          BookEntry e => _BookEntryTile(
+                            entry: e,
+                            key: ValueKey(e.title),
+                          ),
+                        };
+                      }, childCount: entries.length),
                     ),
                 ],
               ),
@@ -229,11 +237,7 @@ class _NavigationEntryTile extends StatelessWidget {
       leading: const Icon(Icons.folder),
       title: Text(entry.title),
       subtitle: entry.subtitle != null
-          ? Text(
-              entry.subtitle!,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            )
+          ? Text(entry.subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis)
           : null,
       onTap: () => context.push(
         '/browse?catalogId=$catalogId&url=${Uri.encodeComponent(entry.url.toString())}',
@@ -252,8 +256,8 @@ class _BookEntryTile extends StatelessWidget {
     final authors = entry.authors.join(', ');
     final seriesText = entry.series != null
         ? (entry.seriesIndex != null
-            ? '${entry.series} #${_formatSeriesIndex(entry.seriesIndex!)}'
-            : entry.series!)
+              ? '${entry.series} #${_formatSeriesIndex(entry.seriesIndex!)}'
+              : entry.series!)
         : null;
     final hasSubtitle = authors.isNotEmpty || seriesText != null;
 
