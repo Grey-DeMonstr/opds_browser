@@ -398,7 +398,13 @@ class FolderDownloadNotifier extends Notifier<FolderJobState> {
   FolderDownloadJob? _job;
 
   @override
-  FolderJobState build() => const FolderJobIdle();
+  FolderJobState build() {
+    // Warm up bookDownloaderProvider (and its settingsProvider dependency) so
+    // that the first start() call never sees a null downloader due to settings
+    // still being in AsyncLoading.
+    ref.watch(bookDownloaderProvider);
+    return const FolderJobIdle();
+  }
 
   Future<void> start(int catalogId, Uri url) async {
     if (state is! FolderJobIdle && state is! FolderJobDone) return;
