@@ -431,7 +431,7 @@ void main() {
     expect(find.byType(BookDetailsSheet), findsOneWidget);
   });
 
-  testWidgets('tapping navigation entry pushes /browse with catalogId and url',
+  testWidgets('tapping navigation entry pushes /browse with catalogId, url, and title',
       (tester) async {
     final subUrl = 'http://example.com/sub';
     final feed = makeFeed(entries: [navEntry(title: 'Sub Folder', url: subUrl)]);
@@ -450,6 +450,73 @@ void main() {
     expect(capturedUri, isNotNull);
     expect(capturedUri, contains('catalogId=1'));
     expect(capturedUri, contains(Uri.encodeComponent(subUrl)));
+    expect(capturedUri, contains(Uri.encodeComponent('Sub Folder')));
+  });
+
+  testWidgets('tapping star uses navTitle as bookmark title when provided',
+      (tester) async {
+    final favRepo = FakeFavoritesRepository();
+    final feedRepo =
+        FakeFeedRepository(initialFeed: makeFeed(title: 'Feed Title'));
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, _) => BrowseScreen(
+            catalogId: 1,
+            url: _feedUrl,
+            navTitle: 'Nav Entry Title',
+          ),
+        ),
+      ],
+    );
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        feedRepositoryProvider.overrideWithValue(feedRepo),
+        favoritesRepositoryProvider.overrideWithValue(favRepo),
+        folderDownloadProvider.overrideWith(() => _FolderJobStub(const FolderJobIdle())),
+      ],
+      child: MaterialApp.router(routerConfig: router),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.star_border));
+    await tester.pumpAndSettle();
+
+    expect(favRepo.favorites, hasLength(1));
+    expect(favRepo.favorites.first.title, 'Nav Entry Title');
+  });
+
+  testWidgets('tapping star uses feed title when navTitle is not provided',
+      (tester) async {
+    final favRepo = FakeFavoritesRepository();
+    final feedRepo =
+        FakeFeedRepository(initialFeed: makeFeed(title: 'Feed Title'));
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, _) => BrowseScreen(catalogId: 1, url: _feedUrl),
+        ),
+      ],
+    );
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        feedRepositoryProvider.overrideWithValue(feedRepo),
+        favoritesRepositoryProvider.overrideWithValue(favRepo),
+        folderDownloadProvider.overrideWith(() => _FolderJobStub(const FolderJobIdle())),
+      ],
+      child: MaterialApp.router(routerConfig: router),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.star_border));
+    await tester.pumpAndSettle();
+
+    expect(favRepo.favorites, hasLength(1));
+    expect(favRepo.favorites.first.title, 'Feed Title');
   });
 
   group('folder download banner', () {

@@ -18,6 +18,7 @@ final _router = GoRouter(
         return BrowseScreen(
           catalogId: int.parse(params['catalogId']!),
           url: Uri.parse(params['url']!),
+          navTitle: params['title'],
         );
       },
     ),
