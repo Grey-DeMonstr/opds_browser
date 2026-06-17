@@ -196,7 +196,9 @@ void main() {
   });
 
   group('Secondary format rows', () {
-    testWidgets('all format rows are visible', (tester) async {
+    testWidgets('preferred format absent; other formats shown', (tester) async {
+      // FB2 is preferred → must NOT appear as a secondary row.
+      // EPUB and PDF are "the other formats" per spec §9.1 and must be shown.
       final entry = BookEntry(
         title: 'Book Title',
         authors: ['Jane Doe'],
@@ -211,7 +213,52 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      expect(find.text('FB2'), findsNothing);
+      expect(find.text('EPUB'), findsOneWidget);
+      expect(find.text('PDF'), findsOneWidget);
+    });
+
+    testWidgets('FB2.ZIP preferred — FB2 still listed as secondary row',
+        (tester) async {
+      // When both FB2.ZIP and FB2 are present, FB2.ZIP is preferred (auto-selected).
+      // FB2 is "the other format" and must remain as a secondary row.
+      // FB2.ZIP itself must NOT appear in secondary rows.
+      final entry = BookEntry(
+        title: 'Book Title',
+        authors: ['Jane Doe'],
+        acquisitionLinks: [_link('FB2.ZIP'), _link('FB2')],
+      );
+
+      await tester.pumpWidget(
+        _buildApp(
+          entry: entry,
+          mockClient: MockClient((_) async => http.Response.bytes([1], 200)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('FB2.ZIP'), findsNothing);
       expect(find.text('FB2'), findsOneWidget);
+    });
+
+    testWidgets('no preferred (EPUB+PDF): all formats shown as secondary rows',
+        (tester) async {
+      // No FB2 variant → preferred is null → picker dialog on Download tap.
+      // All formats must still be visible as secondary tap-to-download rows.
+      final entry = BookEntry(
+        title: 'Book Title',
+        authors: ['Jane Doe'],
+        acquisitionLinks: [_link('EPUB'), _link('PDF')],
+      );
+
+      await tester.pumpWidget(
+        _buildApp(
+          entry: entry,
+          mockClient: MockClient((_) async => http.Response.bytes([1], 200)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
       expect(find.text('EPUB'), findsOneWidget);
       expect(find.text('PDF'), findsOneWidget);
     });
