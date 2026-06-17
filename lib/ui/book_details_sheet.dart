@@ -104,19 +104,22 @@ class _BookDetailsSheetState extends ConsumerState<BookDetailsSheet> {
                     ),
             ),
             const SizedBox(height: 8),
-            ...entry.acquisitionLinks.map(
-              (link) => ListTile(
-                title: Text(link.formatLabel),
-                onTap: isDownloading
-                    ? null
-                    : () {
-                        setState(() => _activeDownloadUrl = link.url);
-                        ref
-                            .read(downloadNotifierProvider(link.url).notifier)
-                            .start(entry, settings);
-                      },
-              ),
-            ),
+            ...entry.acquisitionLinks
+                .where((link) => link != preferred)
+                .map(
+                  (link) => ListTile(
+                    title: Text(link.formatLabel),
+                    onTap: isDownloading
+                        ? null
+                        : () {
+                            setState(() => _activeDownloadUrl = link.url);
+                            ref
+                                .read(
+                                    downloadNotifierProvider(link.url).notifier)
+                                .start(entry, settings);
+                          },
+                  ),
+                ),
           ],
         ),
       ),
