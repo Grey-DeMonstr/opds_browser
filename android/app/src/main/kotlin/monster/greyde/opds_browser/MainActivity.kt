@@ -1,4 +1,4 @@
-package com.example.opds_browser
+package monster.greyde.opds_browser
 
 import io.flutter.embedding.android.FlutterActivity
 
