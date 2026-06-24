@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:opds_browser/domain/entities.dart';
@@ -82,34 +84,46 @@ class _SettingsBody extends ConsumerWidget {
     return ListView(
       children: [
         const ListTile(title: Text('Downloads folder')),
-        RadioGroup<bool>(
-          groupValue: isCustom,
-          onChanged: (value) {
-            if (value == true) {
-              notifier.pickCustomFolder();
-            } else {
-              notifier.setSystemDownloads();
-            }
-          },
-          child: Column(
-            children: [
-              RadioListTile<bool>(
-                title: const Text('System Downloads folder'),
-                value: false,
-              ),
-              ListTile(
-                leading: const Radio<bool>(value: true),
-                title: const Text('Custom folder…'),
-                subtitle: isCustom
-                    ? Text(
-                        'Selected: ${(settings.target as CustomSafFolder).displayName}',
-                      )
-                    : const Text('Tap to select a folder'),
-                onTap: () => notifier.pickCustomFolder(),
-              ),
-            ],
+        if (Platform.isAndroid) ...[
+          ListTile(
+            title: const Text('Custom folder…'),
+            subtitle: isCustom
+                ? Text(
+                    'Selected: ${(settings.target as CustomSafFolder).displayName}',
+                  )
+                : const Text('Tap to select a folder'),
+            onTap: () => notifier.pickCustomFolder(),
           ),
-        ),
+        ] else ...[
+          RadioGroup<bool>(
+            groupValue: isCustom,
+            onChanged: (value) {
+              if (value == true) {
+                notifier.pickCustomFolder();
+              } else {
+                notifier.setSystemDownloads();
+              }
+            },
+            child: Column(
+              children: [
+                RadioListTile<bool>(
+                  title: const Text('System Downloads folder'),
+                  value: false,
+                ),
+                ListTile(
+                  leading: const Radio<bool>(value: true),
+                  title: const Text('Custom folder…'),
+                  subtitle: isCustom
+                      ? Text(
+                          'Selected: ${(settings.target as CustomSafFolder).displayName}',
+                        )
+                      : const Text('Tap to select a folder'),
+                  onTap: () => notifier.pickCustomFolder(),
+                ),
+              ],
+            ),
+          ),
+        ],
         const Divider(),
         const ListTile(title: Text('File organization')),
         CheckboxListTile(
