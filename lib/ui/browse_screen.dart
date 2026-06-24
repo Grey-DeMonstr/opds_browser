@@ -7,6 +7,8 @@ import 'package:open_filex/open_filex.dart';
 import 'package:opds_browser/data/folder_download_job.dart';
 import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/domain/time_formatter.dart';
+import 'package:opds_browser/domain/download_utils.dart';
+import 'package:opds_browser/domain/entities.dart';
 import 'package:opds_browser/ui/book_details_sheet.dart';
 import 'package:opds_browser/ui/providers.dart';
 import 'package:opds_browser/ui/widgets/folder_job_banner.dart';
@@ -255,20 +257,47 @@ class _NavigationEntryTile extends StatelessWidget {
   }
 }
 
-class _BookEntryTile extends StatelessWidget {
+class _BookEntryTile extends ConsumerStatefulWidget {
   final BookEntry entry;
 
   const _BookEntryTile({required this.entry, super.key});
 
   @override
+  ConsumerState<_BookEntryTile> createState() => _BookEntryTileState();
+}
+
+class _BookEntryTileState extends ConsumerState<_BookEntryTile> {
+  Uri? _downloadUrl;
+
+  Uri get _defaultWatchUrl =>
+      (preferredLink(widget.entry.acquisitionLinks) ??
+              widget.entry.acquisitionLinks.first)
+          .url;
+
+  @override
   Widget build(BuildContext context) {
+    final entry = widget.entry;
     final authors = entry.authors.join(', ');
     final seriesText = entry.series != null
         ? (entry.seriesIndex != null
               ? '${entry.series} #${_formatSeriesIndex(entry.seriesIndex!)}'
               : entry.series!)
         : null;
-    final hasSubtitle = authors.isNotEmpty || seriesText != null;
+
+    final hasLinks = entry.acquisitionLinks.isNotEmpty;
+    DownloadState? downloadState;
+    if (hasLinks) {
+      final watchUrl = _downloadUrl ?? _defaultWatchUrl;
+      downloadState = ref.watch(downloadNotifierProvider(watchUrl));
+      ref.listen(downloadNotifierProvider(watchUrl), (_, state) {
+        if (state is DownloadFailed && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Download failed: ${state.message}')),
+          );
+        }
+      });
+    }
+    final isDownloading = downloadState is DownloadInProgress;
 
     return ListTile(
       onTap: () => showModalBottomSheet<void>(
@@ -289,17 +318,71 @@ class _BookEntryTile extends StatelessWidget {
             : const Icon(Icons.book),
       ),
       title: Text(entry.title, maxLines: 2, overflow: TextOverflow.ellipsis),
-      subtitle: hasSubtitle
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (authors.isNotEmpty) Text(authors),
-                if (seriesText != null) Text(seriesText),
-              ],
-            )
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (authors.isNotEmpty) Text(authors),
+          Text(seriesText ?? ''),
+        ],
+      ),
+      isThreeLine: authors.isNotEmpty,
+      trailing: hasLinks
+          ? isDownloading
+              ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : IconButton(
+                  icon: const Icon(Icons.download_outlined),
+                  onPressed: () => _onDownloadTap(context),
+                )
           : null,
-      isThreeLine: authors.isNotEmpty && seriesText != null,
+    );
+  }
+
+  Future<void> _onDownloadTap(BuildContext context) async {
+    final entry = widget.entry;
+    final settings = ref.read(settingsProvider).value ??
+        const AppSettings(target: SystemDownloads());
+    final preferred = preferredLink(entry.acquisitionLinks);
+    if (preferred != null) {
+      setState(() => _downloadUrl = preferred.url);
+      ref
+          .read(downloadNotifierProvider(preferred.url).notifier)
+          .start(entry, settings);
+    } else {
+      final chosen =
+          await _showFormatPicker(context, entry.acquisitionLinks);
+      if (chosen == null || !mounted) return;
+      setState(() => _downloadUrl = chosen.url);
+      ref
+          .read(downloadNotifierProvider(chosen.url).notifier)
+          .start(entry, settings);
+    }
+  }
+
+  Future<AcquisitionLink?> _showFormatPicker(
+    BuildContext context,
+    List<AcquisitionLink> links,
+  ) {
+    return showDialog<AcquisitionLink>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Choose format'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: links
+              .map(
+                (l) => TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(l),
+                  child: Text(l.formatLabel),
+                ),
+              )
+              .toList(),
+        ),
+      ),
     );
   }
 }
