@@ -289,6 +289,38 @@ void main() {
     expect(find.text('Dune Chronicles #1'), findsOneWidget);
   });
 
+  testWidgets('book entry with authors and no series sets isThreeLine true',
+      (tester) async {
+    final feed = makeFeed(entries: [
+      bookEntry(title: 'Dune', authors: ['Frank Herbert']),
+    ]);
+    await tester.pumpWidget(buildApp(feed: feed));
+    await tester.pumpAndSettle();
+
+    final tile = tester.widget<ListTile>(find.byType(ListTile));
+    expect(tile.isThreeLine, isTrue);
+  });
+
+  testWidgets('book entry shows download icon button', (tester) async {
+    final feed = makeFeed(entries: [bookEntry(title: 'My Book')]);
+    await tester.pumpWidget(buildApp(feed: feed));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.download_outlined), findsOneWidget);
+  });
+
+  testWidgets('tapping book row download button triggers download',
+      (tester) async {
+    final feed = makeFeed(entries: [bookEntry(title: 'My Book')]);
+    await tester.pumpWidget(buildAppWithDownload(feed: feed));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.download_outlined));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Download failed'), findsOneWidget);
+  });
+
   testWidgets('mixed feed preserves entry order', (tester) async {
     final feed = makeFeed(entries: [
       navEntry(title: 'Folder A'),

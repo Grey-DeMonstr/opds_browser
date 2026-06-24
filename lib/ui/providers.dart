@@ -9,7 +9,6 @@ import 'package:opds_browser/data/app_database.dart';
 import 'package:opds_browser/data/book_downloader.dart';
 import 'package:opds_browser/data/caching_feed_repository.dart';
 import 'package:opds_browser/data/file_system_download_storage.dart';
-import 'package:opds_browser/data/media_store_download_storage.dart';
 import 'package:opds_browser/data/opds1/opds1_client.dart';
 import 'package:opds_browser/data/saf_download_storage.dart';
 import 'package:opds_browser/data/shared_prefs_settings_repository.dart';
@@ -20,11 +19,7 @@ import 'package:opds_browser/domain/entities.dart';
 import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/domain/opds_client.dart';
 import 'package:opds_browser/domain/repositories.dart';
-import 'package:saf/saf.dart';
-// ignore: implementation_imports
-import 'package:saf/src/storage_access_framework/api.dart' as saf_api;
-// ignore: implementation_imports
-import 'package:saf/src/storage_access_framework/document_file.dart';
+import 'package:saf_util/saf_util.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
@@ -188,8 +183,7 @@ final safPermissionCheckerProvider =
   if (!Platform.isAndroid) {
     return (path) => Directory(path).exists();
   }
-  return (uri) async =>
-      (await Saf.isPersistedPermissionDirectoryFor(uri)) ?? false;
+  return (uri) => SafUtil().hasPersistedPermission(uri, checkWrite: true);
 });
 
 class SettingsNotifier extends AsyncNotifier<AppSettings> {
@@ -225,13 +219,15 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
       state = AsyncData(newSettings);
       return true;
     }
-    final uri = await saf_api.openDocumentTree();
-    if (uri == null) return false;
-    final doc = await DocumentFile.fromTreeUri(Uri.parse(uri));
-    final name = doc?.name ?? uri;
+    final dir = await SafUtil().pickDirectory(
+      persistablePermission: true,
+      writePermission: true,
+    );
+    if (dir == null) return false;
+    final name = dir.name.isNotEmpty ? dir.name : dir.uri;
     final newSettings = (state.value ??
             const AppSettings(target: SystemDownloads()))
-        .copyWith(target: CustomSafFolder(uri, name));
+        .copyWith(target: CustomSafFolder(dir.uri, name));
     await ref.read(settingsRepositoryProvider).save(newSettings);
     state = AsyncData(newSettings);
     return true;
@@ -268,7 +264,7 @@ final settingsProvider =
 final downloadStorageProvider = Provider<DownloadStorage?>((ref) {
   final target = ref.watch(settingsProvider).value?.target;
   return switch (target) {
-    SystemDownloads() when Platform.isAndroid => MediaStoreDownloadStorage(),
+    SystemDownloads() when Platform.isAndroid => null,
     SystemDownloads() => FileSystemDownloadStorage.downloads(),
     CustomSafFolder(uriString: final uri) when Platform.isAndroid =>
       SafDownloadStorage(uri),
