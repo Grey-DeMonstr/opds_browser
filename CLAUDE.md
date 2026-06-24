@@ -19,13 +19,12 @@ Repository is local only, all development happens in the `master` branch. No mer
 
 ```powershell
 flutter pub get               # resolve dependencies
+dart format .                 # format all Dart files
 flutter analyze               # static analysis (must be clean)
 flutter test                  # run all tests (host only, no device needed)
 dart run tool/check.dart      # canonical quality gate: analyze + test
 make check                    # same, via Makefile
 ```
-
-> `tool/check.dart` and `Makefile` are created in scaffold Task 7.
 
 ## Architecture
 
@@ -33,6 +32,7 @@ make check                    # same, via Makefile
 lib/
   domain/    # entities, value objects, repository interfaces, OpdsClient interface
   data/      # OPDS 1.x impl, sqflite DAOs, settings store, download engine
+    opds1/   # Opds1Client + feed parser
   ui/        # screens, widgets, Riverpod providers
   app.dart   # router + theme (MaterialApp, go_router wired here eventually)
   main.dart  # runApp entry point
@@ -55,7 +55,7 @@ test/
 | Settings | `shared_preferences` |
 | Cover images | `cached_network_image` |
 | Open file | `open_filex` |
-| Android storage | `shared_storage` (SAF + MediaStore) |
+| Android storage | `saf_stream` + `saf_util` (SAF); MediaStore via direct Android API |
 | Lints | `flutter_lints` + strict modes (see `analysis_options.yaml`) |
 
 ## Key Constraints
