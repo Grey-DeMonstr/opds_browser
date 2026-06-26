@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:open_filex/open_filex.dart';
+import 'package:opds_browser/data/android_file_opener.dart';
 import 'package:opds_browser/data/folder_download_job.dart';
 import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/domain/time_formatter.dart';
@@ -118,7 +118,7 @@ class _BrowseContent extends ConsumerWidget {
               : SnackBarAction(
                   label: 'Open',
                   onPressed: () =>
-                      OpenFilex.open(result.contentUri, type: result.mimeType),
+                      openFile(result.contentUri, result.mimeType),
                 ),
         ),
       );
