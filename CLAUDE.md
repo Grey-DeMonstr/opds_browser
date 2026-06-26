@@ -54,7 +54,6 @@ test/
 | Local DB | `sqflite` (raw SQL, thin DAOs) |
 | Settings | `shared_preferences` |
 | Cover images | `cached_network_image` |
-| Open file | `open_filex` |
 | Android storage | `saf_stream` + `saf_util` (SAF); MediaStore via direct Android API |
 | Lints | `flutter_lints` + strict modes (see `analysis_options.yaml`) |
 
