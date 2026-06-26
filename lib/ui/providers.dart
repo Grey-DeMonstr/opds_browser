@@ -409,13 +409,11 @@ String _mapError(OpdsException e) => switch (e) {
 
 class FolderDownloadNotifier extends Notifier<FolderJobState> {
   FolderDownloadJob? _job;
+  int _jobGen = 0;
 
   @override
   FolderJobState build() {
-    // Warm up bookDownloaderProvider (and its settingsProvider dependency) so
-    // that the first start() call never sees a null downloader due to settings
-    // still being in AsyncLoading.
-    ref.watch(bookDownloaderProvider);
+    ref.watch(bookDownloaderProvider); // warm up settings so first start() sees non-null
     return const FolderJobIdle();
   }
 
@@ -434,22 +432,44 @@ class FolderDownloadNotifier extends Notifier<FolderJobState> {
       return;
     }
 
+    final gen = ++_jobGen;
     _job = FolderDownloadJob(
       feedRepository: ref.read(feedRepositoryProvider),
       downloadFn: downloader.download,
       settings: ref.read(settingsProvider).requireValue,
       onProgress: (s) {
-        state = s;
+        if (_jobGen == gen) state = s;
       },
     );
 
     await _job!.run(catalogId, url);
+    // _job kept alive for confirmDownload()
+  }
+
+  Future<void> confirmDownload(Set<Uri> checkedBooks) async {
+    if (state is! FolderJobTreeReady) return;
+    final gen = _jobGen;
+    await _job!.download(checkedBooks);
+    // Only clear _job if gen hasn't been superseded (e.g. by reset())
+    if (_jobGen == gen) _job = null;
+  }
+
+  void updateSelection(Set<Uri> checkedBooks) {
+    if (state is FolderJobTreeReady) {
+      state = (state as FolderJobTreeReady).copyWith(checkedBooks: checkedBooks);
+    }
+  }
+
+  /// Cancel in-flight job and return to idle.
+  /// Called when user navigates back from FolderTreeScreen without completing.
+  void reset() {
+    ++_jobGen; // invalidate any pending onProgress callbacks
+    _job?.cancel();
     _job = null;
+    state = const FolderJobIdle();
   }
 
   void cancel() => _job?.cancel();
-
-  void dismiss() => state = const FolderJobIdle();
 }
 
 final folderDownloadProvider =

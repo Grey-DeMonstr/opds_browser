@@ -8,7 +8,7 @@ import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/domain/repositories.dart';
 import 'package:opds_browser/ui/providers.dart';
 
-// ── Fakes ────────────────────────────────────────────────────────────────────
+// ── Fakes ─────────────────────────────────────────────────────────────────────
 
 class _EmptyFeedRepo implements FeedRepository {
   @override
@@ -21,15 +21,39 @@ class _EmptyFeedRepo implements FeedRepository {
       );
 }
 
+class _OneFeedRepo implements FeedRepository {
+  @override
+  Future<CachedFeed> getFeed(int catalogId, Uri url,
+          {bool forceRefresh = false}) async =>
+      CachedFeed(
+        feed: ParsedFeed(
+          title: 'Feed',
+          entries: [
+            BookEntry(
+              title: 'B',
+              authors: const ['A'],
+              acquisitionLinks: [
+                AcquisitionLink(
+                  url: Uri.parse('http://x.com/b.epub'),
+                  mimeType: 'application/epub+zip',
+                  formatLabel: 'EPUB',
+                ),
+              ],
+            ),
+          ],
+        ),
+        fetchedAt: DateTime.now(),
+        fromCache: false,
+      );
+}
+
 class _SlowFeedRepo implements FeedRepository {
   final _completer = Completer<CachedFeed>();
-
   void complete() => _completer.complete(CachedFeed(
         feed: const ParsedFeed(title: 'Done', entries: []),
         fetchedAt: DateTime.now(),
         fromCache: false,
       ));
-
   @override
   Future<CachedFeed> getFeed(int catalogId, Uri url,
           {bool forceRefresh = false}) =>
@@ -68,7 +92,7 @@ ProviderContainer _container({FeedRepository? feedRepo}) {
   return c;
 }
 
-// ── Tests ────────────────────────────────────────────────────────────────────
+// ── Tests ─────────────────────────────────────────────────────────────────────
 
 void main() {
   test('initial state is FolderJobIdle', () {
@@ -83,37 +107,70 @@ void main() {
     expect(c.read(folderDownloadProvider), isA<FolderJobDone>());
   });
 
-  test('start() no-op when job is already scanning', () async {
+  test('start() with one book ends as FolderJobTreeReady', () async {
+    final c = _container(feedRepo: _OneFeedRepo());
+    await c.read(settingsProvider.future);
+    await c.read(folderDownloadProvider.notifier).start(1, Uri.parse('http://x.com'));
+    expect(c.read(folderDownloadProvider), isA<FolderJobTreeReady>());
+  });
+
+  test('start() no-op when already scanning', () async {
     final slowRepo = _SlowFeedRepo();
     final c = _container(feedRepo: slowRepo);
-
     await c.read(settingsProvider.future);
     final notifier = c.read(folderDownloadProvider.notifier);
 
-    // Start first job (suspends at getFeed)
     final firstFuture = notifier.start(1, Uri.parse('http://x.com'));
-    // State set to FolderJobScanning synchronously before first await
     expect(c.read(folderDownloadProvider), isA<FolderJobScanning>());
 
-    // Second start() — guard fires, returns immediately
     await notifier.start(1, Uri.parse('http://x.com/other'));
     expect(c.read(folderDownloadProvider), isA<FolderJobScanning>());
 
-    // Clean up
     slowRepo.complete();
     await firstFuture;
   });
 
-  test('cancel() causes wasCancelled = true in done state', () async {
+  test('updateSelection updates checkedBooks in FolderJobTreeReady', () async {
+    final c = _container(feedRepo: _OneFeedRepo());
+    await c.read(settingsProvider.future);
+    final notifier = c.read(folderDownloadProvider.notifier);
+    await notifier.start(1, Uri.parse('http://x.com'));
+
+    expect(c.read(folderDownloadProvider), isA<FolderJobTreeReady>());
+    notifier.updateSelection({}); // uncheck all
+
+    final ready = c.read(folderDownloadProvider) as FolderJobTreeReady;
+    expect(ready.checkedBooks, isEmpty);
+  });
+
+  test('confirmDownload transitions through Downloading to Done', () async {
+    final c = _container(feedRepo: _OneFeedRepo());
+    await c.read(settingsProvider.future);
+    final notifier = c.read(folderDownloadProvider.notifier);
+    await notifier.start(1, Uri.parse('http://x.com'));
+
+    final ready = c.read(folderDownloadProvider) as FolderJobTreeReady;
+    await notifier.confirmDownload(ready.checkedBooks);
+
+    expect(c.read(folderDownloadProvider), isA<FolderJobDone>());
+  });
+
+  test('confirmDownload no-op when state is not FolderJobTreeReady', () async {
+    final c = _container();
+    await c.read(settingsProvider.future);
+    final notifier = c.read(folderDownloadProvider.notifier);
+    // State is idle — confirmDownload should do nothing
+    await notifier.confirmDownload({});
+    expect(c.read(folderDownloadProvider), isA<FolderJobIdle>());
+  });
+
+  test('cancel() during scan: FolderJobDone with wasCancelled = true', () async {
     final slowRepo = _SlowFeedRepo();
     final c = _container(feedRepo: slowRepo);
-
     await c.read(settingsProvider.future);
     final notifier = c.read(folderDownloadProvider.notifier);
 
     final startFuture = notifier.start(1, Uri.parse('http://x.com'));
-    expect(c.read(folderDownloadProvider), isA<FolderJobScanning>());
-
     notifier.cancel();
     slowRepo.complete();
     await startFuture;
@@ -122,15 +179,27 @@ void main() {
     expect(done.wasCancelled, isTrue);
   });
 
-  test('dismiss() resets state to FolderJobIdle', () async {
-    final c = _container();
-
+  test('reset() during FolderJobTreeReady returns to FolderJobIdle', () async {
+    final c = _container(feedRepo: _OneFeedRepo());
     await c.read(settingsProvider.future);
     final notifier = c.read(folderDownloadProvider.notifier);
     await notifier.start(1, Uri.parse('http://x.com'));
 
-    expect(c.read(folderDownloadProvider), isA<FolderJobDone>());
-    notifier.dismiss();
+    expect(c.read(folderDownloadProvider), isA<FolderJobTreeReady>());
+    notifier.reset();
     expect(c.read(folderDownloadProvider), isA<FolderJobIdle>());
+  });
+
+  test('start() allowed again after reset()', () async {
+    final c = _container(feedRepo: _OneFeedRepo());
+    await c.read(settingsProvider.future);
+    final notifier = c.read(folderDownloadProvider.notifier);
+
+    await notifier.start(1, Uri.parse('http://x.com'));
+    expect(c.read(folderDownloadProvider), isA<FolderJobTreeReady>());
+
+    notifier.reset();
+    await notifier.start(1, Uri.parse('http://x.com'));
+    expect(c.read(folderDownloadProvider), isA<FolderJobTreeReady>());
   });
 }
