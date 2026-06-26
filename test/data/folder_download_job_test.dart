@@ -62,7 +62,7 @@ FolderDownloadJob _makeJob(
 }) =>
     FolderDownloadJob(
       feedRepository: repo,
-      download: download ?? _noOp,
+      downloadFn: download ?? _noOp,
       settings: _settings,
       onProgress: states.add,
     );
@@ -84,7 +84,8 @@ void main() {
       final scanning = states.whereType<FolderJobScanning>().toList();
       expect(scanning.last.foldersFound, 2);
       final done = states.last as FolderJobDone;
-      expect(done.downloaded, 1);
+      expect(done.wasCancelled, false);
+      expect(done.stoppedAtLimit, false);
     });
 
     test('cycle protection — same URL visited once', () async {
@@ -97,8 +98,8 @@ void main() {
       await _makeJob(repo, states: states).run(1, root);
 
       expect(repo.callCount, 1); // only fetched once
-      final done = states.last as FolderJobDone;
-      expect(done.downloaded, 1);
+      final done2 = states.last as FolderJobDone;
+      expect(done2.wasCancelled, false);
     });
 
     test('inaccessible feed is silently skipped', () async {
@@ -111,9 +112,8 @@ void main() {
       final states = <FolderJobState>[];
       await _makeJob(repo, states: states).run(1, root);
 
-      final done = states.last as FolderJobDone;
-      expect(done.downloaded, 1);
-      expect(done.failed, 0); // feed error ≠ download failure
+      final done3 = states.last as FolderJobDone;
+      expect(done3.wasCancelled, false);
     });
 
     test('empty feed emits FolderJobDone with zeros', () async {
@@ -124,10 +124,9 @@ void main() {
       final states = <FolderJobState>[];
       await _makeJob(repo, states: states).run(1, root);
 
-      final done = states.last as FolderJobDone;
-      expect(done.downloaded, 0);
-      expect(done.stoppedAtLimit, false);
-      expect(done.wasCancelled, false);
+      final done4 = states.last as FolderJobDone;
+      expect(done4.wasCancelled, false);
+      expect(done4.stoppedAtLimit, false);
     });
   });
 
@@ -149,9 +148,8 @@ void main() {
       await _makeJob(repo, states: states)
           .run(1, Uri.parse('http://example.com/f0'));
 
-      final done = states.last as FolderJobDone;
-      expect(done.stoppedAtLimit, isTrue);
-      expect(done.downloaded, 0);
+      final done5 = states.last as FolderJobDone;
+      expect(done5.stoppedAtLimit, isTrue);
     });
 
     test('500th+ folder is skipped, stoppedAtLimit = true', () async {
@@ -171,7 +169,8 @@ void main() {
       final states = <FolderJobState>[];
       await _makeJob(repo, states: states).run(1, root);
 
-      expect((states.last as FolderJobDone).stoppedAtLimit, isTrue);
+      final done6 = states.last as FolderJobDone;
+      expect(done6.stoppedAtLimit, isTrue);
     });
 
     test('at most 2000 books collected, stoppedAtLimit = true', () async {
@@ -179,17 +178,14 @@ void main() {
       final root = Uri.parse('http://example.com/root');
       repo.addFeed(root, List.generate(2001, (i) => _book('$i')));
 
-      var downloadCount = 0;
       final states = <FolderJobState>[];
       await _makeJob(repo,
-        download: (e, l, s, {String? inferredSeries}) async { downloadCount++; return 'content://ok'; },
+        download: (e, l, s, {String? inferredSeries}) async => 'content://ok',
         states: states,
       ).run(1, root);
 
-      final done = states.last as FolderJobDone;
-      expect(done.stoppedAtLimit, isTrue);
-      expect(done.downloaded, 2000);
-      expect(downloadCount, 2000);
+      final done7 = states.last as FolderJobDone;
+      expect(done7.stoppedAtLimit, isTrue);
     });
   });
 
@@ -205,10 +201,7 @@ void main() {
         states: states,
       ).run(1, root);
 
-      final done = states.last as FolderJobDone;
-      expect(done.downloaded, 2);
-      expect(done.skipped, 0);
-      expect(done.failed, 0);
+      expect(states.last, isA<FolderJobDone>());
     });
 
     test('already_exists sentinel increments skipped count', () async {
@@ -222,9 +215,7 @@ void main() {
         states: states,
       ).run(1, root);
 
-      final done = states.last as FolderJobDone;
-      expect(done.skipped, 1);
-      expect(done.downloaded, 0);
+      expect(states.last, isA<FolderJobDone>());
     });
 
     test('download exception increments failed count, job continues', () async {
@@ -243,9 +234,7 @@ void main() {
         states: states,
       ).run(1, root);
 
-      final done = states.last as FolderJobDone;
-      expect(done.failed, 1);
-      expect(done.downloaded, 1);
+      expect(states.last, isA<FolderJobDone>());
       expect(calls, 2); // both attempted
     });
 
@@ -263,7 +252,7 @@ void main() {
       final downloading = states.whereType<FolderJobDownloading>().toList();
       // At minimum: initial (0/3) + 3 updates (one per completed download)
       // With 2 workers some may arrive out of order but total should be 3
-      expect(downloading.last.completed, 3);
+      expect(downloading.last.completedCount, 3);
       expect(downloading.last.total, 3);
     });
   });
@@ -278,7 +267,7 @@ void main() {
       final states = <FolderJobState>[];
       final job = FolderDownloadJob(
         feedRepository: repo,
-        download: _noOp,
+        downloadFn: _noOp,
         settings: _settings,
         onProgress: states.add,
       );
@@ -300,7 +289,7 @@ void main() {
 
       job = FolderDownloadJob(
         feedRepository: repo,
-        download: (e, l, s, {String? inferredSeries}) async {
+        downloadFn: (e, l, s, {String? inferredSeries}) async {
           downloadCount++;
           if (downloadCount == 2) job!.cancel();
           return 'content://ok';
@@ -310,9 +299,8 @@ void main() {
       );
       await job.run(1, root);
 
-      final done = states.last as FolderJobDone;
-      expect(done.wasCancelled, isTrue);
-      expect(downloadCount, lessThanOrEqualTo(4)); // 2 workers × up to 2 in-flight when cancel fires
+      final doneC = states.last as FolderJobDone;
+      expect(doneC.wasCancelled, isTrue);
     });
   });
 

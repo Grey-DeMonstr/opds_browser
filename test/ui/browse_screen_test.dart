@@ -552,7 +552,8 @@ void main() {
   });
 
   group('folder download banner', () {
-    testWidgets('banner widget present and hidden when FolderJobIdle',
+    // Banner is a temporary stub (deleted in Task 9) — just verify it renders.
+    testWidgets('banner widget present when FolderJobIdle',
         (tester) async {
       await tester.pumpWidget(buildApp(
         feed: makeFeed(),
@@ -560,54 +561,46 @@ void main() {
       ));
       await tester.pumpAndSettle();
       expect(find.byType(FolderJobBanner), findsOneWidget);
-      expect(find.widgetWithText(TextButton, 'CANCEL'), findsNothing);
-      expect(find.widgetWithText(TextButton, 'DISMISS'), findsNothing);
     });
 
-    testWidgets('banner shows scanning message during FolderJobScanning',
+    testWidgets('banner widget present when FolderJobScanning',
         (tester) async {
       await tester.pumpWidget(buildApp(
         feed: makeFeed(),
         folderJobState: const FolderJobScanning(foldersFound: 7),
       ));
       await tester.pumpAndSettle();
-      expect(find.textContaining('Scanning'), findsOneWidget);
-      expect(find.textContaining('7'), findsWidgets);
-      expect(find.widgetWithText(TextButton, 'CANCEL'), findsOneWidget);
+      expect(find.byType(FolderJobBanner), findsOneWidget);
     });
 
-    testWidgets('banner shows downloading progress during FolderJobDownloading',
+    testWidgets('banner widget present during FolderJobDownloading',
         (tester) async {
       await tester.pumpWidget(buildApp(
         feed: makeFeed(),
-        folderJobState: const FolderJobDownloading(
-          completed: 3,
+        folderJobState: FolderJobDownloading(
+          root: DownloadFolder(title: '', children: []),
+          results: const {},
           total: 10,
-          downloaded: 2,
-          skipped: 1,
-          failed: 0,
+          completedCount: 3,
         ),
       ));
       await tester.pumpAndSettle();
-      expect(find.textContaining('3'), findsWidgets);
-      expect(find.textContaining('10'), findsWidgets);
-      expect(find.textContaining('1 skipped'), findsOneWidget);
+      expect(find.byType(FolderJobBanner), findsOneWidget);
     });
 
-    testWidgets('banner shows summary with DISMISS button when done',
+    testWidgets('banner widget present when FolderJobDone',
         (tester) async {
       await tester.pumpWidget(buildApp(
         feed: makeFeed(),
-        folderJobState: const FolderJobDone(
-          downloaded: 5,
-          skipped: 2,
-          failed: 1,
+        folderJobState: FolderJobDone(
+          root: DownloadFolder(title: '', children: []),
+          results: const {},
+          wasCancelled: false,
           stoppedAtLimit: false,
         ),
       ));
       await tester.pumpAndSettle();
-      expect(find.textContaining('Downloaded: 5'), findsOneWidget);
-      expect(find.widgetWithText(TextButton, 'DISMISS'), findsOneWidget);
+      expect(find.byType(FolderJobBanner), findsOneWidget);
     });
   });
 

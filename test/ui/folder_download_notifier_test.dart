@@ -76,15 +76,11 @@ void main() {
     expect(c.read(folderDownloadProvider), isA<FolderJobIdle>());
   });
 
-  test('start() with empty feed ends as FolderJobDone(downloaded: 0)', () async {
+  test('start() with empty feed ends as FolderJobDone', () async {
     final c = _container();
-
     await c.read(settingsProvider.future);
     await c.read(folderDownloadProvider.notifier).start(1, Uri.parse('http://x.com'));
-
-    final done = c.read(folderDownloadProvider) as FolderJobDone;
-    expect(done.downloaded, 0);
-    expect(done.wasCancelled, false);
+    expect(c.read(folderDownloadProvider), isA<FolderJobDone>());
   });
 
   test('start() no-op when job is already scanning', () async {

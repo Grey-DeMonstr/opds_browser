@@ -425,19 +425,18 @@ class FolderDownloadNotifier extends Notifier<FolderJobState> {
 
     final downloader = ref.read(bookDownloaderProvider);
     if (downloader == null) {
-      state = const FolderJobDone(
-        downloaded: 0,
-        skipped: 0,
-        failed: 0,
-        stoppedAtLimit: false,
+      state = FolderJobDone(
+        root: DownloadFolder(title: '', children: []),
+        results: const {},
         wasCancelled: true,
+        stoppedAtLimit: false,
       );
       return;
     }
 
     _job = FolderDownloadJob(
       feedRepository: ref.read(feedRepositoryProvider),
-      download: downloader.download,
+      downloadFn: downloader.download,
       settings: ref.read(settingsProvider).requireValue,
       onProgress: (s) {
         state = s;
