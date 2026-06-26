@@ -292,11 +292,13 @@ class DownloadDone extends DownloadState {
     required this.contentUri,
     required this.fileName,
     required this.alreadyExisted,
+    required this.mimeType,
   });
 
   final String contentUri;
   final String fileName;
   final bool alreadyExisted;
+  final String mimeType;
 }
 
 class DownloadFailed extends DownloadState {
@@ -339,7 +341,11 @@ class DownloadNotifier extends Notifier<DownloadState> {
   @override
   DownloadState build() => const DownloadIdle();
 
-  Future<void> start(BookEntry entry, AppSettings settings) async {
+  Future<void> start(
+    BookEntry entry,
+    AppSettings settings, {
+    String? inferredSeries,
+  }) async {
     if (state is DownloadInProgress) return;
     state = const DownloadInProgress();
 
@@ -350,16 +356,27 @@ class DownloadNotifier extends Notifier<DownloadState> {
     }
 
     final link = entry.acquisitionLinks.firstWhere((l) => l.url == _linkUrl);
-    final fileName = buildFileName(entry, link, settings);
+    final fileName = buildFileName(entry, link, settings, inferredSeries: inferredSeries);
 
     try {
-      final result = await downloader.download(entry, link, settings);
+      final result = await downloader.download(
+        entry,
+        link,
+        settings,
+        inferredSeries: inferredSeries,
+      );
       final done = result == 'already_exists'
-          ? DownloadDone(contentUri: '', fileName: fileName, alreadyExisted: true)
+          ? DownloadDone(
+              contentUri: '',
+              fileName: fileName,
+              alreadyExisted: true,
+              mimeType: link.mimeType,
+            )
           : DownloadDone(
               contentUri: result,
               fileName: fileName,
               alreadyExisted: false,
+              mimeType: link.mimeType,
             );
       ref.read<_LastDownloadResultNotifier>(lastDownloadResultProvider.notifier).set(done);
       state = done;
