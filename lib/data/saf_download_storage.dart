@@ -22,6 +22,7 @@ class SafDownloadStorage implements DownloadStorage {
     List<String> pathSegments,
     String fileName,
     Stream<List<int>> bytes,
+    String mimeType,
   ) async {
     var dirUri = _treeUriString;
     if (pathSegments.isNotEmpty) {
@@ -35,7 +36,7 @@ class SafDownloadStorage implements DownloadStorage {
     final result = await _safStream.writeFileBytes(
       dirUri,
       fileName,
-      'application/octet-stream',
+      mimeType,
       Uint8List.fromList(buffer),
     );
     return result.uri.toString();
