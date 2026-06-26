@@ -28,20 +28,33 @@ AcquisitionLink folderPreferredLink(List<AcquisitionLink> links) {
   return links.first;
 }
 
+/// Extracts the `series` query parameter from [url] as the inferred series
+/// name, or null when the parameter is absent or empty.
+String? inferSeriesFromUrl(Uri url) {
+  final value = url.queryParameters['series'];
+  return (value != null && value.isNotEmpty) ? value : null;
+}
+
 /// Builds the sanitized download filename for [entry] in [link]'s format.
 /// Author and series segments are omitted when [settings] indicates they are
 /// already encoded in the folder path (createAuthorFolder / createSeriesFolder).
 /// Pattern: `[<Authors> - ][<Series> #<Index> - ]<Title>.<ext>`
 /// Capped at 200 characters (truncates title segment, preserves extension).
-String buildFileName(BookEntry entry, AcquisitionLink link, AppSettings settings) {
+String buildFileName(
+  BookEntry entry,
+  AcquisitionLink link,
+  AppSettings settings, {
+  String? inferredSeries,
+}) {
   final parts = <String>[];
   final authors = _authorString(entry.authors);
   if (authors != null && !settings.createAuthorFolder) parts.add(authors);
-  if (entry.series != null && !settings.createSeriesFolder) {
+  final effectiveSeries = entry.series ?? inferredSeries;
+  if (effectiveSeries != null && !settings.createSeriesFolder) {
     final idx = entry.seriesIndex;
     parts.add(idx != null
-        ? '${entry.series} #${_formatIndex(idx)}'
-        : entry.series!);
+        ? '$effectiveSeries #${_formatIndex(idx)}'
+        : effectiveSeries);
   }
   parts.add(entry.title);
   final ext = _formatExt(link.formatLabel);
@@ -56,14 +69,19 @@ String buildFileName(BookEntry entry, AcquisitionLink link, AppSettings settings
 /// Returns the list of subdirectory segments to place between the storage root
 /// and the filename, based on [settings]. Returns an empty list when no
 /// folder-per-author/series data is available.
-List<String> buildPathSegments(AppSettings settings, BookEntry entry) {
+List<String> buildPathSegments(
+  AppSettings settings,
+  BookEntry entry, {
+  String? inferredSeries,
+}) {
   final segments = <String>[];
   final authors = _authorString(entry.authors);
   if (settings.createAuthorFolder && authors != null) {
     segments.add(_sanitize(authors));
   }
-  if (settings.createSeriesFolder && entry.series != null) {
-    segments.add(_sanitize(entry.series!));
+  final effectiveSeries = entry.series ?? inferredSeries;
+  if (settings.createSeriesFolder && effectiveSeries != null) {
+    segments.add(_sanitize(effectiveSeries));
   }
   return segments;
 }
