@@ -238,7 +238,7 @@ class FolderDownloadJob {
       _onProgress(FolderJobDownloading(
         root: displayRoot,
         currentBook: task.link.url,
-        results: Map.unmodifiable(results),
+        results: Map.of(results),
         total: tasks.length,
         completedCount: results.length,
       ));
@@ -259,6 +259,14 @@ class FolderDownloadJob {
           error: e.toString(),
         );
       }
+
+      _onProgress(FolderJobDownloading(
+        root: displayRoot,
+        currentBook: null,
+        results: Map.of(results),
+        total: tasks.length,
+        completedCount: results.length,
+      ));
 
       if (!_cancelled && i < tasks.length - 1) {
         await Future<void>.delayed(_downloadDelay);

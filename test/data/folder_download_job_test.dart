@@ -387,11 +387,56 @@ void main() {
       await job.download(ready.checkedBooks);
 
       final downloading = states.whereType<FolderJobDownloading>().toList();
-      expect(downloading.length, 2); // one before each book
-      for (final d in downloading) {
-        expect(d.currentBook, isNotNull);
-      }
-      expect(downloading.last.completedCount, 1); // second book's pre-emit shows 1 done
+      expect(downloading.length, 4); // one before + one after each book
+      final preEmits = downloading.where((d) => d.currentBook != null).toList();
+      final postEmits = downloading.where((d) => d.currentBook == null).toList();
+      expect(preEmits.length, 2);
+      expect(postEmits.length, 2);
+      expect(preEmits.last.completedCount, 1); // second book's pre-emit shows 1 done
+      expect(postEmits.last.completedCount, 2); // final post-emit shows 2 done
+    });
+
+    test('state sequence for 2 books: pre, post, pre, post, Done', () async {
+      final repo = _FakeFeedRepository();
+      final root = Uri.parse('http://example.com/root');
+      repo.addFeed(root, [_book('1'), _book('2')]);
+
+      final states = <FolderJobState>[];
+      final job = FolderDownloadJob(
+        feedRepository: repo,
+        downloadFn: (e, l, s, {inferredSeries}) async => 'content://ok',
+        settings: _settings,
+        onProgress: states.add,
+        downloadDelay: Duration.zero,
+      );
+      await job.run(1, root);
+      final ready = states.whereType<FolderJobTreeReady>().last;
+      await job.download(ready.checkedBooks);
+
+      // Collect only the downloading + done states in order
+      final relevant = states
+          .where((s) => s is FolderJobDownloading || s is FolderJobDone)
+          .toList();
+
+      expect(relevant.length, 5); // pre1, post1, pre2, post2, Done
+
+      final pre1 = relevant[0] as FolderJobDownloading;
+      expect(pre1.currentBook, isNotNull);
+      expect(pre1.completedCount, 0);
+
+      final post1 = relevant[1] as FolderJobDownloading;
+      expect(post1.currentBook, isNull);
+      expect(post1.completedCount, 1);
+
+      final pre2 = relevant[2] as FolderJobDownloading;
+      expect(pre2.currentBook, isNotNull);
+      expect(pre2.completedCount, 1);
+
+      final post2 = relevant[3] as FolderJobDownloading;
+      expect(post2.currentBook, isNull);
+      expect(post2.completedCount, 2);
+
+      expect(relevant[4], isA<FolderJobDone>());
     });
 
     test('no delay after the last book', () async {
