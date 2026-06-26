@@ -18,6 +18,7 @@ class FakeDownloadStorage implements DownloadStorage {
   final String writeResult;
   String? writtenFileName;
   List<String>? writtenSegments;
+  String? writtenMimeType;
 
   FakeDownloadStorage({
     this.existsResult = false,
@@ -33,9 +34,11 @@ class FakeDownloadStorage implements DownloadStorage {
     List<String> pathSegments,
     String fileName,
     Stream<List<int>> bytes,
+    String mimeType,
   ) async {
     writtenFileName = fileName;
     writtenSegments = pathSegments;
+    writtenMimeType = mimeType;
     await bytes.drain<void>();
     return writeResult;
   }
@@ -89,6 +92,16 @@ void main() {
     expect(storage.writtenSegments, isEmpty);
   });
 
+  test('mimeType from link is passed to storage.write()', () async {
+    final client = MockClient((_) async => http.Response.bytes([1], 200));
+    final storage = FakeDownloadStorage();
+    final downloader = BookDownloader(client, storage);
+
+    await downloader.download(_book, _link, _settings);
+
+    expect(storage.writtenMimeType, 'application/fb2');
+  });
+
   test('non-2xx response throws HttpStatusException', () async {
     final client = MockClient((_) async => http.Response('Not found', 404));
     final storage = FakeDownloadStorage();
@@ -127,5 +140,19 @@ void main() {
     await downloader.download(_book, _link, settings);
 
     expect(storage.writtenSegments, ['Jane Doe']);
+  });
+
+  test('inferred series used for path segments when entry.series is null and createSeriesFolder is true', () async {
+    final client = MockClient((_) async => http.Response.bytes([1], 200));
+    final storage = FakeDownloadStorage();
+    final downloader = BookDownloader(client, storage);
+    const settings = AppSettings(
+      target: SystemDownloads(),
+      createSeriesFolder: true,
+    );
+
+    await downloader.download(_book, _link, settings, inferredSeries: 'My Series');
+
+    expect(storage.writtenSegments, ['My Series']);
   });
 }

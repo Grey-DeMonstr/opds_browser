@@ -19,10 +19,11 @@ class BookDownloader {
   Future<String> download(
     BookEntry entry,
     AcquisitionLink link,
-    AppSettings settings,
-  ) async {
-    final segments = buildPathSegments(settings, entry);
-    final fileName = buildFileName(entry, link, settings);
+    AppSettings settings, {
+    String? inferredSeries,
+  }) async {
+    final segments = buildPathSegments(settings, entry, inferredSeries: inferredSeries);
+    final fileName = buildFileName(entry, link, settings, inferredSeries: inferredSeries);
 
     if (await _storage.exists(segments, fileName)) {
       return _alreadyExists;
@@ -48,6 +49,6 @@ class BookDownloader {
       );
     }
 
-    return _storage.write(segments, fileName, response.stream);
+    return _storage.write(segments, fileName, response.stream, link.mimeType);
   }
 }
