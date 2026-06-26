@@ -34,5 +34,6 @@ abstract interface class DownloadStorage {
     List<String> pathSegments,
     String fileName,
     Stream<List<int>> bytes,
+    String mimeType,
   );
 }

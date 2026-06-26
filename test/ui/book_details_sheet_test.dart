@@ -22,7 +22,8 @@ class FakeDownloadStorage implements DownloadStorage {
   Future<bool> exists(List<String> p, String f) async => existsResult;
 
   @override
-  Future<String> write(List<String> p, String f, Stream<List<int>> b) async {
+  Future<String> write(
+      List<String> p, String f, Stream<List<int>> b, String mimeType) async {
     await b.drain<void>();
     return 'content://fake/1';
   }

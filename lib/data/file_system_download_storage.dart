@@ -25,6 +25,7 @@ class FileSystemDownloadStorage implements DownloadStorage {
     List<String> pathSegments,
     String fileName,
     Stream<List<int>> bytes,
+    String mimeType,
   ) async {
     final file = File(_resolve(pathSegments, fileName));
     await file.parent.create(recursive: true);
