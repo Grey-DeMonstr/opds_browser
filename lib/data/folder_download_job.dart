@@ -60,34 +60,51 @@ class FolderJobScanning extends FolderJobState {
   final int foldersFound;
 }
 
+/// Scan complete — awaiting user selection.
+class FolderJobTreeReady extends FolderJobState {
+  const FolderJobTreeReady({
+    required this.root,
+    required this.checkedBooks,
+    this.stoppedAtLimit = false,
+  });
+  final DownloadTreeNode root;
+  final Set<Uri> checkedBooks;
+  final bool stoppedAtLimit;
+
+  FolderJobTreeReady copyWith({Set<Uri>? checkedBooks}) => FolderJobTreeReady(
+        root: root,
+        checkedBooks: checkedBooks ?? this.checkedBooks,
+        stoppedAtLimit: stoppedAtLimit,
+      );
+}
+
+/// Download in progress — root is the checked-only subtree.
 class FolderJobDownloading extends FolderJobState {
   const FolderJobDownloading({
-    required this.completed,
+    required this.root,
+    required this.results,
     required this.total,
-    required this.downloaded,
-    required this.skipped,
-    required this.failed,
+    required this.completedCount,
+    this.currentBook,
   });
-  final int completed; // downloaded + skipped + failed so far
+  final DownloadTreeNode root;
+  final Uri? currentBook;
+  final Map<Uri, BookDownloadResult> results;
   final int total;
-  final int downloaded;
-  final int skipped;
-  final int failed;
+  final int completedCount;
 }
 
 class FolderJobDone extends FolderJobState {
   const FolderJobDone({
-    required this.downloaded,
-    required this.skipped,
-    required this.failed,
+    required this.root,
+    required this.results,
+    required this.wasCancelled,
     required this.stoppedAtLimit,
-    this.wasCancelled = false,
   });
-  final int downloaded;
-  final int skipped;
-  final int failed;
-  final bool stoppedAtLimit;
+  final DownloadTreeNode root;
+  final Map<Uri, BookDownloadResult> results;
   final bool wasCancelled;
+  final bool stoppedAtLimit;
 }
 
 // ── Job ───────────────────────────────────────────────────────────────────────
@@ -95,11 +112,11 @@ class FolderJobDone extends FolderJobState {
 class FolderDownloadJob {
   FolderDownloadJob({
     required FeedRepository feedRepository,
-    required DownloadFn download,
+    required DownloadFn downloadFn,
     required AppSettings settings,
     required void Function(FolderJobState) onProgress,
   })  : _feedRepository = feedRepository,
-        _download = download,
+        _download = downloadFn,
         _settings = settings,
         _onProgress = onProgress;
 
@@ -154,11 +171,12 @@ class FolderDownloadJob {
       if (tasks.length >= 2000) stoppedAtLimit = true;
     }
 
+    final emptyRoot = DownloadFolder(title: '', children: []);
+
     if (_cancelled || tasks.isEmpty) {
       _onProgress(FolderJobDone(
-        downloaded: 0,
-        skipped: 0,
-        failed: 0,
+        root: emptyRoot,
+        results: const {},
         stoppedAtLimit: stoppedAtLimit,
         wasCancelled: _cancelled,
       ));
@@ -166,16 +184,13 @@ class FolderDownloadJob {
     }
 
     // ── Phase 2: download with concurrency 2 ─────────────────────────────
-    var downloaded = 0;
-    var skipped = 0;
-    var failed = 0;
+    final results = <Uri, BookDownloadResult>{};
 
     _onProgress(FolderJobDownloading(
-      completed: 0,
+      root: emptyRoot,
+      results: Map.unmodifiable(results),
       total: tasks.length,
-      downloaded: 0,
-      skipped: 0,
-      failed: 0,
+      completedCount: 0,
     ));
 
     var index = 0;
@@ -185,22 +200,25 @@ class FolderDownloadJob {
         final i = index++; // safe: no await between read and write (Dart single-isolate)
         if (i >= tasks.length) return;
         final (entry, link) = tasks[i];
+        final bookUri = link.url;
         try {
           final result = await _download(entry, link, _settings, inferredSeries: null);
-          if (result == 'already_exists') {
-            skipped++;
-          } else {
-            downloaded++;
-          }
-        } catch (_) {
-          failed++;
+          results[bookUri] = BookDownloadResult(
+            status: result == 'already_exists'
+                ? BookDownloadStatus.skipped
+                : BookDownloadStatus.done,
+          );
+        } catch (e) {
+          results[bookUri] = BookDownloadResult(
+            status: BookDownloadStatus.failed,
+            error: e.toString(),
+          );
         }
         _onProgress(FolderJobDownloading(
-          completed: downloaded + skipped + failed,
+          root: emptyRoot,
+          results: Map.unmodifiable(results),
           total: tasks.length,
-          downloaded: downloaded,
-          skipped: skipped,
-          failed: failed,
+          completedCount: results.length,
         ));
       }
     }
@@ -208,9 +226,8 @@ class FolderDownloadJob {
     await Future.wait([runWorker(), runWorker()]);
 
     _onProgress(FolderJobDone(
-      downloaded: downloaded,
-      skipped: skipped,
-      failed: failed,
+      root: emptyRoot,
+      results: Map.unmodifiable(results),
       stoppedAtLimit: stoppedAtLimit,
       wasCancelled: _cancelled,
     ));
