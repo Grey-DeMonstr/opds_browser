@@ -17,11 +17,13 @@ class BrowseScreen extends ConsumerStatefulWidget {
   final int catalogId;
   final Uri url;
   final String? navTitle;
+  final String? inferredSeries;
 
   const BrowseScreen({
     required this.catalogId,
     required this.url,
     this.navTitle,
+    this.inferredSeries,
     super.key,
   });
 
@@ -71,6 +73,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
         isFavorite: isFavorite,
         onRefresh: _refresh,
         navTitle: widget.navTitle,
+        inheritedSeries: widget.inferredSeries,
       ),
     );
   }
@@ -82,6 +85,7 @@ class _BrowseContent extends ConsumerWidget {
   final bool isFavorite;
   final Future<void> Function() onRefresh;
   final String? navTitle;
+  final String? inheritedSeries;
 
   const _BrowseContent({
     required this.args,
@@ -89,6 +93,7 @@ class _BrowseContent extends ConsumerWidget {
     required this.isFavorite,
     required this.onRefresh,
     this.navTitle,
+    this.inheritedSeries,
   });
 
   @override
@@ -96,7 +101,7 @@ class _BrowseContent extends ConsumerWidget {
     final (catalogId, url) = args;
     final entries = state.feed.feed.entries;
     final jobState = ref.watch(folderDownloadProvider);
-    final inferredSeries = inferSeriesFromUrl(url);
+    final inferredSeries = inferSeriesFromUrl(url) ?? inheritedSeries;
 
     ref.listen(lastDownloadResultProvider, (_, result) {
       if (result == null) return;
@@ -186,7 +191,7 @@ class _BrowseContent extends ConsumerWidget {
               color: Colors.black,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: SelectableText(
-                url.toString(),
+                '$url\nseries: $inferredSeries',
                 style: Theme.of(
                   context,
                 ).textTheme.labelSmall?.copyWith(fontFamily: 'monospace'),
@@ -211,6 +216,7 @@ class _BrowseContent extends ConsumerWidget {
                           NavigationEntry e => _NavigationEntryTile(
                             entry: e,
                             catalogId: catalogId,
+                            inferredSeries: inferredSeries,
                             key: ValueKey(e.url),
                           ),
                           BookEntry e => _BookEntryTile(
@@ -238,15 +244,20 @@ String _formatSeriesIndex(double idx) =>
 class _NavigationEntryTile extends StatelessWidget {
   final NavigationEntry entry;
   final int catalogId;
+  final String? inferredSeries;
 
   const _NavigationEntryTile({
     required this.entry,
     required this.catalogId,
+    this.inferredSeries,
     super.key,
   });
 
   @override
   Widget build(BuildContext context) {
+    final seriesParam = inferredSeries != null
+        ? '&series=${Uri.encodeComponent(inferredSeries!)}'
+        : '';
     return ListTile(
       leading: const Icon(Icons.folder),
       title: Text(entry.title),
@@ -254,7 +265,7 @@ class _NavigationEntryTile extends StatelessWidget {
           ? Text(entry.subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis)
           : null,
       onTap: () => context.push(
-        '/browse?catalogId=$catalogId&url=${Uri.encodeComponent(entry.url.toString())}&title=${Uri.encodeComponent(entry.title)}',
+        '/browse?catalogId=$catalogId&url=${Uri.encodeComponent(entry.url.toString())}&title=${Uri.encodeComponent(entry.title)}$seriesParam',
       ),
     );
   }

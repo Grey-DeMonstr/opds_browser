@@ -19,6 +19,7 @@ final _router = GoRouter(
           catalogId: int.parse(params['catalogId']!),
           url: Uri.parse(params['url']!),
           navTitle: params['title'],
+          inferredSeries: params['series'],
         );
       },
     ),
