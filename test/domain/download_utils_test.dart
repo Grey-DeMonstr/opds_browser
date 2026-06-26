@@ -166,6 +166,28 @@ void main() {
     test('series folder enabled but no series — author still included', () {
       expect(buildFileName(_book(), _link('FB2'), _seriesFolder), 'Jane Doe - Book Title.fb2');
     });
+
+    test('entry.series null, inferredSeries provided, series folder off — inferred series in filename', () {
+      expect(
+        buildFileName(_book(), _link('FB2'), _noFolders, inferredSeries: 'Inferred Series'),
+        'Jane Doe - Inferred Series - Book Title.fb2',
+      );
+    });
+
+    test('entry.series null, inferredSeries provided, series folder on — series omitted from filename', () {
+      expect(
+        buildFileName(_book(), _link('FB2'), _seriesFolder, inferredSeries: 'Inferred Series'),
+        'Jane Doe - Book Title.fb2',
+      );
+    });
+
+    test('entry.series set — real series used in filename, inferredSeries ignored', () {
+      final book = _book(series: 'Real Series');
+      expect(
+        buildFileName(book, _link('FB2'), _noFolders, inferredSeries: 'Inferred Series'),
+        'Jane Doe - Real Series - Book Title.fb2',
+      );
+    });
   });
 
   // ── buildPathSegments ──────────────────────────────────────────────────────
@@ -208,6 +230,27 @@ void main() {
       const s = AppSettings(target: SystemDownloads(), createSeriesFolder: true);
       expect(buildPathSegments(s, _book()), isEmpty);
     });
+
+    test('series flag on, entry.series null, inferredSeries provided — inferred series folder created', () {
+      const s = AppSettings(target: SystemDownloads(), createSeriesFolder: true);
+      expect(
+        buildPathSegments(s, _book(), inferredSeries: 'Inferred Series'),
+        ['Inferred Series'],
+      );
+    });
+
+    test('series flag on — real entry.series takes precedence over inferredSeries', () {
+      const s = AppSettings(target: SystemDownloads(), createSeriesFolder: true);
+      expect(
+        buildPathSegments(s, _book(series: 'Real Series'), inferredSeries: 'Inferred Series'),
+        ['Real Series'],
+      );
+    });
+
+    test('series flag on, entry.series null, inferredSeries null — no folder', () {
+      const s = AppSettings(target: SystemDownloads(), createSeriesFolder: true);
+      expect(buildPathSegments(s, _book(), inferredSeries: null), isEmpty);
+    });
   });
 
   // ── folderPreferredLink ───────────────────────────────────────────────────
@@ -246,6 +289,37 @@ void main() {
       final first = _link('DJVU');
       final second = _link('AZW3');
       expect(folderPreferredLink([first, second]), same(first));
+    });
+  });
+
+  // ── inferSeriesFromUrl ─────────────────────────────────────────────────────
+
+  group('inferSeriesFromUrl', () {
+    test('returns series value when present', () {
+      final url = Uri.parse('http://example.com/feed?series=The+Wheel+of+Time');
+      expect(inferSeriesFromUrl(url), 'The Wheel of Time');
+    });
+
+    test('returns null when series param absent', () {
+      final url = Uri.parse('http://example.com/feed?author=Tolkien');
+      expect(inferSeriesFromUrl(url), isNull);
+    });
+
+    test('returns null when series param is empty string', () {
+      final url = Uri.parse('http://example.com/feed?series=');
+      expect(inferSeriesFromUrl(url), isNull);
+    });
+
+    test('returns null for URL with no query params', () {
+      final url = Uri.parse('http://example.com/feed');
+      expect(inferSeriesFromUrl(url), isNull);
+    });
+
+    test('decodes percent-encoded characters', () {
+      // series=%D0%92%D0%BE%D0%B9%D0%BD%D0%B0 → "Война"
+      final url = Uri.parse(
+          'http://example.com/feed?series=%D0%92%D0%BE%D0%B9%D0%BD%D0%B0');
+      expect(inferSeriesFromUrl(url), 'Война');
     });
   });
 }
