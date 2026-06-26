@@ -9,7 +9,41 @@ import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/domain/repositories.dart';
 
 typedef DownloadFn = Future<String> Function(
-    BookEntry entry, AcquisitionLink link, AppSettings settings);
+    BookEntry entry, AcquisitionLink link, AppSettings settings,
+    {String? inferredSeries});
+
+// ── Tree model ────────────────────────────────────────────────────────────────
+
+sealed class DownloadTreeNode {
+  const DownloadTreeNode();
+}
+
+class DownloadBook extends DownloadTreeNode {
+  const DownloadBook({
+    required this.entry,
+    required this.link,
+    this.inferredSeries,
+  });
+  final BookEntry entry;
+  final AcquisitionLink link;
+  final String? inferredSeries;
+}
+
+class DownloadFolder extends DownloadTreeNode {
+  DownloadFolder({required this.title, required this.children});
+  final String title;
+  final List<DownloadTreeNode> children;
+}
+
+// ── Download result ───────────────────────────────────────────────────────────
+
+enum BookDownloadStatus { downloading, done, skipped, failed }
+
+class BookDownloadResult {
+  const BookDownloadResult({required this.status, this.error});
+  final BookDownloadStatus status;
+  final String? error;
+}
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -152,7 +186,7 @@ class FolderDownloadJob {
         if (i >= tasks.length) return;
         final (entry, link) = tasks[i];
         try {
-          final result = await _download(entry, link, _settings);
+          final result = await _download(entry, link, _settings, inferredSeries: null);
           if (result == 'already_exists') {
             skipped++;
           } else {
