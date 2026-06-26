@@ -611,6 +611,42 @@ void main() {
     });
   });
 
+  testWidgets('book with no series shows inferred series in italics when URL has series param',
+      (tester) async {
+    final seriesUrl = Uri.parse('http://example.com/feed?series=Dune+Chronicles');
+    final feed = makeFeed(entries: [bookEntry(title: 'Dune')]);
+    await tester.pumpWidget(buildApp(feed: feed, url: seriesUrl));
+    await tester.pumpAndSettle();
+
+    final textWidget = tester.widget<Text>(find.text('Dune Chronicles'));
+    expect(textWidget.style?.fontStyle, FontStyle.italic);
+  });
+
+  testWidgets('book with own series uses real series — not italic, URL series ignored',
+      (tester) async {
+    final seriesUrl = Uri.parse('http://example.com/feed?series=URL+Series');
+    final feed = makeFeed(
+        entries: [bookEntry(title: 'Dune', series: 'Real Series', seriesIndex: 1)]);
+    await tester.pumpWidget(buildApp(feed: feed, url: seriesUrl));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Real Series #1'), findsOneWidget);
+    expect(find.text('URL Series'), findsNothing);
+    final textWidget = tester.widget<Text>(find.text('Real Series #1'));
+    expect(textWidget.style?.fontStyle, isNot(FontStyle.italic));
+  });
+
+  testWidgets('book with no series and no URL series param shows empty series area',
+      (tester) async {
+    final feed = makeFeed(entries: [bookEntry(title: 'Dune')]);
+    await tester.pumpWidget(buildApp(feed: feed));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Dune'), findsOneWidget);
+    // No unexpected series text visible
+    expect(find.text('Dune Chronicles'), findsNothing);
+  });
+
   group('Download-folder button', () {
     testWidgets('button enabled when FolderJobIdle', (tester) async {
       await tester.pumpWidget(buildApp(

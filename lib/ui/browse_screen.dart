@@ -96,6 +96,7 @@ class _BrowseContent extends ConsumerWidget {
     final (catalogId, url) = args;
     final entries = state.feed.feed.entries;
     final jobState = ref.watch(folderDownloadProvider);
+    final inferredSeries = inferSeriesFromUrl(url);
 
     ref.listen(lastDownloadResultProvider, (_, result) {
       if (result == null) return;
@@ -111,7 +112,8 @@ class _BrowseContent extends ConsumerWidget {
               ? null
               : SnackBarAction(
                   label: 'Open',
-                  onPressed: () => OpenFilex.open(result.contentUri),
+                  onPressed: () =>
+                      OpenFilex.open(result.contentUri, type: result.mimeType),
                 ),
         ),
       );
@@ -213,6 +215,7 @@ class _BrowseContent extends ConsumerWidget {
                           ),
                           BookEntry e => _BookEntryTile(
                             entry: e,
+                            inferredSeries: inferredSeries,
                             key: ValueKey(e.title),
                           ),
                         };
@@ -259,8 +262,13 @@ class _NavigationEntryTile extends StatelessWidget {
 
 class _BookEntryTile extends ConsumerStatefulWidget {
   final BookEntry entry;
+  final String? inferredSeries;
 
-  const _BookEntryTile({required this.entry, super.key});
+  const _BookEntryTile({
+    required this.entry,
+    this.inferredSeries,
+    super.key,
+  });
 
   @override
   ConsumerState<_BookEntryTile> createState() => _BookEntryTileState();
@@ -278,10 +286,12 @@ class _BookEntryTileState extends ConsumerState<_BookEntryTile> {
   Widget build(BuildContext context) {
     final entry = widget.entry;
     final authors = entry.authors.join(', ');
-    final seriesText = entry.series != null
+    final effectiveSeries = entry.series ?? widget.inferredSeries;
+    final isInferredSeries = entry.series == null && effectiveSeries != null;
+    final seriesText = effectiveSeries != null
         ? (entry.seriesIndex != null
-              ? '${entry.series} #${_formatSeriesIndex(entry.seriesIndex!)}'
-              : entry.series!)
+              ? '$effectiveSeries #${_formatSeriesIndex(entry.seriesIndex!)}'
+              : effectiveSeries)
         : null;
 
     final hasLinks = entry.acquisitionLinks.isNotEmpty;
@@ -323,7 +333,12 @@ class _BookEntryTileState extends ConsumerState<_BookEntryTile> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (authors.isNotEmpty) Text(authors),
-          Text(seriesText ?? ''),
+          Text(
+            seriesText ?? '',
+            style: isInferredSeries
+                ? const TextStyle(fontStyle: FontStyle.italic)
+                : null,
+          ),
         ],
       ),
       isThreeLine: authors.isNotEmpty,
@@ -351,7 +366,7 @@ class _BookEntryTileState extends ConsumerState<_BookEntryTile> {
       setState(() => _downloadUrl = preferred.url);
       ref
           .read(downloadNotifierProvider(preferred.url).notifier)
-          .start(entry, settings);
+          .start(entry, settings, inferredSeries: widget.inferredSeries);
     } else {
       final chosen =
           await _showFormatPicker(context, entry.acquisitionLinks);
@@ -359,7 +374,7 @@ class _BookEntryTileState extends ConsumerState<_BookEntryTile> {
       setState(() => _downloadUrl = chosen.url);
       ref
           .read(downloadNotifierProvider(chosen.url).notifier)
-          .start(entry, settings);
+          .start(entry, settings, inferredSeries: widget.inferredSeries);
     }
   }
 
