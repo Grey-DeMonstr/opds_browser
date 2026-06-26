@@ -51,7 +51,8 @@ BookEntry _book(String id) => BookEntry(
       ],
     );
 
-Future<String> _noOp(BookEntry e, AcquisitionLink l, AppSettings s) async =>
+Future<String> _noOp(BookEntry e, AcquisitionLink l, AppSettings s,
+        {String? inferredSeries}) async =>
     'content://ok';
 
 FolderDownloadJob _makeJob(
@@ -181,7 +182,7 @@ void main() {
       var downloadCount = 0;
       final states = <FolderJobState>[];
       await _makeJob(repo,
-        download: (e, l, s) async { downloadCount++; return 'content://ok'; },
+        download: (e, l, s, {String? inferredSeries}) async { downloadCount++; return 'content://ok'; },
         states: states,
       ).run(1, root);
 
@@ -200,7 +201,7 @@ void main() {
 
       final states = <FolderJobState>[];
       await _makeJob(repo,
-        download: (e, l, s) async => 'content://ok',
+        download: (e, l, s, {String? inferredSeries}) async => 'content://ok',
         states: states,
       ).run(1, root);
 
@@ -217,7 +218,7 @@ void main() {
 
       final states = <FolderJobState>[];
       await _makeJob(repo,
-        download: (e, l, s) async => 'already_exists',
+        download: (e, l, s, {String? inferredSeries}) async => 'already_exists',
         states: states,
       ).run(1, root);
 
@@ -234,7 +235,7 @@ void main() {
       var calls = 0;
       final states = <FolderJobState>[];
       await _makeJob(repo,
-        download: (e, l, s) async {
+        download: (e, l, s, {String? inferredSeries}) async {
           calls++;
           if (e.title == 'Book bad') throw Exception('network error');
           return 'content://ok';
@@ -255,7 +256,7 @@ void main() {
 
       final states = <FolderJobState>[];
       await _makeJob(repo,
-        download: (e, l, s) async => 'content://ok',
+        download: (e, l, s, {String? inferredSeries}) async => 'content://ok',
         states: states,
       ).run(1, root);
 
@@ -299,7 +300,7 @@ void main() {
 
       job = FolderDownloadJob(
         feedRepository: repo,
-        download: (e, l, s) async {
+        download: (e, l, s, {String? inferredSeries}) async {
           downloadCount++;
           if (downloadCount == 2) job!.cancel();
           return 'content://ok';
@@ -312,6 +313,38 @@ void main() {
       final done = states.last as FolderJobDone;
       expect(done.wasCancelled, isTrue);
       expect(downloadCount, lessThanOrEqualTo(4)); // 2 workers × up to 2 in-flight when cancel fires
+    });
+  });
+
+  group('tree model types', () {
+    test('DownloadBook holds entry, link, optional series', () {
+      final link = AcquisitionLink(
+        url: Uri.parse('http://x.com/b.epub'),
+        mimeType: 'application/epub+zip',
+        formatLabel: 'EPUB',
+      );
+      final entry = BookEntry(title: 'T', authors: const ['A'], acquisitionLinks: [link]);
+      final book = DownloadBook(entry: entry, link: link, inferredSeries: 'S');
+      expect(book.entry.title, 'T');
+      expect(book.link.formatLabel, 'EPUB');
+      expect(book.inferredSeries, 'S');
+    });
+
+    test('DownloadFolder holds title and children list', () {
+      final folder = DownloadFolder(title: 'F', children: []);
+      expect(folder.title, 'F');
+      expect(folder.children, isEmpty);
+    });
+
+    test('BookDownloadResult.failed carries error string', () {
+      const r = BookDownloadResult(status: BookDownloadStatus.failed, error: 'timeout');
+      expect(r.status, BookDownloadStatus.failed);
+      expect(r.error, 'timeout');
+    });
+
+    test('BookDownloadResult.done has null error', () {
+      const r = BookDownloadResult(status: BookDownloadStatus.done);
+      expect(r.error, isNull);
     });
   });
 }
