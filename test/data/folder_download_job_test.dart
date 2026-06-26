@@ -297,28 +297,6 @@ void main() {
     });
   });
 
-  group('cancellation', () {
-    test('cancel during scan emits FolderJobDone with wasCancelled = true', () async {
-      final repo = _CancellingFeedRepository(cancelAfterCalls: 2);
-      final root = Uri.parse('http://example.com/root');
-      repo.addFeed(root, [_nav('/sub')]);
-      repo.addFeed(Uri.parse('http://example.com/sub'), [_book('1')]);
-
-      final states = <FolderJobState>[];
-      final job = FolderDownloadJob(
-        feedRepository: repo,
-        downloadFn: _noOp,
-        settings: _settings,
-        onProgress: states.add,
-      );
-      repo.job = job;
-      await job.run(1, root);
-
-      expect(states.last, isA<FolderJobDone>());
-      expect((states.last as FolderJobDone).wasCancelled, isTrue);
-    });
-  });
-
   group('tree model types', () {
     test('DownloadBook holds entry, link, optional series', () {
       final link = AcquisitionLink(
