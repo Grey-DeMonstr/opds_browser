@@ -321,5 +321,25 @@ void main() {
           'http://example.com/feed?series=%D0%92%D0%BE%D0%B9%D0%BD%D0%B0');
       expect(inferSeriesFromUrl(url), 'Война');
     });
+
+    test('survives go-router encode/decode round-trip with Russian series', () {
+      // Reproduces the in-app navigation chain:
+      //   entry.url.toString()
+      //   → Uri.encodeComponent()      (NavigationEntryTile.onTap)
+      //   → embedded in '/browse?url=…' string
+      //   → Uri.parse(route).queryParameters['url']   (go_router / app.dart)
+      //   → Uri.parse(decodedString)
+      //   → inferSeriesFromUrl()
+      const rawUrlString =
+          'https://example.com/opds/author?author=%3DTest&series=%D0%9A%D0%BE%D1%81%D0%BC%D0%BE%D0%BE%D0%BB%D1%83%D1%85%D0%B8&genre=';
+      final originalUrl = Uri.parse(rawUrlString);
+
+      final encodedParam = Uri.encodeComponent(originalUrl.toString());
+      final routeUrl = '/browse?catalogId=1&url=$encodedParam&title=test';
+      final decodedUrlString = Uri.parse(routeUrl).queryParameters['url']!;
+      final reconstructedUrl = Uri.parse(decodedUrlString);
+
+      expect(inferSeriesFromUrl(reconstructedUrl), 'Космоолухи');
+    });
   });
 }

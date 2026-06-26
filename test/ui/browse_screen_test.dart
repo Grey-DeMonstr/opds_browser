@@ -611,6 +611,85 @@ void main() {
     });
   });
 
+  testWidgets('BrowseScreen with inferredSeries param shows series on book tiles when URL has no series',
+      (tester) async {
+    // Simulates the book-folder page: URL has no series param, but the
+    // parent series-list page propagated inferredSeries via the route.
+    final bookPageUrl = Uri.parse('http://example.com/book?uid=abc123');
+    final feed = makeFeed(entries: [bookEntry(title: 'Dune')]);
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, _) => BrowseScreen(
+            catalogId: 1,
+            url: bookPageUrl,
+            inferredSeries: 'Dune Chronicles',
+          ),
+        ),
+      ],
+    );
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        feedRepositoryProvider.overrideWithValue(
+            FakeFeedRepository(initialFeed: feed)),
+        favoritesRepositoryProvider
+            .overrideWithValue(FakeFavoritesRepository()),
+        folderDownloadProvider
+            .overrideWith(() => _FolderJobStub(const FolderJobIdle())),
+      ],
+      child: MaterialApp.router(routerConfig: router),
+    ));
+    await tester.pumpAndSettle();
+
+    final textWidget = tester.widget<Text>(find.text('Dune Chronicles'));
+    expect(textWidget.style?.fontStyle, FontStyle.italic);
+  });
+
+  testWidgets('navigation tile push includes series param when inferredSeries is non-null',
+      (tester) async {
+    // When on a series page, tapping a nav entry should carry inferredSeries
+    // into the child route so book tiles on the child page inherit it.
+    final seriesUrl = Uri.parse('http://example.com/feed?series=Dune+Chronicles');
+    final feed = makeFeed(entries: [navEntry(title: 'Book Folder')]);
+
+    String? capturedUri;
+    await tester.pumpWidget(buildApp(
+      feed: feed,
+      catalogId: 1,
+      url: seriesUrl,
+      onBrowse: (state) => capturedUri = state.uri.toString(),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Book Folder'));
+    await tester.pumpAndSettle();
+
+    expect(capturedUri, isNotNull);
+    expect(capturedUri, contains('series='));
+    expect(capturedUri, contains('Dune'));
+  });
+
+  testWidgets('navigation tile push omits series param when inferredSeries is null',
+      (tester) async {
+    final feed = makeFeed(entries: [navEntry(title: 'Folder')]);
+
+    String? capturedUri;
+    await tester.pumpWidget(buildApp(
+      feed: feed,
+      catalogId: 1,
+      onBrowse: (state) => capturedUri = state.uri.toString(),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Folder'));
+    await tester.pumpAndSettle();
+
+    expect(capturedUri, isNotNull);
+    expect(capturedUri, isNot(contains('series=')));
+  });
+
   testWidgets('book with no series shows inferred series in italics when URL has series param',
       (tester) async {
     final seriesUrl = Uri.parse('http://example.com/feed?series=Dune+Chronicles');
