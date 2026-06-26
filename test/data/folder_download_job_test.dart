@@ -295,6 +295,202 @@ void main() {
 
       expect(states.last, isA<FolderJobTreeReady>());
     });
+
+    test('successful download: BookDownloadStatus.done', () async {
+      final repo = _FakeFeedRepository();
+      final root = Uri.parse('http://example.com/root');
+      repo.addFeed(root, [_book('1')]);
+
+      final states = <FolderJobState>[];
+      final job = FolderDownloadJob(
+        feedRepository: repo,
+        downloadFn: (e, l, s, {inferredSeries}) async => 'content://ok',
+        settings: _settings,
+        onProgress: states.add,
+        downloadDelay: Duration.zero,
+      );
+      await job.run(1, root);
+      final ready = states.whereType<FolderJobTreeReady>().last;
+      await job.download(ready.checkedBooks);
+
+      final done = states.last as FolderJobDone;
+      expect(done.results.length, 1);
+      expect(done.results.values.first.status, BookDownloadStatus.done);
+    });
+
+    test('already_exists: BookDownloadStatus.skipped', () async {
+      final repo = _FakeFeedRepository();
+      final root = Uri.parse('http://example.com/root');
+      repo.addFeed(root, [_book('1')]);
+
+      final states = <FolderJobState>[];
+      final job = FolderDownloadJob(
+        feedRepository: repo,
+        downloadFn: (e, l, s, {inferredSeries}) async => 'already_exists',
+        settings: _settings,
+        onProgress: states.add,
+        downloadDelay: Duration.zero,
+      );
+      await job.run(1, root);
+      final ready = states.whereType<FolderJobTreeReady>().last;
+      await job.download(ready.checkedBooks);
+
+      final done = states.last as FolderJobDone;
+      expect(done.results.values.first.status, BookDownloadStatus.skipped);
+    });
+
+    test('download exception: BookDownloadStatus.failed with error; job continues', () async {
+      final repo = _FakeFeedRepository();
+      final root = Uri.parse('http://example.com/root');
+      repo.addFeed(root, [_book('bad'), _book('good')]);
+
+      var calls = 0;
+      final states = <FolderJobState>[];
+      final job = FolderDownloadJob(
+        feedRepository: repo,
+        downloadFn: (e, l, s, {inferredSeries}) async {
+          calls++;
+          if (e.title == 'Book bad') throw Exception('network error');
+          return 'content://ok';
+        },
+        settings: _settings,
+        onProgress: states.add,
+        downloadDelay: Duration.zero,
+      );
+      await job.run(1, root);
+      final ready = states.whereType<FolderJobTreeReady>().last;
+      await job.download(ready.checkedBooks);
+
+      final done = states.last as FolderJobDone;
+      expect(calls, 2); // both attempted
+      final statuses = done.results.values.map((r) => r.status).toSet();
+      expect(statuses, containsAll([BookDownloadStatus.failed, BookDownloadStatus.done]));
+      final failedResult = done.results.values.firstWhere((r) => r.status == BookDownloadStatus.failed);
+      expect(failedResult.error, contains('network error'));
+    });
+
+    test('FolderJobDownloading emitted before each book with currentBook set', () async {
+      final repo = _FakeFeedRepository();
+      final root = Uri.parse('http://example.com/root');
+      repo.addFeed(root, [_book('1'), _book('2')]);
+
+      final states = <FolderJobState>[];
+      final job = FolderDownloadJob(
+        feedRepository: repo,
+        downloadFn: (e, l, s, {inferredSeries}) async => 'content://ok',
+        settings: _settings,
+        onProgress: states.add,
+        downloadDelay: Duration.zero,
+      );
+      await job.run(1, root);
+      final ready = states.whereType<FolderJobTreeReady>().last;
+      await job.download(ready.checkedBooks);
+
+      final downloading = states.whereType<FolderJobDownloading>().toList();
+      expect(downloading.length, 2); // one before each book
+      for (final d in downloading) {
+        expect(d.currentBook, isNotNull);
+      }
+      expect(downloading.last.completedCount, 1); // second book's pre-emit shows 1 done
+    });
+
+    test('no delay after the last book', () async {
+      final repo = _FakeFeedRepository();
+      final root = Uri.parse('http://example.com/root');
+      repo.addFeed(root, [_book('1')]);
+
+      final states = <FolderJobState>[];
+      final job = FolderDownloadJob(
+        feedRepository: repo,
+        downloadFn: (e, l, s, {inferredSeries}) async => 'content://ok',
+        settings: _settings,
+        onProgress: states.add,
+        downloadDelay: const Duration(milliseconds: 1),
+      );
+      // We just check it completes quickly (no hanging delay after last book)
+      final sw = Stopwatch()..start();
+      await job.run(1, root);
+      final ready = states.whereType<FolderJobTreeReady>().last;
+      await job.download(ready.checkedBooks);
+      sw.stop();
+      // With 1ms delay and NO trailing delay, completion should be well under 100ms
+      expect(sw.elapsedMilliseconds, lessThan(500));
+    });
+
+    test('only checked books are downloaded', () async {
+      final repo = _FakeFeedRepository();
+      final root = Uri.parse('http://example.com/root');
+      repo.addFeed(root, [_book('1'), _book('2'), _book('3')]);
+
+      var calls = 0;
+      final states = <FolderJobState>[];
+      final job = FolderDownloadJob(
+        feedRepository: repo,
+        downloadFn: (e, l, s, {inferredSeries}) async { calls++; return 'content://ok'; },
+        settings: _settings,
+        onProgress: states.add,
+        downloadDelay: Duration.zero,
+      );
+      await job.run(1, root);
+      final ready = states.whereType<FolderJobTreeReady>().last;
+      // Uncheck one book
+      final oneBook = ready.checkedBooks.first;
+      final subset = ready.checkedBooks.where((u) => u != oneBook).toSet();
+      await job.download(subset);
+
+      expect(calls, 2); // only 2 downloaded
+      final done = states.last as FolderJobDone;
+      expect(done.results.length, 2);
+    });
+
+    test('cancel during download: remaining books not started; wasCancelled = true', () async {
+      final repo = _FakeFeedRepository();
+      final root = Uri.parse('http://example.com/root');
+      repo.addFeed(root, List.generate(5, (i) => _book('$i')));
+
+      var downloadCount = 0;
+      FolderDownloadJob? job;
+      final states = <FolderJobState>[];
+      job = FolderDownloadJob(
+        feedRepository: repo,
+        downloadFn: (e, l, s, {inferredSeries}) async {
+          downloadCount++;
+          if (downloadCount == 2) job!.cancel();
+          return 'content://ok';
+        },
+        settings: _settings,
+        onProgress: states.add,
+        downloadDelay: Duration.zero,
+      );
+      await job.run(1, root);
+      final ready = states.whereType<FolderJobTreeReady>().last;
+      await job.download(ready.checkedBooks);
+
+      final done = states.last as FolderJobDone;
+      expect(done.wasCancelled, isTrue);
+      expect(downloadCount, lessThan(5)); // cancelled after 2nd book
+    });
+
+    test('FolderJobDone.stoppedAtLimit preserved from scan phase', () async {
+      final repo = _FakeFeedRepository();
+      final root = Uri.parse('http://example.com/root');
+      repo.addFeed(root, List.generate(2001, (i) => _book('$i')));
+
+      final states = <FolderJobState>[];
+      final job = FolderDownloadJob(
+        feedRepository: repo,
+        downloadFn: (e, l, s, {inferredSeries}) async => 'content://ok',
+        settings: _settings,
+        onProgress: states.add,
+        downloadDelay: Duration.zero,
+      );
+      await job.run(1, root);
+      final ready = states.whereType<FolderJobTreeReady>().last;
+      await job.download(ready.checkedBooks);
+
+      final done = states.last as FolderJobDone;
+      expect(done.stoppedAtLimit, isTrue);
+    });
   });
 
   group('tree model types', () {

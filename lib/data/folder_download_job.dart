@@ -123,12 +123,9 @@ class FolderDownloadJob {
         _downloadDelay = downloadDelay;
 
   final FeedRepository _feedRepository;
-  // ignore: unused_field — used in Task 4 download()
   final DownloadFn _downloadFn;
-  // ignore: unused_field — used in Task 4 download()
   final AppSettings _settings;
   final void Function(FolderJobState) _onProgress;
-  // ignore: unused_field — used in Task 4 download()
   final Duration _downloadDelay;
 
   bool _cancelled = false;
@@ -219,7 +216,61 @@ class FolderDownloadJob {
 
   /// Phase 2: sequential download — call after run() emits FolderJobTreeReady.
   Future<void> download(Set<Uri> checkedBooks) async {
-    // Implemented in Task 4
+    if (_scannedRoot == null || checkedBooks.isEmpty) {
+      _onProgress(FolderJobDone(
+        root: DownloadFolder(title: '', children: []),
+        results: const {},
+        wasCancelled: _cancelled,
+        stoppedAtLimit: _stoppedAtLimit,
+      ));
+      return;
+    }
+
+    final displayRoot = _filterTree(_scannedRoot!, checkedBooks) ??
+        DownloadFolder(title: '', children: []);
+    final tasks = _collectTasks(displayRoot);
+    final results = <Uri, BookDownloadResult>{};
+
+    for (var i = 0; i < tasks.length; i++) {
+      if (_cancelled) break;
+
+      final task = tasks[i];
+      _onProgress(FolderJobDownloading(
+        root: displayRoot,
+        currentBook: task.link.url,
+        results: Map.unmodifiable(results),
+        total: tasks.length,
+        completedCount: results.length,
+      ));
+
+      try {
+        final outcome = await _downloadFn(
+          task.entry, task.link, _settings,
+          inferredSeries: task.inferredSeries,
+        );
+        results[task.link.url] = BookDownloadResult(
+          status: outcome == 'already_exists'
+              ? BookDownloadStatus.skipped
+              : BookDownloadStatus.done,
+        );
+      } catch (e) {
+        results[task.link.url] = BookDownloadResult(
+          status: BookDownloadStatus.failed,
+          error: e.toString(),
+        );
+      }
+
+      if (!_cancelled && i < tasks.length - 1) {
+        await Future<void>.delayed(_downloadDelay);
+      }
+    }
+
+    _onProgress(FolderJobDone(
+      root: displayRoot,
+      results: Map.unmodifiable(results),
+      wasCancelled: _cancelled,
+      stoppedAtLimit: _stoppedAtLimit,
+    ));
   }
 }
 
@@ -246,7 +297,6 @@ Set<Uri> _collectBookUrls(DownloadTreeNode node) {
 }
 
 /// Filter tree to only nodes whose subtree intersects [checkedBooks].
-// ignore: unused_element — used in Task 4 download()
 DownloadTreeNode? _filterTree(DownloadTreeNode node, Set<Uri> checkedBooks) {
   if (node is DownloadBook) {
     return checkedBooks.contains(node.link.url) ? node : null;
@@ -259,7 +309,6 @@ DownloadTreeNode? _filterTree(DownloadTreeNode node, Set<Uri> checkedBooks) {
   return DownloadFolder(title: folder.title, children: filtered);
 }
 
-// ignore: unused_element — used in Task 4 download()
 List<DownloadBook> _collectTasks(DownloadTreeNode node) {
   if (node is DownloadBook) return [node];
   return (node as DownloadFolder).children.expand(_collectTasks).toList();
