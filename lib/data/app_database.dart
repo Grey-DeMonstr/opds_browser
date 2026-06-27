@@ -20,14 +20,20 @@ class AppDatabase {
     return _factory.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 1,
+        version: 2,
         onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
-        onCreate: (db, _) => _createSchema(db),
+        onCreate: (db, _) async {
+          await _createV1Schema(db);
+          await _createV2Schema(db);
+        },
+        onUpgrade: (db, oldVersion, newVersion) async {
+          if (oldVersion < 2) await _createV2Schema(db);
+        },
       ),
     );
   }
 
-  Future<void> _createSchema(Database db) async {
+  Future<void> _createV1Schema(Database db) async {
     await db.execute('''
       CREATE TABLE catalogs (
         id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,6 +60,18 @@ class AppDatabase {
         title      TEXT    NOT NULL,
         sort_order INTEGER NOT NULL,
         UNIQUE (catalog_id, url)
+      )
+    ''');
+  }
+
+  Future<void> _createV2Schema(Database db) async {
+    await db.execute('''
+      CREATE TABLE local_book_cache (
+        path         TEXT    PRIMARY KEY,
+        title        TEXT    NOT NULL,
+        author       TEXT    NOT NULL,
+        series       TEXT,
+        series_index INTEGER
       )
     ''');
   }

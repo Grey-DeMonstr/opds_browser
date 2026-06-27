@@ -31,6 +31,12 @@ void main() {
       expect(names, contains('favorites'));
     });
 
+    test('local_book_cache table exists after open', () async {
+      final d = await db.database;
+      final names = (await tables(d)).map((r) => r['name']).toList();
+      expect(names, contains('local_book_cache'));
+    });
+
     test('foreign keys enforced — insert invalid catalog_id throws', () async {
       final d = await db.database;
       expect(
