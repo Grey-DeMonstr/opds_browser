@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opds_browser/data/fb2_metadata_parser.dart';
@@ -27,30 +26,6 @@ class FakeSettingsRepository implements SettingsRepository {
       const AppSettings(target: CustomSafFolder('content://tree/root', 'Lib'));
   @override
   Future<void> save(AppSettings settings) async {}
-}
-
-// Minimal FB2 XML bytes (bypasses real SAF — parser is called only on cache miss)
-// ignore: unused_element
-Uint8List _fb2Bytes(
-  String title,
-  String author, {
-  String? series,
-  int? seriesNum,
-}) {
-  final seriesEl = series != null
-      ? '<sequence name="$series" number="${seriesNum ?? 1}"/>'
-      : '';
-  final xml =
-      '''<?xml version="1.0" encoding="UTF-8"?>
-<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
-<description><title-info>
-<author><last-name>$author</last-name></author>
-<book-title>$title</book-title>
-$seriesEl
-</title-info></description>
-<body><section><p>.</p></section></body>
-</FictionBook>''';
-  return Uint8List.fromList(xml.codeUnits);
 }
 
 // ── Test helper ───────────────────────────────────────────────────────────────
@@ -167,8 +142,10 @@ void main() {
     await c.read(localLibraryNotifierProvider.notifier).refresh();
 
     // After refresh, cache was cleared; since FakeScanner provides no bytes,
-    // book gets placeholder metadata
-    expect(await cache.get('Jane Doe/book.fb2'), isNull);
+    // book gets placeholder metadata which is now cached as fallback
+    final cached = await cache.get('Jane Doe/book.fb2');
+    expect(cached, isNotNull);
+    expect(cached?.title, 'book.fb2');
   });
 
   test('validationRun starts as false', () async {
