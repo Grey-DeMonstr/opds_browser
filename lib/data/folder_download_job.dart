@@ -119,7 +119,7 @@ class FolderDownloadJob {
     required DownloadFn downloadFn,
     required AppSettings settings,
     required void Function(FolderJobState) onProgress,
-    Duration downloadDelay = const Duration(seconds: 5),
+    Duration downloadDelay = const Duration(seconds: 1),
   }) : _feedRepository = feedRepository,
        _downloadFn = downloadFn,
        _settings = settings,
