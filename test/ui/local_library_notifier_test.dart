@@ -201,6 +201,114 @@ void main() {
     expect(state.validationRun, isFalse);
   });
 
+  group('validate', () {
+    test('sets validationRun and annotates invalid books', () async {
+      // depth-1 book with wrong author
+      final file = LibraryFile(
+        relativePath: 'Jane Doe/book.fb2',
+        documentUri: 'content://doc/1',
+        parentUri: 'content://dir/1',
+      );
+      final c = _makeContainer(files: [file]);
+      addTearDown(c.dispose);
+      await c.read(localLibraryNotifierProvider.notifier).waitForReady();
+
+      // Inject a book with wrong author into cache
+      final cache = c.read(localLibraryCacheProvider);
+      await cache.put(
+        'Jane Doe/book.fb2',
+        const LocalBookMetadata(title: 'T', author: 'Wrong Name'),
+      );
+
+      // Re-scan to pick up the cache
+      await c.read(localLibraryNotifierProvider.notifier).refresh();
+
+      c.read(localLibraryNotifierProvider.notifier).validate();
+
+      final state = c.read(localLibraryNotifierProvider) as LibraryReady;
+      expect(state.validationRun, isTrue);
+
+      final book = state.root.children
+          .whereType<LibraryFolder>()
+          .first
+          .children
+          .whereType<LibraryBook>()
+          .first;
+      expect(book.isInvalid, isTrue);
+    });
+
+    test('marks valid book as not invalid', () async {
+      final file = LibraryFile(
+        relativePath: 'Jane Doe/book.fb2',
+        documentUri: 'content://doc/1',
+        parentUri: 'content://dir/1',
+      );
+      // Pre-populate cache so the initial scan picks up the matching author.
+      final db = AppDatabase(
+        factory: databaseFactoryFfi,
+        path: inMemoryDatabasePath,
+      );
+      final cache = SqfliteLocalLibraryCache(db);
+      await cache.put(
+        'Jane Doe/book.fb2',
+        const LocalBookMetadata(title: 'T', author: 'Jane Doe'),
+      );
+      final c = _makeContainer(files: [file], cache: cache);
+      addTearDown(c.dispose);
+      await c.read(localLibraryNotifierProvider.notifier).waitForReady();
+
+      c.read(localLibraryNotifierProvider.notifier).validate();
+
+      final state = c.read(localLibraryNotifierProvider) as LibraryReady;
+      final book = state.root.children
+          .whereType<LibraryFolder>()
+          .first
+          .children
+          .whereType<LibraryBook>()
+          .first;
+      expect(book.isInvalid, isFalse);
+    });
+  });
+
+  group('fix', () {
+    test('calls writer for invalid books and re-validates', () async {
+      final rw = FakeReadWriter(returnValidFb2: true);
+      final file = LibraryFile(
+        relativePath: 'Jane Doe/book.fb2',
+        documentUri: 'content://doc/1',
+        parentUri: 'content://dir/1',
+      );
+      final c = _makeContainer(files: [file], readWriter: rw);
+      addTearDown(c.dispose);
+      await c.read(localLibraryNotifierProvider.notifier).waitForReady();
+
+      // Inject wrong author so book is invalid after validate
+      final cache = c.read(localLibraryCacheProvider);
+      await cache.put(
+        'Jane Doe/book.fb2',
+        const LocalBookMetadata(title: 'T', author: 'Wrong'),
+      );
+      await c.read(localLibraryNotifierProvider.notifier).refresh();
+      c.read(localLibraryNotifierProvider.notifier).validate();
+
+      await c.read(localLibraryNotifierProvider.notifier).fix();
+
+      // Writer was called
+      expect(rw.writtenPaths, isNotEmpty);
+
+      // After fix, re-validation runs and book should now be valid
+      final state = c.read(localLibraryNotifierProvider) as LibraryReady;
+      expect(state.validationRun, isTrue);
+      final book = state.root.children
+          .whereType<LibraryFolder>()
+          .first
+          .children
+          .whereType<LibraryBook>()
+          .first;
+      expect(book.isInvalid, isFalse);
+    });
+  });
+
   group('updateBook', () {
     test('updates in-memory book meta and cache', () async {
       final db = AppDatabase(

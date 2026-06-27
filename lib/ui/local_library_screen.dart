@@ -162,6 +162,37 @@ class LocalLibraryNotifier extends Notifier<LocalLibraryState> {
     return folder.copyWith(children: newChildren);
   }
 
+  void validate() {
+    final current = state;
+    if (current is! LibraryReady) return;
+    const validator = LocalLibraryValidator();
+    final annotated = validator.validate(current.root);
+    state = current.copyWith(root: annotated, validationRun: true);
+  }
+
+  Future<(int fixed, int skipped)> fix() async {
+    final current = state;
+    if (current is! LibraryReady) return (0, 0);
+
+    final rw = ref.read(localBookReadWriterProvider);
+    final writer = ref.read(fb2MetadataWriterProvider);
+    final cache = ref.read(localLibraryCacheProvider);
+
+    final fixer = LocalLibraryFixer(
+      readWriter: rw,
+      writer: writer,
+      cache: cache,
+    );
+    final (result, newRoot) = await fixer.fix(current.root);
+
+    // Re-validate after fix to refresh isInvalid and hasWarning flags
+    const validator = LocalLibraryValidator();
+    final revalidated = validator.validate(newRoot);
+    state = current.copyWith(root: revalidated, validationRun: true);
+
+    return (result.fixed, result.skipped);
+  }
+
   Future<void> refresh() async {
     final cache = ref.read(localLibraryCacheProvider);
     await cache.deleteAll();
