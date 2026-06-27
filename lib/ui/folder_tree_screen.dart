@@ -29,10 +29,11 @@ class _SelectionView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(folderDownloadProvider.notifier);
 
-    // Pop the screen when state leaves FolderJobTreeReady (cancelled or reset
-    // externally).
+    // Pop the screen only when state reaches FolderJobIdle (produced by
+    // reset() or an idle guard). Transitioning to FolderJobDownloading must
+    // NOT pop — the screen switches to _DownloadView in place.
     ref.listen<FolderJobState>(folderDownloadProvider, (previous, next) {
-      if (next is! FolderJobTreeReady && context.mounted) {
+      if (next is FolderJobIdle && context.mounted) {
         context.pop();
       }
     });
@@ -287,64 +288,76 @@ class _DoneView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(folderDownloadProvider.notifier);
     final rows = _flattenTree(state.root, 0);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Download complete')),
-      body: Column(
-        children: [
-          if (state.wasCancelled)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                'Download was cancelled.',
-                style: TextStyle(color: Colors.orange),
+    void closeAndReset() {
+      notifier.reset();
+      context.pop();
+    }
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) closeAndReset();
+      },
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Download complete')),
+        body: Column(
+          children: [
+            if (state.wasCancelled)
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Text(
+                  'Download was cancelled.',
+                  style: TextStyle(color: Colors.orange),
+                ),
               ),
-            ),
-          if (state.stoppedAtLimit)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                'Catalogue limit reached — not all books were scanned.',
-                style: TextStyle(color: Colors.orange),
+            if (state.stoppedAtLimit)
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Text(
+                  'Catalogue limit reached — not all books were scanned.',
+                  style: TextStyle(color: Colors.orange),
+                ),
               ),
-            ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: rows.length,
-              itemBuilder: (_, i) {
-                final (node, depth) = rows[i];
-                if (node is! DownloadBook) {
+            Expanded(
+              child: ListView.builder(
+                itemCount: rows.length,
+                itemBuilder: (_, i) {
+                  final (node, depth) = rows[i];
+                  if (node is! DownloadBook) {
+                    return Padding(
+                      padding: EdgeInsets.only(left: depth * 16.0),
+                      child: ListTile(
+                        leading: const Icon(Icons.folder),
+                        title: Text((node as DownloadFolder).title),
+                      ),
+                    );
+                  }
+                  final result = state.results[node.link.url];
+                  final icon = _bookIcon(node.link.url, false, result, context);
                   return Padding(
                     padding: EdgeInsets.only(left: depth * 16.0),
                     child: ListTile(
-                      leading: const Icon(Icons.folder),
-                      title: Text((node as DownloadFolder).title),
+                      leading: icon,
+                      title: Text(node.entry.title),
                     ),
                   );
-                }
-                final result = state.results[node.link.url];
-                final icon = _bookIcon(node.link.url, false, result, context);
-                return Padding(
-                  padding: EdgeInsets.only(left: depth * 16.0),
-                  child: ListTile(
-                    leading: icon,
-                    title: Text(node.entry.title),
-                  ),
-                );
-              },
-            ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: FilledButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Close'),
+                },
               ),
             ),
-          ),
-        ],
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: FilledButton(
+                  onPressed: closeAndReset,
+                  child: const Text('Close'),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

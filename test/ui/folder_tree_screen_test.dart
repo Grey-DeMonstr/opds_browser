@@ -45,13 +45,26 @@ class _FakeTreeNotifier extends FolderDownloadNotifier {
   @override
   Future<void> confirmDownload(Set<Uri> checkedBooks) async {
     lastConfirm = checkedBooks;
+    // Transition to FolderJobDownloading so the UI shows _DownloadView.
+    final ready = state as FolderJobTreeReady;
+    state = FolderJobDownloading(
+      root: ready.root,
+      results: const {},
+      total: checkedBooks.length,
+      completedCount: 0,
+    );
   }
 
   @override
   void reset() {
     resetCalled = true;
-    // Note: setting state = const FolderJobIdle() requires riverpod context,
-    // so we just set the flag for testing purposes.
+    // Only update state when the notifier is live inside a ProviderContainer.
+    // Direct instantiation outside a container will throw; guard with try/catch.
+    try {
+      state = const FolderJobIdle();
+    } catch (_) {
+      // Notifier not initialised (used in a bare unit test).
+    }
   }
 
   @override
@@ -75,9 +88,30 @@ GoRouter _router() => GoRouter(routes: [
       GoRoute(path: '/', builder: _treeScreen),
     ]);
 
+/// Two-route router: a blank Home page at '/' that can push '/tree'.
+/// Allows context.pop() in FolderTreeScreen to have something to pop to.
+GoRouter _routerWithHome() => GoRouter(
+      initialLocation: '/tree',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, s) => const Scaffold(body: SizedBox()),
+          routes: [
+            GoRoute(path: 'tree', builder: _treeScreen),
+          ],
+        ),
+      ],
+    );
+
 Widget _wrap(ProviderContainer container) => UncontrolledProviderScope(
       container: container,
       child: MaterialApp.router(routerConfig: _router()),
+    );
+
+/// Wraps with a two-level router so FolderTreeScreen can pop back to home.
+Widget _wrapPoppable(ProviderContainer container) => UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp.router(routerConfig: _routerWithHome()),
     );
 
 Widget _wrapWithState(FolderJobState initial) =>
@@ -181,6 +215,28 @@ void main() {
       await tester.pump();
       final notifier = c.read(folderDownloadProvider.notifier) as _FakeTreeNotifier;
       expect(notifier.lastConfirm, isNotNull);
+    });
+
+    testWidgets(
+        'tapping Download button shows _DownloadView (not a pop)', (tester) async {
+      final b1 = _book('1');
+      final c = _container(FolderJobTreeReady(root: b1, checkedBooks: {b1.link.url}));
+      await tester.pumpWidget(_wrap(c));
+
+      // Verify we start in selection mode (FilledButton with Download label).
+      expect(find.textContaining('Download'), findsOneWidget);
+
+      // Tap the Download button — fake notifier transitions to FolderJobDownloading.
+      await tester.tap(find.byType(FilledButton));
+      await tester.pump();
+
+      // _DownloadView must be visible: it contains a LinearProgressIndicator
+      // and a Cancel button. The screen must NOT have been popped.
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      expect(find.text('Cancel'), findsOneWidget);
+
+      // Selection UI is gone — no checkbox, no Download button.
+      expect(find.byType(Checkbox), findsNothing);
     });
 
     test('notifier.reset() sets resetCalled flag', () {
@@ -339,6 +395,25 @@ void main() {
         stoppedAtLimit: false,
       )));
       expect(find.textContaining('cancelled'), findsOneWidget);
+    });
+
+    testWidgets('Close button calls notifier.reset() before popping',
+        (tester) async {
+      final b = _book('1');
+      final c = _container(FolderJobDone(
+        root: b,
+        results: {b.link.url: const BookDownloadResult(status: BookDownloadStatus.done)},
+        wasCancelled: false,
+        stoppedAtLimit: false,
+      ));
+      await tester.pumpWidget(_wrapPoppable(c));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
+
+      final notifier = c.read(folderDownloadProvider.notifier) as _FakeTreeNotifier;
+      expect(notifier.resetCalled, isTrue);
     });
   });
 }
