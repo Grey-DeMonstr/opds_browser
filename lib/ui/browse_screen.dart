@@ -11,7 +11,6 @@ import 'package:opds_browser/domain/download_utils.dart';
 import 'package:opds_browser/domain/entities.dart';
 import 'package:opds_browser/ui/book_details_sheet.dart';
 import 'package:opds_browser/ui/providers.dart';
-import 'package:opds_browser/ui/widgets/folder_job_banner.dart';
 
 class BrowseScreen extends ConsumerStatefulWidget {
   final int catalogId;
@@ -150,35 +149,10 @@ class _BrowseContent extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.download_for_offline_outlined),
             tooltip: 'Download folder',
-            onPressed: (jobState is FolderJobIdle || jobState is FolderJobDone)
-                ? () async {
-                    final confirmed = await showDialog<bool>(
-                      context: context,
-                      builder: (dialogContext) => AlertDialog(
-                        title: const Text('Download folder'),
-                        content: const Text(
-                          'Download all books in this folder and its '
-                          'subfolders? This may be a large amount of data.',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () =>
-                                Navigator.pop(dialogContext, false),
-                            child: const Text('CANCEL'),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.pop(dialogContext, true),
-                            child: const Text('DOWNLOAD'),
-                          ),
-                        ],
-                      ),
-                    );
-                    if (confirmed == true && context.mounted) {
-                      ref
-                          .read(folderDownloadProvider.notifier)
-                          .start(catalogId, url);
-                    }
-                  }
+            onPressed: jobState is FolderJobIdle
+                ? () => context.push(
+                      '/folder-scan?catalogId=$catalogId&url=${Uri.encodeComponent(url.toString())}',
+                    )
                 : null,
           ),
         ],
@@ -231,7 +205,6 @@ class _BrowseContent extends ConsumerWidget {
               ),
             ),
           ),
-          const FolderJobBanner(),
         ],
       ),
     );
