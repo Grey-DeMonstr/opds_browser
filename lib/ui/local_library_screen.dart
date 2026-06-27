@@ -135,6 +135,7 @@ class LocalLibraryNotifier extends Notifier<LocalLibraryState> {
       patched,
     );
     await cache.put(book.relativePath, newMeta);
+    if (!ref.mounted) return;
 
     final currentReady = state;
     if (currentReady is LibraryReady) {
@@ -184,11 +185,9 @@ class LocalLibraryNotifier extends Notifier<LocalLibraryState> {
       cache: cache,
     );
     final (result, newRoot) = await fixer.fix(current.root);
+    if (!ref.mounted) return (0, 0);
 
-    // Re-validate after fix to refresh isInvalid and hasWarning flags
-    const validator = LocalLibraryValidator();
-    final revalidated = validator.validate(newRoot);
-    state = current.copyWith(root: revalidated, validationRun: true);
+    state = current.copyWith(root: newRoot, validationRun: true);
 
     return (result.fixed, result.skipped);
   }
