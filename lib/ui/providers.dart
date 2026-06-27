@@ -15,9 +15,14 @@ import 'package:opds_browser/data/saf_download_storage.dart';
 import 'package:opds_browser/data/shared_prefs_settings_repository.dart';
 import 'package:opds_browser/data/sqflite_catalog_repository.dart';
 import 'package:opds_browser/data/sqflite_favorites_repository.dart';
+import 'package:opds_browser/data/fb2_metadata_parser.dart';
+import 'package:opds_browser/data/saf_book_read_writer.dart';
+import 'package:opds_browser/data/saf_local_library_scanner.dart';
+import 'package:opds_browser/data/sqflite_local_library_cache.dart';
 import 'package:opds_browser/domain/download_utils.dart';
 import 'package:opds_browser/domain/entities.dart';
 import 'package:opds_browser/domain/models.dart';
+import 'package:opds_browser/domain/local_library.dart';
 import 'package:opds_browser/domain/opds_client.dart';
 import 'package:opds_browser/domain/repositories.dart';
 import 'package:saf_util/saf_util.dart';
@@ -503,3 +508,21 @@ final folderDownloadProvider =
     NotifierProvider<FolderDownloadNotifier, FolderJobState>(
       FolderDownloadNotifier.new,
     );
+
+// ── Local library ─────────────────────────────────────────────────────────────
+
+final localLibraryScannerProvider = Provider<LocalLibraryScanner>(
+  (ref) => SafLocalLibraryScanner(),
+);
+
+final localLibraryCacheProvider = Provider<SqfliteLocalLibraryCache>(
+  (ref) => SqfliteLocalLibraryCache(ref.watch(appDatabaseProvider)),
+);
+
+final fb2MetadataParserProvider = Provider<Fb2MetadataParser>(
+  (ref) => Fb2MetadataParser(),
+);
+
+final localBookReadWriterProvider = Provider<LocalBookReadWriter>(
+  (ref) => SafBookReadWriter(),
+);
