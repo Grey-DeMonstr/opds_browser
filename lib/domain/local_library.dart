@@ -90,6 +90,50 @@ abstract interface class LocalLibraryScanner {
   Stream<LibraryFile> scan(String treeUri);
 }
 
+class LocalLibraryValidator {
+  const LocalLibraryValidator();
+
+  /// Returns a new annotated tree. Pure function — no I/O.
+  LibraryFolder validate(LibraryFolder root) {
+    return _annotateFolder(root);
+  }
+
+  LibraryFolder _annotateFolder(LibraryFolder folder) {
+    final annotatedChildren = folder.children.map(_annotateNode).toList();
+    final hasWarning = annotatedChildren.any(
+      (node) => switch (node) {
+        LibraryBook b => b.isInvalid,
+        LibraryFolder f => f.hasWarning,
+      },
+    );
+    return folder.copyWith(children: annotatedChildren, hasWarning: hasWarning);
+  }
+
+  LibraryNode _annotateNode(LibraryNode node) => switch (node) {
+    LibraryBook b => b.copyWith(isInvalid: !_isValid(b)),
+    LibraryFolder f => _annotateFolder(f),
+  };
+
+  bool _isValid(LibraryBook book) {
+    final parts = book.relativePath.split('/');
+    // Last part is the filename; preceding parts are folder segments
+    final segments = parts.sublist(0, parts.length - 1);
+    final depth = segments.length;
+    final author = book.meta.author.toLowerCase().trim();
+    final series = book.meta.series?.toLowerCase().trim();
+
+    return switch (depth) {
+      0 => false,
+      1 => series == null && segments[0].toLowerCase().trim() == author,
+      2 =>
+        series != null &&
+            segments[0].toLowerCase().trim() == author &&
+            segments[1].toLowerCase().trim() == series,
+      _ => false,
+    };
+  }
+}
+
 abstract interface class LocalBookReadWriter {
   Future<Uint8List> readBytes(String documentUri);
 
