@@ -113,6 +113,54 @@ class LocalLibraryNotifier extends Notifier<LocalLibraryState> {
     }
   }
 
+  Future<void> updateBook(LibraryBook book, LocalBookMetadata newMeta) async {
+    final rw = ref.read(localBookReadWriterProvider);
+    final writer = ref.read(fb2MetadataWriterProvider);
+    final cache = ref.read(localLibraryCacheProvider);
+
+    final isZip = book.relativePath.toLowerCase().endsWith('.fb2.zip');
+    final fileName = book.relativePath.split('/').last;
+    final mimeType = isZip
+        ? 'application/zip'
+        : 'application/x-fictionbook+xml';
+
+    final bytes = await rw.readBytes(book.documentUri);
+    final patched = writer.patchBytes(bytes, newMeta, isZip: isZip);
+    await rw.writeBytes(
+      book.documentUri,
+      book.parentUri,
+      fileName,
+      mimeType,
+      patched,
+    );
+    await cache.put(book.relativePath, newMeta);
+
+    final currentReady = state;
+    if (currentReady is LibraryReady) {
+      final newRoot = _replaceBook(
+        currentReady.root,
+        book.relativePath,
+        (b) => b.copyWith(meta: newMeta),
+      );
+      state = currentReady.copyWith(root: newRoot);
+    }
+  }
+
+  LibraryFolder _replaceBook(
+    LibraryFolder folder,
+    String relativePath,
+    LibraryBook Function(LibraryBook) update,
+  ) {
+    final newChildren = folder.children.map((node) {
+      return switch (node) {
+        LibraryBook b when b.relativePath == relativePath => update(b),
+        LibraryFolder f => _replaceBook(f, relativePath, update),
+        _ => node,
+      };
+    }).toList();
+    return folder.copyWith(children: newChildren);
+  }
+
   Future<void> refresh() async {
     final cache = ref.read(localLibraryCacheProvider);
     await cache.deleteAll();

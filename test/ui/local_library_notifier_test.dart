@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opds_browser/data/fb2_metadata_parser.dart';
@@ -28,22 +30,64 @@ class FakeSettingsRepository implements SettingsRepository {
   Future<void> save(AppSettings settings) async {}
 }
 
+class FakeReadWriter implements LocalBookReadWriter {
+  final _callLog = <String>[];
+  List<String> get writtenPaths => _callLog;
+
+  // Returns minimal valid FB2 so patchBytes succeeds in updateBook tests.
+  static const _minimalFb2 =
+      '<?xml version="1.0"?>'
+      '<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">'
+      '<description><title-info>'
+      '<author><last-name>Old</last-name></author>'
+      '<book-title>Old</book-title>'
+      '</title-info></description>'
+      '<body><section><p/></section></body>'
+      '</FictionBook>';
+
+  final bool returnValidFb2;
+
+  FakeReadWriter({this.returnValidFb2 = false});
+
+  @override
+  Future<Uint8List> readBytes(String documentUri) async {
+    if (returnValidFb2) {
+      return Uint8List.fromList(_minimalFb2.codeUnits);
+    }
+    return Uint8List(0);
+  }
+
+  @override
+  Future<void> writeBytes(
+    String documentUri,
+    String parentUri,
+    String fileName,
+    String mimeType,
+    Uint8List bytes,
+  ) async {
+    _callLog.add(documentUri);
+  }
+}
+
 // ── Test helper ───────────────────────────────────────────────────────────────
 
 ProviderContainer _makeContainer({
   required List<LibraryFile> files,
   SqfliteLocalLibraryCache? cache,
+  LocalBookReadWriter? readWriter,
 }) {
   final db = AppDatabase(
     factory: databaseFactoryFfi,
     path: inMemoryDatabasePath,
   );
   final realCache = cache ?? SqfliteLocalLibraryCache(db);
+  final rw = readWriter ?? FakeReadWriter();
   return ProviderContainer(
     overrides: [
       localLibraryScannerProvider.overrideWithValue(FakeScanner(files)),
       localLibraryCacheProvider.overrideWithValue(realCache),
       fb2MetadataParserProvider.overrideWithValue(Fb2MetadataParser()),
+      localBookReadWriterProvider.overrideWithValue(rw),
       settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
       safPermissionCheckerProvider.overrideWithValue((_) async => true),
     ],
@@ -154,5 +198,59 @@ void main() {
     await c.read(localLibraryNotifierProvider.notifier).waitForReady();
     final state = c.read(localLibraryNotifierProvider) as LibraryReady;
     expect(state.validationRun, isFalse);
+  });
+
+  group('updateBook', () {
+    test('updates in-memory book meta and cache', () async {
+      final db = AppDatabase(
+        factory: databaseFactoryFfi,
+        path: inMemoryDatabasePath,
+      );
+      final cache = SqfliteLocalLibraryCache(db);
+      final rw = FakeReadWriter(returnValidFb2: true);
+
+      final file = LibraryFile(
+        relativePath: 'Jane Doe/book.fb2',
+        documentUri: 'content://doc/1',
+        parentUri: 'content://dir/1',
+      );
+      final c = _makeContainer(files: [file], cache: cache, readWriter: rw);
+      addTearDown(c.dispose);
+      await c.read(localLibraryNotifierProvider.notifier).waitForReady();
+
+      final state = c.read(localLibraryNotifierProvider) as LibraryReady;
+      final book = state.root.children
+          .whereType<LibraryFolder>()
+          .first
+          .children
+          .whereType<LibraryBook>()
+          .first;
+
+      const newMeta = LocalBookMetadata(
+        title: 'New Title',
+        author: 'New Author',
+      );
+      await c
+          .read(localLibraryNotifierProvider.notifier)
+          .updateBook(book, newMeta);
+
+      // In-memory tree updated
+      final newState = c.read(localLibraryNotifierProvider) as LibraryReady;
+      final updatedBook = newState.root.children
+          .whereType<LibraryFolder>()
+          .first
+          .children
+          .whereType<LibraryBook>()
+          .first;
+      expect(updatedBook.meta.title, 'New Title');
+      expect(updatedBook.meta.author, 'New Author');
+
+      // Cache updated
+      final cached = await cache.get('Jane Doe/book.fb2');
+      expect(cached?.title, 'New Title');
+
+      // Writer was called
+      expect(rw.writtenPaths, contains('content://doc/1'));
+    });
   });
 }
