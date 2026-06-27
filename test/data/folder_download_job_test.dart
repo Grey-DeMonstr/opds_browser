@@ -35,7 +35,7 @@ class _FakeFeedRepository implements FeedRepository {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-const _settings = AppSettings(target: SystemDownloads());
+const _settings = AppSettings();
 
 NavigationEntry _nav(String path) =>
     NavigationEntry(title: 'Nav', url: Uri.parse('http://example.com$path'));

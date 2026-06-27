@@ -25,9 +25,7 @@ class _BookDetailsSheetState extends ConsumerState<BookDetailsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final settings =
-        ref.watch(settingsProvider).value ??
-        const AppSettings(target: SystemDownloads());
+    final settings = ref.watch(settingsProvider).value ?? const AppSettings();
     final watchUrl = _activeDownloadUrl ?? _defaultWatchUrl;
     final downloadState = ref.watch(downloadNotifierProvider(watchUrl));
     final isDownloading = downloadState is DownloadInProgress;

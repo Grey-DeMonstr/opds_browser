@@ -37,9 +37,7 @@ class FakeDownloadStorage implements DownloadStorage {
 
 class FakeSettingsNotifier extends SettingsNotifier {
   final AppSettings _initial;
-  FakeSettingsNotifier({
-    this._initial = const AppSettings(target: SystemDownloads()),
-  });
+  FakeSettingsNotifier({this._initial = const AppSettings()});
 
   @override
   Future<AppSettings> build() async => _initial;

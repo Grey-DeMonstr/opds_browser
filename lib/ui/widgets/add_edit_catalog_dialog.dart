@@ -59,22 +59,25 @@ class _AddEditCatalogDialogState extends ConsumerState<AddEditCatalogDialog> {
       try {
         ok = await ref.read(opdsClientProvider).probe(url);
       } on OpdsException catch (e) {
-        if (mounted)
+        if (mounted) {
           setState(() {
             _probing = false;
             _probeError = e.message;
           });
+        }
         return;
       }
-      if (mounted)
+      if (mounted) {
         setState(() {
           _probing = false;
         });
+      }
       if (!ok) {
-        if (mounted)
+        if (mounted) {
           setState(() {
             _probeError = 'Not a supported OPDS catalogue';
           });
+        }
         return;
       }
     }

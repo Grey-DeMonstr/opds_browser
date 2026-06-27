@@ -20,45 +20,38 @@ class FakeSettingsNotifier extends SettingsNotifier {
   Future<AppSettings> build() async {
     if (_triggerPermissionRevoked) {
       permissionRevoked = true;
-      return const AppSettings(target: SystemDownloads());
+      return const AppSettings();
     }
     return _initial;
   }
 
   @override
   Future<bool> pickCustomFolder() async {
-    final newSettings =
-        (state.value ?? const AppSettings(target: SystemDownloads())).copyWith(
-          target: const CustomSafFolder('content://fake/tree', 'TestFolder'),
-        );
+    final newSettings = (state.value ?? const AppSettings()).copyWith(
+      target: const CustomSafFolder('content://fake/tree', 'TestFolder'),
+    );
     state = AsyncData(newSettings);
     return true;
   }
 
   @override
-  Future<void> setSystemDownloads() async {
+  Future<void> clearTarget() async {
     state = AsyncData(
-      (state.value ?? const AppSettings(target: SystemDownloads())).copyWith(
-        target: const SystemDownloads(),
-      ),
+      (state.value ?? const AppSettings()).copyWith(clearTarget: true),
     );
   }
 
   @override
   Future<void> setCreateAuthorFolder(bool value) async {
     state = AsyncData(
-      (state.value ?? const AppSettings(target: SystemDownloads())).copyWith(
-        createAuthorFolder: value,
-      ),
+      (state.value ?? const AppSettings()).copyWith(createAuthorFolder: value),
     );
   }
 
   @override
   Future<void> setCreateSeriesFolder(bool value) async {
     state = AsyncData(
-      (state.value ?? const AppSettings(target: SystemDownloads())).copyWith(
-        createSeriesFolder: value,
-      ),
+      (state.value ?? const AppSettings()).copyWith(createSeriesFolder: value),
     );
   }
 }
@@ -77,7 +70,7 @@ Widget buildApp(FakeSettingsNotifier notifier) {
 void main() {
   group('buildPathExample', () {
     test('no folders: filename directly under Downloads', () {
-      const s = AppSettings(target: SystemDownloads());
+      const s = AppSettings();
       expect(
         buildPathExample(s),
         'Downloads/Jane Doe - Great Series #1 - Book Title.fb2',
@@ -85,10 +78,7 @@ void main() {
     });
 
     test('author folder enabled — author omitted from filename', () {
-      const s = AppSettings(
-        target: SystemDownloads(),
-        createAuthorFolder: true,
-      );
+      const s = AppSettings(createAuthorFolder: true);
       expect(
         buildPathExample(s),
         'Downloads/Jane Doe/Great Series #1 - Book Title.fb2',
@@ -96,10 +86,7 @@ void main() {
     });
 
     test('series folder enabled — series omitted from filename', () {
-      const s = AppSettings(
-        target: SystemDownloads(),
-        createSeriesFolder: true,
-      );
+      const s = AppSettings(createSeriesFolder: true);
       expect(
         buildPathExample(s),
         'Downloads/Great Series/Jane Doe - Book Title.fb2',
@@ -107,11 +94,7 @@ void main() {
     });
 
     test('both folders enabled — author and series omitted from filename', () {
-      const s = AppSettings(
-        target: SystemDownloads(),
-        createAuthorFolder: true,
-        createSeriesFolder: true,
-      );
+      const s = AppSettings(createAuthorFolder: true, createSeriesFolder: true);
       expect(
         buildPathExample(s),
         'Downloads/Jane Doe/Great Series/Book Title.fb2',
@@ -123,9 +106,7 @@ void main() {
     testWidgets(
       'renders both radios with System Downloads selected by default',
       (tester) async {
-        final notifier = FakeSettingsNotifier(
-          initial: const AppSettings(target: SystemDownloads()),
-        );
+        final notifier = FakeSettingsNotifier(initial: const AppSettings());
         await tester.pumpWidget(buildApp(notifier));
         await tester.pumpAndSettle();
 
@@ -152,9 +133,7 @@ void main() {
     testWidgets(
       'tapping Custom folder tile calls pickCustomFolder and updates subtitle',
       (tester) async {
-        final notifier = FakeSettingsNotifier(
-          initial: const AppSettings(target: SystemDownloads()),
-        );
+        final notifier = FakeSettingsNotifier(initial: const AppSettings());
         await tester.pumpWidget(buildApp(notifier));
         await tester.pumpAndSettle();
 
@@ -165,7 +144,7 @@ void main() {
       },
     );
 
-    testWidgets('tapping System Downloads radio calls setSystemDownloads', (
+    testWidgets('tapping System Downloads radio calls clearTarget', (
       tester,
     ) async {
       final notifier = FakeSettingsNotifier(
@@ -183,9 +162,7 @@ void main() {
     });
 
     testWidgets('author checkbox toggles on and off', (tester) async {
-      final notifier = FakeSettingsNotifier(
-        initial: const AppSettings(target: SystemDownloads()),
-      );
+      final notifier = FakeSettingsNotifier(initial: const AppSettings());
       await tester.pumpWidget(buildApp(notifier));
       await tester.pumpAndSettle();
 
@@ -196,9 +173,7 @@ void main() {
     });
 
     testWidgets('series checkbox toggles on and off', (tester) async {
-      final notifier = FakeSettingsNotifier(
-        initial: const AppSettings(target: SystemDownloads()),
-      );
+      final notifier = FakeSettingsNotifier(initial: const AppSettings());
       await tester.pumpWidget(buildApp(notifier));
       await tester.pumpAndSettle();
 
@@ -211,9 +186,7 @@ void main() {
     testWidgets('path caption updates live when author checkbox changes', (
       tester,
     ) async {
-      final notifier = FakeSettingsNotifier(
-        initial: const AppSettings(target: SystemDownloads()),
-      );
+      final notifier = FakeSettingsNotifier(initial: const AppSettings());
       await tester.pumpWidget(buildApp(notifier));
       await tester.pumpAndSettle();
 
@@ -235,7 +208,7 @@ void main() {
       tester,
     ) async {
       final notifier = FakeSettingsNotifier(
-        initial: const AppSettings(target: SystemDownloads()),
+        initial: const AppSettings(),
         triggerPermissionRevoked: true,
       );
       await tester.pumpWidget(buildApp(notifier));

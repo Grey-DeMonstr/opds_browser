@@ -58,7 +58,7 @@ final _book = BookEntry(
   acquisitionLinks: [_link],
 );
 
-const _settings = AppSettings(target: SystemDownloads());
+const _settings = AppSettings();
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
@@ -142,10 +142,7 @@ void main() {
     final client = MockClient((_) async => http.Response.bytes([1], 200));
     final storage = FakeDownloadStorage();
     final downloader = BookDownloader(client, storage);
-    const settings = AppSettings(
-      target: SystemDownloads(),
-      createAuthorFolder: true,
-    );
+    const settings = AppSettings(createAuthorFolder: true);
 
     await downloader.download(_book, _link, settings);
 
@@ -158,10 +155,7 @@ void main() {
       final client = MockClient((_) async => http.Response.bytes([1], 200));
       final storage = FakeDownloadStorage();
       final downloader = BookDownloader(client, storage);
-      const settings = AppSettings(
-        target: SystemDownloads(),
-        createSeriesFolder: true,
-      );
+      const settings = AppSettings(createSeriesFolder: true);
 
       await downloader.download(
         _book,
