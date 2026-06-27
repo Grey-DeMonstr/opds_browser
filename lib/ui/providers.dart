@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter/foundation.dart';
 import 'package:opds_browser/data/folder_download_job.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -189,6 +190,17 @@ final safPermissionCheckerProvider = Provider<Future<bool> Function(String)>((
   return (uri) => SafUtil().hasPersistedPermission(uri, checkWrite: true);
 });
 
+class _RouterRefreshNotifier extends ChangeNotifier {
+  void ping() => notifyListeners();
+}
+
+final routerRefreshProvider = Provider<_RouterRefreshNotifier>((ref) {
+  final notifier = _RouterRefreshNotifier();
+  ref.onDispose(notifier.dispose);
+  ref.listen(settingsProvider, (prev, next) => notifier.ping());
+  return notifier;
+});
+
 class SettingsNotifier extends AsyncNotifier<AppSettings> {
   bool permissionRevoked = false;
 
@@ -197,11 +209,11 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
     final repo = ref.read(settingsRepositoryProvider);
     final checker = ref.read(safPermissionCheckerProvider);
     var settings = await repo.load();
-    if (settings.target is CustomSafFolder) {
-      final uri = (settings.target as CustomSafFolder).uriString;
-      final hasPermission = await checker(uri);
+    final target = settings.target;
+    if (target != null) {
+      final hasPermission = await checker(target.uriString);
       if (!hasPermission) {
-        settings = settings.copyWith(target: const SystemDownloads());
+        settings = settings.copyWith(clearTarget: true);
         await repo.save(settings);
         permissionRevoked = true;
       }
@@ -214,11 +226,9 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
       final dirPath = await getDirectoryPath();
       if (dirPath == null) return false;
       final name = p.basename(dirPath);
-      final newSettings =
-          (state.value ?? const AppSettings(target: SystemDownloads()))
-              .copyWith(
-                target: CustomSafFolder(dirPath, name.isEmpty ? dirPath : name),
-              );
+      final newSettings = (state.value ?? const AppSettings()).copyWith(
+        target: CustomSafFolder(dirPath, name.isEmpty ? dirPath : name),
+      );
       await ref.read(settingsRepositoryProvider).save(newSettings);
       state = AsyncData(newSettings);
       return true;
@@ -229,19 +239,18 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
     );
     if (dir == null) return false;
     final name = dir.name.isNotEmpty ? dir.name : dir.uri;
-    final newSettings =
-        (state.value ?? const AppSettings(target: SystemDownloads())).copyWith(
-          target: CustomSafFolder(dir.uri, name),
-        );
+    final newSettings = (state.value ?? const AppSettings()).copyWith(
+      target: CustomSafFolder(dir.uri, name),
+    );
     await ref.read(settingsRepositoryProvider).save(newSettings);
     state = AsyncData(newSettings);
     return true;
   }
 
-  Future<void> setSystemDownloads() async {
+  Future<void> clearTarget() async {
     final current = state.value;
     if (current == null) return;
-    final newSettings = current.copyWith(target: const SystemDownloads());
+    final newSettings = current.copyWith(clearTarget: true);
     await ref.read(settingsRepositoryProvider).save(newSettings);
     state = AsyncData(newSettings);
   }
@@ -270,8 +279,6 @@ final settingsProvider = AsyncNotifierProvider<SettingsNotifier, AppSettings>(
 final downloadStorageProvider = Provider<DownloadStorage?>((ref) {
   final target = ref.watch(settingsProvider).value?.target;
   return switch (target) {
-    SystemDownloads() when Platform.isAndroid => null,
-    SystemDownloads() => FileSystemDownloadStorage.downloads(),
     CustomSafFolder(uriString: final uri) when Platform.isAndroid =>
       SafDownloadStorage(uri),
     CustomSafFolder(uriString: final path) => FileSystemDownloadStorage(path),

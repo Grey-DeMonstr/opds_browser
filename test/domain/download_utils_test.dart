@@ -23,17 +23,10 @@ BookEntry _book({
   acquisitionLinks: links ?? [_link('FB2')],
 );
 
-const _noFolders = AppSettings(target: SystemDownloads());
-const _authorFolder = AppSettings(
-  target: SystemDownloads(),
-  createAuthorFolder: true,
-);
-const _seriesFolder = AppSettings(
-  target: SystemDownloads(),
-  createSeriesFolder: true,
-);
+const _noFolders = AppSettings();
+const _authorFolder = AppSettings(createAuthorFolder: true);
+const _seriesFolder = AppSettings(createSeriesFolder: true);
 const _bothFolders = AppSettings(
-  target: SystemDownloads(),
   createAuthorFolder: true,
   createSeriesFolder: true,
 );
@@ -247,36 +240,26 @@ void main() {
   // ── buildPathSegments ──────────────────────────────────────────────────────
 
   group('buildPathSegments', () {
-    const system = AppSettings(target: SystemDownloads());
+    const system = AppSettings();
 
     test('both flags off — empty list', () {
       expect(buildPathSegments(system, _book(series: 'S')), isEmpty);
     });
 
     test('author flag on — author segment added', () {
-      const s = AppSettings(
-        target: SystemDownloads(),
-        createAuthorFolder: true,
-      );
+      const s = AppSettings(createAuthorFolder: true);
       expect(buildPathSegments(s, _book()), ['Jane Doe']);
     });
 
     test('series flag on — series segment added', () {
-      const s = AppSettings(
-        target: SystemDownloads(),
-        createSeriesFolder: true,
-      );
+      const s = AppSettings(createSeriesFolder: true);
       expect(buildPathSegments(s, _book(series: 'Great Series')), [
         'Great Series',
       ]);
     });
 
     test('both flags on — author then series', () {
-      const s = AppSettings(
-        target: SystemDownloads(),
-        createAuthorFolder: true,
-        createSeriesFolder: true,
-      );
+      const s = AppSettings(createAuthorFolder: true, createSeriesFolder: true);
       expect(buildPathSegments(s, _book(series: 'Great Series')), [
         'Jane Doe',
         'Great Series',
@@ -284,28 +267,19 @@ void main() {
     });
 
     test('author flag on but authors empty — no folder created', () {
-      const s = AppSettings(
-        target: SystemDownloads(),
-        createAuthorFolder: true,
-      );
+      const s = AppSettings(createAuthorFolder: true);
       expect(buildPathSegments(s, _book(authors: [])), isEmpty);
     });
 
     test('series flag on but series null — no folder created', () {
-      const s = AppSettings(
-        target: SystemDownloads(),
-        createSeriesFolder: true,
-      );
+      const s = AppSettings(createSeriesFolder: true);
       expect(buildPathSegments(s, _book()), isEmpty);
     });
 
     test(
       'series flag on, entry.series null, inferredSeries provided — inferred series folder created',
       () {
-        const s = AppSettings(
-          target: SystemDownloads(),
-          createSeriesFolder: true,
-        );
+        const s = AppSettings(createSeriesFolder: true);
         expect(
           buildPathSegments(s, _book(), inferredSeries: 'Inferred Series'),
           ['Inferred Series'],
@@ -316,10 +290,7 @@ void main() {
     test(
       'series flag on — real entry.series takes precedence over inferredSeries',
       () {
-        const s = AppSettings(
-          target: SystemDownloads(),
-          createSeriesFolder: true,
-        );
+        const s = AppSettings(createSeriesFolder: true);
         expect(
           buildPathSegments(
             s,
@@ -334,10 +305,7 @@ void main() {
     test(
       'series flag on, entry.series null, inferredSeries null — no folder',
       () {
-        const s = AppSettings(
-          target: SystemDownloads(),
-          createSeriesFolder: true,
-        );
+        const s = AppSettings(createSeriesFolder: true);
         expect(buildPathSegments(s, _book(), inferredSeries: null), isEmpty);
       },
     );

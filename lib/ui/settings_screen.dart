@@ -101,7 +101,7 @@ class _SettingsBody extends ConsumerWidget {
               if (value == true) {
                 notifier.pickCustomFolder();
               } else {
-                notifier.setSystemDownloads();
+                notifier.clearTarget();
               }
             },
             child: Column(

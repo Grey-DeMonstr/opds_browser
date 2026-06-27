@@ -85,8 +85,7 @@ class _FakeDownloadStorage implements DownloadStorage {
 
 class _ConstSettingsRepo implements SettingsRepository {
   @override
-  Future<AppSettings> load() async =>
-      const AppSettings(target: SystemDownloads());
+  Future<AppSettings> load() async => const AppSettings();
   @override
   Future<void> save(AppSettings s) async {}
 }

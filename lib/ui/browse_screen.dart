@@ -338,9 +338,7 @@ class _BookEntryTileState extends ConsumerState<_BookEntryTile> {
 
   Future<void> _onDownloadTap(BuildContext context) async {
     final entry = widget.entry;
-    final settings =
-        ref.read(settingsProvider).value ??
-        const AppSettings(target: SystemDownloads());
+    final settings = ref.read(settingsProvider).value ?? const AppSettings();
     final preferred = preferredLink(entry.acquisitionLinks);
     if (preferred != null) {
       setState(() => _downloadUrl = preferred.url);

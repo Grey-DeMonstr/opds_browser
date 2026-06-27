@@ -79,7 +79,7 @@ final _book = BookEntry(
   ],
 );
 
-const _settings = AppSettings(target: SystemDownloads());
+const _settings = AppSettings();
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
@@ -218,10 +218,7 @@ void main() {
         client: MockClient((_) async => http.Response.bytes([1], 200)),
         storage: storage,
       );
-      const settings = AppSettings(
-        target: SystemDownloads(),
-        createSeriesFolder: true,
-      );
+      const settings = AppSettings(createSeriesFolder: true);
 
       await c
           .read(downloadNotifierProvider(_linkUrl).notifier)
