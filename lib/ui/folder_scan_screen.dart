@@ -63,6 +63,7 @@ class _FolderScanScreenState extends ConsumerState<FolderScanScreen> {
               TextButton(
                 onPressed: () {
                   ref.read(folderDownloadProvider.notifier).cancel();
+                  if (context.mounted) context.pop();
                 },
                 child: const Text('Cancel'),
               ),
