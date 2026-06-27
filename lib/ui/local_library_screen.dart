@@ -89,6 +89,8 @@ class LocalLibraryNotifier extends Notifier<LocalLibraryState> {
               author: '',
             );
             metaMap[file.relativePath] = fallback;
+            await cache.put(file.relativePath, fallback);
+            if (!ref.mounted) return;
           }
         }
         if (!ref.mounted) return;
