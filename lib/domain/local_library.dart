@@ -180,7 +180,7 @@ class LocalLibraryFixer {
           case LibraryBook b when b.isInvalid:
             final result = await _fixBook(b);
             if (result != null) {
-              newChildren.add(b.copyWith(meta: result));
+              newChildren.add(b.copyWith(meta: result, isInvalid: false));
               fixed++;
             } else {
               newChildren.add(b);
@@ -196,7 +196,8 @@ class LocalLibraryFixer {
     }
 
     final newRoot = await processFolder(root);
-    return (FixResult(fixed: fixed, skipped: skipped), newRoot);
+    final revalidated = const LocalLibraryValidator().validate(newRoot);
+    return (FixResult(fixed: fixed, skipped: skipped), revalidated);
   }
 
   Future<LocalBookMetadata?> _fixBook(LibraryBook book) async {
