@@ -277,9 +277,21 @@ class _LocalLibraryScreenState extends ConsumerState<LocalLibraryScreen> {
     });
   }
 
+  Future<void> _runFix(BuildContext context, WidgetRef ref) async {
+    final (fixed, skipped) = await ref
+        .read(localLibraryNotifierProvider.notifier)
+        .fix();
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Fixed $fixed book(s), skipped $skipped')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final libState = ref.watch(localLibraryNotifierProvider);
+    final isScanning = libState is LibraryScanning;
+    final validationRun = libState is LibraryReady && libState.validationRun;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Local library'),
@@ -287,10 +299,26 @@ class _LocalLibraryScreenState extends ConsumerState<LocalLibraryScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh',
-            onPressed: libState is LibraryScanning
+            onPressed: isScanning
                 ? null
                 : () =>
                       ref.read(localLibraryNotifierProvider.notifier).refresh(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.check_circle_outline),
+            tooltip: 'Validate',
+            onPressed: isScanning
+                ? null
+                : () => ref
+                      .read(localLibraryNotifierProvider.notifier)
+                      .validate(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.auto_fix_high),
+            tooltip: 'Fix',
+            onPressed: (isScanning || !validationRun)
+                ? null
+                : () => _runFix(context, ref),
           ),
         ],
       ),
