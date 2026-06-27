@@ -291,9 +291,10 @@ void main() {
       await c.read(localLibraryNotifierProvider.notifier).refresh();
       c.read(localLibraryNotifierProvider.notifier).validate();
 
-      await c.read(localLibraryNotifierProvider.notifier).fix();
+      final result = await c.read(localLibraryNotifierProvider.notifier).fix();
 
-      // Writer was called
+      // Writer was called and fix count > 0
+      expect(result.$1, greaterThan(0));
       expect(rw.writtenPaths, isNotEmpty);
 
       // After fix, re-validation runs and book should now be valid
@@ -306,6 +307,28 @@ void main() {
           .whereType<LibraryBook>()
           .first;
       expect(book.isInvalid, isFalse);
+    });
+  });
+
+  group('validate and fix no-ops when not ready', () {
+    test('validate() is a no-op when state is LibraryScanning', () {
+      final c = _makeContainer(files: []);
+      addTearDown(c.dispose);
+      // State is LibraryScanning synchronously on build
+      expect(c.read(localLibraryNotifierProvider), isA<LibraryScanning>());
+      // Should not throw
+      c.read(localLibraryNotifierProvider.notifier).validate();
+      // State remains LibraryScanning
+      expect(c.read(localLibraryNotifierProvider), isA<LibraryScanning>());
+    });
+
+    test('fix() returns (0, 0) when state is LibraryScanning', () async {
+      final c = _makeContainer(files: []);
+      addTearDown(c.dispose);
+      expect(c.read(localLibraryNotifierProvider), isA<LibraryScanning>());
+      final result = await c.read(localLibraryNotifierProvider.notifier).fix();
+      expect(result.$1, 0);
+      expect(result.$2, 0);
     });
   });
 
