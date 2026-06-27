@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -52,7 +53,7 @@ class FakeReadWriter implements LocalBookReadWriter {
   @override
   Future<Uint8List> readBytes(String documentUri) async {
     if (returnValidFb2) {
-      return Uint8List.fromList(_minimalFb2.codeUnits);
+      return Uint8List.fromList(utf8.encode(_minimalFb2));
     }
     return Uint8List(0);
   }
