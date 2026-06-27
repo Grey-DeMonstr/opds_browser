@@ -365,8 +365,9 @@ Widget _bookIcon(
     return const SizedBox(width: 24);
   }
   return switch (result.status) {
-    BookDownloadStatus.done || BookDownloadStatus.skipped =>
+    BookDownloadStatus.done =>
       const Icon(Icons.check_circle, color: Colors.green),
+    BookDownloadStatus.skipped => const Icon(Icons.skip_next),
     BookDownloadStatus.failed => GestureDetector(
         onTap: () => showDialog<void>(
           context: context,
