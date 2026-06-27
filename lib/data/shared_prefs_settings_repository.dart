@@ -12,12 +12,12 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
   @override
   Future<AppSettings> load() async {
     final prefs = await SharedPreferences.getInstance();
-    final kind = prefs.getString(_keyKind) ?? 'system';
+    final kind = prefs.getString(_keyKind);
     final uri = prefs.getString(_keyUri);
     final displayName = prefs.getString(_keyDisplayName) ?? '';
     final target = (kind == 'custom' && uri != null)
         ? CustomSafFolder(uri, displayName)
-        : const SystemDownloads();
+        : null;
     return AppSettings(
       target: target,
       createAuthorFolder: prefs.getBool(_keyAuthor) ?? false,
@@ -29,12 +29,12 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
   Future<void> save(AppSettings settings) async {
     final prefs = await SharedPreferences.getInstance();
     final target = settings.target;
-    if (target is CustomSafFolder) {
+    if (target != null) {
       await prefs.setString(_keyKind, 'custom');
       await prefs.setString(_keyUri, target.uriString);
       await prefs.setString(_keyDisplayName, target.displayName);
     } else {
-      await prefs.setString(_keyKind, 'system');
+      await prefs.setString(_keyKind, 'none');
       await prefs.remove(_keyUri);
       await prefs.remove(_keyDisplayName);
     }
