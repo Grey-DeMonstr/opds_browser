@@ -18,6 +18,12 @@ class SafBookReadWriter implements LocalBookReadWriter {
     String mimeType,
     Uint8List bytes,
   ) async {
-    throw UnimplementedError('TODO: implement SAF write-back in Plan 04');
+    await _safStream.writeFileBytes(
+      parentUri,
+      fileName,
+      mimeType,
+      bytes,
+      overwrite: true,
+    );
   }
 }
