@@ -23,5 +23,19 @@
   },
   "enabledPlugins": {
     "superpowers@claude-plugins-official": true
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$json = [Console]::In.ReadToEnd() | ConvertFrom-Json; if ($json.tool_input.file_path -like '*.dart') { dart format . }",
+            "shell": "powershell"
+          }
+        ]
+      }
+    ]
   }
 }
