@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:opds_browser/ui/browse_screen.dart';
+import 'package:opds_browser/ui/local_library_screen.dart';
 import 'package:opds_browser/ui/folder_scan_screen.dart';
 import 'package:opds_browser/ui/folder_tree_screen.dart';
 import 'package:opds_browser/ui/setup_screen.dart';
@@ -75,8 +76,7 @@ class _OpdsBrowserAppState extends ConsumerState<OpdsBrowserApp> {
         ),
         GoRoute(
           path: '/library',
-          builder: (context, state) =>
-              const Scaffold(body: Center(child: Text('Library coming soon'))),
+          builder: (context, state) => const LocalLibraryScreen(),
         ),
       ],
     );
