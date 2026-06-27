@@ -94,4 +94,22 @@ void main() {
     expect(c.read(settingsProvider).value?.createSeriesFolder, isTrue);
     expect((await repo.load()).createSeriesFolder, isTrue);
   });
+
+  test('clearTarget() updates state and persists', () async {
+    const uri = 'content://example/tree/primary';
+    final repo = FakeSettingsRepository(
+      const AppSettings(target: CustomSafFolder(uri, 'Downloads')),
+    );
+    final c = ProviderContainer(
+      overrides: [
+        settingsRepositoryProvider.overrideWithValue(repo),
+        safPermissionCheckerProvider.overrideWithValue((_) async => true),
+      ],
+    );
+    addTearDown(c.dispose);
+    await c.read(settingsProvider.future);
+    await c.read(settingsProvider.notifier).clearTarget();
+    expect(c.read(settingsProvider).value?.target, isNull);
+    expect((await repo.load()).target, isNull);
+  });
 }
