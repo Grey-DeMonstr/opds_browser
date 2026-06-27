@@ -45,7 +45,7 @@ void main() {
       });
 
       test(
-        'invalid when author name mismatches (case-sensitive char difference)',
+        'valid when author name differs only by case (case-insensitive match)',
         () {
           const meta = LocalBookMetadata(title: 'T', author: 'jane doe');
           // "Jane Doe" folder vs "jane doe" in meta
