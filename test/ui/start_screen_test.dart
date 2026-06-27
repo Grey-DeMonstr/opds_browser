@@ -105,6 +105,7 @@ GoRouter _makeRouter() {
       GoRoute(path: '/', builder: (_, _) => const StartScreen()),
       GoRoute(path: '/browse', builder: (_, _) => const SizedBox()),
       GoRoute(path: '/settings', builder: (_, _) => const SizedBox()),
+      GoRoute(path: '/library', builder: (_, _) => const SizedBox()),
     ],
   );
 }
@@ -463,5 +464,38 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Science'), findsNothing);
+  });
+
+  testWidgets('library icon button is present in AppBar', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.local_library_outlined), findsOneWidget);
+  });
+
+  testWidgets('tapping library icon navigates to /library', (tester) async {
+    String? capturedUri;
+    final router = GoRouter(
+      routes: [
+        GoRoute(path: '/', builder: (_, _) => const StartScreen()),
+        GoRoute(path: '/browse', builder: (_, _) => const SizedBox()),
+        GoRoute(path: '/settings', builder: (_, _) => const SizedBox()),
+        GoRoute(
+          path: '/library',
+          builder: (_, state) {
+            capturedUri = state.uri.toString();
+            return const SizedBox();
+          },
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(buildApp(router: router));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.local_library_outlined));
+    await tester.pumpAndSettle();
+
+    expect(capturedUri, equals('/library'));
   });
 }
