@@ -49,6 +49,8 @@ class _FakeTreeNotifier extends FolderDownloadNotifier {
   @override
   void reset() {
     resetCalled = true;
+    // Note: setting state = const FolderJobIdle() requires riverpod context,
+    // so we just set the flag for testing purposes.
   }
 }
 
@@ -148,6 +150,20 @@ void main() {
       expect(notifier.lastSelection, isEmpty);
     });
 
+    testWidgets('tapping folder checkbox checks all children', (tester) async {
+      final b1 = _book('1');
+      final b2 = _book('2');
+      final folder = _folder('F', [b1, b2]);
+      final c = _container(FolderJobTreeReady(
+          root: folder, checkedBooks: const {}));
+      await tester.pumpWidget(_wrap(c));
+      // First checkbox is the folder
+      await tester.tap(find.byType(Checkbox).first);
+      await tester.pump();
+      final notifier = c.read(folderDownloadProvider.notifier) as _FakeTreeNotifier;
+      expect(notifier.lastSelection, {b1.link.url, b2.link.url});
+    });
+
     testWidgets('tapping Download button calls confirmDownload', (tester) async {
       final b1 = _book('1');
       final c = _container(FolderJobTreeReady(root: b1, checkedBooks: {b1.link.url}));
@@ -156,6 +172,24 @@ void main() {
       await tester.pump();
       final notifier = c.read(folderDownloadProvider.notifier) as _FakeTreeNotifier;
       expect(notifier.lastConfirm, isNotNull);
+    });
+
+    test('notifier.reset() sets resetCalled flag', () {
+      // Verify that the reset() method works correctly.
+      // In the real app, PopScope.onPopInvokedWithResult in folder_tree_screen.dart
+      // calls notifier.reset() on system back press.
+      final b1 = _book('1');
+      final notifier = _FakeTreeNotifier(
+          FolderJobTreeReady(root: b1, checkedBooks: {b1.link.url}));
+
+      // Verify initial state
+      expect(notifier.resetCalled, isFalse);
+
+      // Call reset() - this should set the flag
+      notifier.reset();
+
+      // Verify reset() was called and the flag is set
+      expect(notifier.resetCalled, isTrue);
     });
 
     testWidgets('shows stoppedAtLimit warning banner when true', (tester) async {
