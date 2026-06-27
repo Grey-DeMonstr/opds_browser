@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:opds_browser/domain/entities.dart';
@@ -32,22 +30,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void initState() {
     super.initState();
     _sub = ref.listenManual(settingsProvider, (_, next) {
-      if (next is AsyncData) {
-        final notifier = ref.read(settingsProvider.notifier);
-        if (notifier.permissionRevoked) {
-          notifier.permissionRevoked = false;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Custom downloads folder is no longer accessible'
-                  ' — reverted to system Downloads.',
-                ),
+      if (next is AsyncData &&
+          ref.read(settingsProvider.notifier).permissionRevoked) {
+        ref.read(settingsProvider.notifier).permissionRevoked = false;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Custom downloads folder is no longer accessible — please select a new folder.',
               ),
-            );
-          });
-        }
+            ),
+          );
+        });
       }
     }, fireImmediately: true);
   }
@@ -79,53 +74,20 @@ class _SettingsBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(settingsProvider.notifier);
-    final isCustom = settings.target is CustomSafFolder;
-
     return ListView(
       children: [
-        const ListTile(title: Text('Downloads folder')),
-        if (Platform.isAndroid) ...[
-          ListTile(
-            title: const Text('Custom folder…'),
-            subtitle: isCustom
-                ? Text(
-                    'Selected: ${(settings.target as CustomSafFolder).displayName}',
-                  )
-                : const Text('Tap to select a folder'),
-            onTap: () => notifier.pickCustomFolder(),
+        ListTile(
+          title: const Text('Downloads folder'),
+          subtitle: settings.target != null
+              ? Text('Selected: ${settings.target!.displayName}')
+              : const Text('No folder selected'),
+          trailing: TextButton(
+            onPressed: () => notifier.pickCustomFolder(),
+            child: const Text('Change…'),
           ),
-        ] else ...[
-          RadioGroup<bool>(
-            groupValue: isCustom,
-            onChanged: (value) {
-              if (value == true) {
-                notifier.pickCustomFolder();
-              } else {
-                notifier.clearTarget();
-              }
-            },
-            child: Column(
-              children: [
-                RadioListTile<bool>(
-                  title: const Text('System Downloads folder'),
-                  value: false,
-                ),
-                ListTile(
-                  leading: const Radio<bool>(value: true),
-                  title: const Text('Custom folder…'),
-                  subtitle: isCustom
-                      ? Text(
-                          'Selected: ${(settings.target as CustomSafFolder).displayName}',
-                        )
-                      : const Text('Tap to select a folder'),
-                  onTap: () => notifier.pickCustomFolder(),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
         const Divider(),
-        const ListTile(title: Text('File organization')),
+        const ListTile(title: Text('File organisation')),
         CheckboxListTile(
           title: const Text('Create a folder per author'),
           value: settings.createAuthorFolder,
