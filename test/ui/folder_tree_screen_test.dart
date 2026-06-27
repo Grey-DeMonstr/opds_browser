@@ -293,11 +293,15 @@ void main() {
 
     testWidgets('shows LinearProgressIndicator and Cancel button', (tester) async {
       final b = _book('1');
-      await tester.pumpWidget(_wrapWithState(
-        downloadState(root: b, total: 3, completedCount: 1),
-      ));
+      final c = _container(downloadState(root: b, total: 3, completedCount: 1));
+      await tester.pumpWidget(_wrap(c));
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
       expect(find.text('Cancel'), findsOneWidget);
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pump();
+      final notifier = c.read(folderDownloadProvider.notifier) as _FakeTreeNotifier;
+      expect(notifier.cancelCalled, isTrue);
     });
 
     testWidgets('checkboxes are hidden in download mode', (tester) async {
@@ -319,6 +323,11 @@ void main() {
         stoppedAtLimit: false,
       )));
       expect(find.text('Close'), findsOneWidget);
+
+      // Verify the Close button is a FilledButton
+      expect(find.byWidgetPredicate(
+        (w) => w is FilledButton && w.child is Text && (w.child as Text).data == 'Close',
+      ), findsOneWidget);
     });
 
     testWidgets('wasCancelled shows cancellation notice', (tester) async {
