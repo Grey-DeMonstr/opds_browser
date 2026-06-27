@@ -31,6 +31,7 @@ class _FakeTreeNotifier extends FolderDownloadNotifier {
   Set<Uri>? lastSelection;
   Set<Uri>? lastConfirm;
   bool resetCalled = false;
+  bool cancelCalled = false;
 
   @override
   FolderJobState build() => _initial;
@@ -51,6 +52,11 @@ class _FakeTreeNotifier extends FolderDownloadNotifier {
     resetCalled = true;
     // Note: setting state = const FolderJobIdle() requires riverpod context,
     // so we just set the flag for testing purposes.
+  }
+
+  @override
+  void cancel() {
+    cancelCalled = true;
   }
 }
 
@@ -73,6 +79,9 @@ Widget _wrap(ProviderContainer container) => UncontrolledProviderScope(
       container: container,
       child: MaterialApp.router(routerConfig: _router()),
     );
+
+Widget _wrapWithState(FolderJobState initial) =>
+    _wrap(_container(initial));
 
 // ── Selection mode tests ───────────────────────────────────────────────────────
 
@@ -208,6 +217,119 @@ void main() {
       await tester.pumpWidget(_wrap(c));
       // No Download button shown in non-selection mode
       expect(find.byType(FilledButton), findsNothing);
+    });
+  });
+
+  group('download mode', () {
+    FolderJobDownloading downloadState({
+      required DownloadTreeNode root,
+      Uri? currentBook,
+      Map<Uri, BookDownloadResult> results = const {},
+      int total = 1,
+      int completedCount = 0,
+    }) =>
+        FolderJobDownloading(
+          root: root,
+          currentBook: currentBook,
+          results: results,
+          total: total,
+          completedCount: completedCount,
+        );
+
+    testWidgets('current book shows CircularProgressIndicator', (tester) async {
+      final b = _book('1');
+      await tester.pumpWidget(_wrapWithState(
+        downloadState(root: b, currentBook: b.link.url, total: 1),
+      ));
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    });
+
+    testWidgets('done book shows green check icon', (tester) async {
+      final b = _book('1');
+      await tester.pumpWidget(_wrapWithState(
+        downloadState(
+          root: b,
+          results: {b.link.url: const BookDownloadResult(status: BookDownloadStatus.done)},
+          total: 1,
+          completedCount: 1,
+        ),
+      ));
+      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+    });
+
+    testWidgets('failed book shows red warning icon', (tester) async {
+      final b = _book('1');
+      await tester.pumpWidget(_wrapWithState(
+        downloadState(
+          root: b,
+          results: {
+            b.link.url: const BookDownloadResult(
+                status: BookDownloadStatus.failed, error: 'timeout')
+          },
+          total: 1,
+          completedCount: 1,
+        ),
+      ));
+      expect(find.byIcon(Icons.warning_rounded), findsOneWidget);
+    });
+
+    testWidgets('tapping warning icon shows error dialog', (tester) async {
+      final b = _book('1');
+      await tester.pumpWidget(_wrapWithState(
+        downloadState(
+          root: b,
+          results: {
+            b.link.url: const BookDownloadResult(
+                status: BookDownloadStatus.failed, error: 'network error')
+          },
+          total: 1,
+          completedCount: 1,
+        ),
+      ));
+      await tester.tap(find.byIcon(Icons.warning_rounded));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('network error'), findsOneWidget);
+    });
+
+    testWidgets('shows LinearProgressIndicator and Cancel button', (tester) async {
+      final b = _book('1');
+      await tester.pumpWidget(_wrapWithState(
+        downloadState(root: b, total: 3, completedCount: 1),
+      ));
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      expect(find.text('Cancel'), findsOneWidget);
+    });
+
+    testWidgets('checkboxes are hidden in download mode', (tester) async {
+      final b = _book('1');
+      await tester.pumpWidget(_wrapWithState(
+        downloadState(root: b, total: 1),
+      ));
+      expect(find.byType(Checkbox), findsNothing);
+    });
+  });
+
+  group('done mode', () {
+    testWidgets('shows Close button', (tester) async {
+      final b = _book('1');
+      await tester.pumpWidget(_wrapWithState(FolderJobDone(
+        root: b,
+        results: {b.link.url: const BookDownloadResult(status: BookDownloadStatus.done)},
+        wasCancelled: false,
+        stoppedAtLimit: false,
+      )));
+      expect(find.text('Close'), findsOneWidget);
+    });
+
+    testWidgets('wasCancelled shows cancellation notice', (tester) async {
+      final b = _book('1');
+      await tester.pumpWidget(_wrapWithState(FolderJobDone(
+        root: b,
+        results: {},
+        wasCancelled: true,
+        stoppedAtLimit: false,
+      )));
+      expect(find.textContaining('cancelled'), findsOneWidget);
     });
   });
 }
