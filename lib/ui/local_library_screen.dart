@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:opds_browser/domain/local_library.dart';
 import 'package:opds_browser/ui/providers.dart';
+import 'package:opds_browser/ui/widgets/edit_book_metadata_sheet.dart';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -387,6 +388,11 @@ class _BookTile extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.only(left: depth * 16.0),
       child: ListTile(
+        onTap: () => showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          builder: (_) => EditBookMetadataSheet(book: book),
+        ),
         leading: const Icon(Icons.book),
         title: Text(meta.title, maxLines: 2, overflow: TextOverflow.ellipsis),
         subtitle: Column(
