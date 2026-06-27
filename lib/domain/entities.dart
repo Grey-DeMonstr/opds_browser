@@ -1,12 +1,4 @@
-sealed class DownloadTarget {
-  const DownloadTarget();
-}
-
-class SystemDownloads extends DownloadTarget {
-  const SystemDownloads();
-}
-
-class CustomSafFolder extends DownloadTarget {
+class CustomSafFolder {
   final String uriString;
   final String displayName;
   const CustomSafFolder(this.uriString, this.displayName);
@@ -43,22 +35,23 @@ class Favorite {
 }
 
 class AppSettings {
-  final DownloadTarget target;
+  final CustomSafFolder? target;
   final bool createAuthorFolder;
   final bool createSeriesFolder;
 
   const AppSettings({
-    required this.target,
+    this.target,
     this.createAuthorFolder = false,
     this.createSeriesFolder = false,
   });
 
   AppSettings copyWith({
-    DownloadTarget? target,
+    CustomSafFolder? target,
+    bool clearTarget = false,
     bool? createAuthorFolder,
     bool? createSeriesFolder,
   }) => AppSettings(
-    target: target ?? this.target,
+    target: clearTarget ? null : (target ?? this.target),
     createAuthorFolder: createAuthorFolder ?? this.createAuthorFolder,
     createSeriesFolder: createSeriesFolder ?? this.createSeriesFolder,
   );
