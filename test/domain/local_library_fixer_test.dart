@@ -100,15 +100,17 @@ void main() {
       expect(rw.writtenUris, hasLength(1));
 
       // In-memory tree updated
-      final book = newRoot.children
-          .whereType<LibraryFolder>()
-          .first
-          .children
-          .whereType<LibraryBook>()
-          .first;
+      final folder = newRoot.children.whereType<LibraryFolder>().first;
+      final book = folder.children.whereType<LibraryBook>().first;
       expect(book.meta.author, 'Jane Doe');
       expect(book.meta.series, isNull);
       expect(book.meta.seriesIndex, isNull);
+
+      // Verify book is no longer marked invalid
+      expect(book.isInvalid, false);
+
+      // Verify parent folder no longer has warning
+      expect(folder.hasWarning, false);
 
       // Cache updated
       final cached = await cache.get('Jane Doe/book.fb2');
