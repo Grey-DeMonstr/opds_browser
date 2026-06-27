@@ -9,10 +9,7 @@ import 'package:opds_browser/ui/start_screen.dart';
 
 final _router = GoRouter(
   routes: [
-    GoRoute(
-      path: '/',
-      builder: (context, state) => const StartScreen(),
-    ),
+    GoRoute(path: '/', builder: (context, state) => const StartScreen()),
     GoRoute(
       path: '/browse',
       builder: (context, state) {

@@ -13,7 +13,9 @@ void main() {
 
   group('OpdsHttpFetcher', () {
     test('returns body bytes on 200', () async {
-      final client = MockClient((_) async => http.Response.bytes(minimalBody, 200));
+      final client = MockClient(
+        (_) async => http.Response.bytes(minimalBody, 200),
+      );
       final result = await OpdsHttpFetcher(client).fetch(feedUrl);
       expect(result, minimalBody);
     });
@@ -32,17 +34,29 @@ void main() {
       final client = MockClient((_) async => http.Response('Not Found', 404));
       expect(
         OpdsHttpFetcher(client).fetch(feedUrl),
-        throwsA(isA<HttpStatusException>()
-            .having((e) => e.statusCode, 'statusCode', 404)),
+        throwsA(
+          isA<HttpStatusException>().having(
+            (e) => e.statusCode,
+            'statusCode',
+            404,
+          ),
+        ),
       );
     });
 
     test('throws HttpStatusException(401) on 401', () async {
-      final client = MockClient((_) async => http.Response('Unauthorized', 401));
+      final client = MockClient(
+        (_) async => http.Response('Unauthorized', 401),
+      );
       expect(
         OpdsHttpFetcher(client).fetch(feedUrl),
-        throwsA(isA<HttpStatusException>()
-            .having((e) => e.statusCode, 'statusCode', 401)),
+        throwsA(
+          isA<HttpStatusException>().having(
+            (e) => e.statusCode,
+            'statusCode',
+            401,
+          ),
+        ),
       );
     });
 
@@ -62,8 +76,10 @@ void main() {
         return http.Response.bytes(minimalBody, 200);
       });
       expect(
-        OpdsHttpFetcher(client, timeout: const Duration(milliseconds: 100))
-            .fetch(feedUrl),
+        OpdsHttpFetcher(
+          client,
+          timeout: const Duration(milliseconds: 100),
+        ).fetch(feedUrl),
         throwsA(isA<NetworkException>()),
       );
     });

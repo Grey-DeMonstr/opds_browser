@@ -9,10 +9,9 @@ class FakeCatalogRepository implements CatalogRepository {
   var _nextId = 1;
 
   FakeCatalogRepository({List<Catalog> initial = const []})
-      : _data = List.of(initial) {
+    : _data = List.of(initial) {
     if (initial.isNotEmpty) {
-      _nextId =
-          initial.map((c) => c.id).reduce((a, b) => a > b ? a : b) + 1;
+      _nextId = initial.map((c) => c.id).reduce((a, b) => a > b ? a : b) + 1;
     }
   }
 
@@ -22,7 +21,11 @@ class FakeCatalogRepository implements CatalogRepository {
   @override
   Future<Catalog> add(String title, Uri rootUrl) async {
     final c = Catalog(
-        id: _nextId++, title: title, rootUrl: rootUrl, protocol: 'opds1');
+      id: _nextId++,
+      title: title,
+      rootUrl: rootUrl,
+      protocol: 'opds1',
+    );
     _data.add(c);
     return c;
   }
@@ -40,21 +43,24 @@ class FakeCatalogRepository implements CatalogRepository {
 }
 
 ProviderContainer makeContainer({List<Catalog> initial = const []}) {
-  final container = ProviderContainer(overrides: [
-    catalogRepositoryProvider.overrideWithValue(
-      FakeCatalogRepository(initial: initial),
-    ),
-  ]);
+  final container = ProviderContainer(
+    overrides: [
+      catalogRepositoryProvider.overrideWithValue(
+        FakeCatalogRepository(initial: initial),
+      ),
+    ],
+  );
   return container;
 }
 
 void main() {
   test('build() loads catalogs from repository', () async {
     final seed = Catalog(
-        id: 1,
-        title: 'A',
-        rootUrl: Uri.parse('https://a.com'),
-        protocol: 'opds1');
+      id: 1,
+      title: 'A',
+      rootUrl: Uri.parse('https://a.com'),
+      protocol: 'opds1',
+    );
     final container = makeContainer(initial: [seed]);
     addTearDown(container.dispose);
 
@@ -68,7 +74,9 @@ void main() {
     addTearDown(container.dispose);
 
     await container.read(catalogsProvider.future); // wait for build
-    await container.read(catalogsProvider.notifier).add('B', Uri.parse('https://b.com'));
+    await container
+        .read(catalogsProvider.notifier)
+        .add('B', Uri.parse('https://b.com'));
 
     final catalogs = container.read(catalogsProvider).value!;
     expect(catalogs, hasLength(1));
@@ -77,19 +85,21 @@ void main() {
 
   test('updateCatalog() changes title and refreshes state', () async {
     final seed = Catalog(
-        id: 1,
-        title: 'Old',
-        rootUrl: Uri.parse('https://a.com'),
-        protocol: 'opds1');
+      id: 1,
+      title: 'Old',
+      rootUrl: Uri.parse('https://a.com'),
+      protocol: 'opds1',
+    );
     final container = makeContainer(initial: [seed]);
     addTearDown(container.dispose);
 
     await container.read(catalogsProvider.future);
     final updated = Catalog(
-        id: 1,
-        title: 'New',
-        rootUrl: Uri.parse('https://a.com'),
-        protocol: 'opds1');
+      id: 1,
+      title: 'New',
+      rootUrl: Uri.parse('https://a.com'),
+      protocol: 'opds1',
+    );
     await container.read(catalogsProvider.notifier).updateCatalog(updated);
 
     final catalogs = container.read(catalogsProvider).value!;
@@ -98,10 +108,11 @@ void main() {
 
   test('delete() removes catalog and refreshes state', () async {
     final seed = Catalog(
-        id: 1,
-        title: 'A',
-        rootUrl: Uri.parse('https://a.com'),
-        protocol: 'opds1');
+      id: 1,
+      title: 'A',
+      rootUrl: Uri.parse('https://a.com'),
+      protocol: 'opds1',
+    );
     final container = makeContainer(initial: [seed]);
     addTearDown(container.dispose);
 

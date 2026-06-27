@@ -39,44 +39,50 @@ void main() {
   final url = Uri.parse('https://example.com/opds');
 
   ParsedFeed singlePage(String title) => ParsedFeed(
-        title: title,
-        entries: [
-          NavigationEntry(
-            title: 'Item',
-            url: Uri.parse('https://example.com/item'),
-          ),
-        ],
-        nextPageUrl: null,
-      );
+    title: title,
+    entries: [
+      NavigationEntry(
+        title: 'Item',
+        url: Uri.parse('https://example.com/item'),
+      ),
+    ],
+    nextPageUrl: null,
+  );
 
   group('CachingFeedRepository', () {
-    test('cache miss — fetches feed, writes to DB, returns fromCache: false', () async {
-      final client = _FakeOpdsClient([singlePage('My Feed')]);
-      final repo = CachingFeedRepository(db, client);
+    test(
+      'cache miss — fetches feed, writes to DB, returns fromCache: false',
+      () async {
+        final client = _FakeOpdsClient([singlePage('My Feed')]);
+        final repo = CachingFeedRepository(db, client);
 
-      final result = await repo.getFeed(catalogId, url);
+        final result = await repo.getFeed(catalogId, url);
 
-      expect(result.fromCache, isFalse);
-      expect(result.feed.title, 'My Feed');
-      expect(client.callCount, 1);
+        expect(result.fromCache, isFalse);
+        expect(result.feed.title, 'My Feed');
+        expect(client.callCount, 1);
 
-      final d = await db.database;
-      expect(await d.query('feed_cache'), hasLength(1));
-    });
+        final d = await db.database;
+        expect(await d.query('feed_cache'), hasLength(1));
+      },
+    );
 
-    test('cache hit — returns stored feed, does not call client again', () async {
-      final client = _FakeOpdsClient([singlePage('Cached Feed')]);
-      final repo = CachingFeedRepository(db, client);
+    test(
+      'cache hit — returns stored feed, does not call client again',
+      () async {
+        final client = _FakeOpdsClient([singlePage('Cached Feed')]);
+        final repo = CachingFeedRepository(db, client);
 
-      await repo.getFeed(catalogId, url);
-      final callsAfterFirst = client.callCount;
+        await repo.getFeed(catalogId, url);
+        final callsAfterFirst = client.callCount;
 
-      final result = await repo.getFeed(catalogId, url);
+        final result = await repo.getFeed(catalogId, url);
 
-      expect(result.fromCache, isTrue);
-      expect(result.feed.title, 'Cached Feed');
-      expect(client.callCount, callsAfterFirst);
-    });
+        expect(result.fromCache, isTrue);
+        expect(result.feed.title, 'Cached Feed');
+        expect(client.callCount, callsAfterFirst);
+      },
+    );
 
     test('cache hit — fetchedAt matches value stored on first fetch', () async {
       final client = _FakeOpdsClient([singlePage('Feed')]);
@@ -102,34 +108,44 @@ void main() {
       );
     });
 
-    test('forceRefresh — calls client even when cached, overwrites DB row', () async {
-      final client = _FakeOpdsClient([singlePage('Old'), singlePage('New')]);
-      final repo = CachingFeedRepository(db, client);
+    test(
+      'forceRefresh — calls client even when cached, overwrites DB row',
+      () async {
+        final client = _FakeOpdsClient([singlePage('Old'), singlePage('New')]);
+        final repo = CachingFeedRepository(db, client);
 
-      await repo.getFeed(catalogId, url);
-      final result = await repo.getFeed(catalogId, url, forceRefresh: true);
+        await repo.getFeed(catalogId, url);
+        final result = await repo.getFeed(catalogId, url, forceRefresh: true);
 
-      expect(result.fromCache, isFalse);
-      expect(result.feed.title, 'New');
+        expect(result.fromCache, isFalse);
+        expect(result.feed.title, 'New');
 
-      final d = await db.database;
-      final rows = await d.query('feed_cache');
-      expect(rows, hasLength(1));
-      final stored =
-          jsonDecode(rows.first['feed_json'] as String) as Map<String, dynamic>;
-      expect(stored['title'], 'New');
-    });
+        final d = await db.database;
+        final rows = await d.query('feed_cache');
+        expect(rows, hasLength(1));
+        final stored =
+            jsonDecode(rows.first['feed_json'] as String)
+                as Map<String, dynamic>;
+        expect(stored['title'], 'New');
+      },
+    );
 
-    test('normalizeUrl — http://host:80/path and http://host/path share one cache row', () async {
-      final client = _FakeOpdsClient([singlePage('Feed')]);
-      final repo = CachingFeedRepository(db, client);
+    test(
+      'normalizeUrl — http://host:80/path and http://host/path share one cache row',
+      () async {
+        final client = _FakeOpdsClient([singlePage('Feed')]);
+        final repo = CachingFeedRepository(db, client);
 
-      await repo.getFeed(catalogId, Uri.parse('http://example.com:80/opds'));
-      final result = await repo.getFeed(catalogId, Uri.parse('http://example.com/opds'));
+        await repo.getFeed(catalogId, Uri.parse('http://example.com:80/opds'));
+        final result = await repo.getFeed(
+          catalogId,
+          Uri.parse('http://example.com/opds'),
+        );
 
-      expect(result.fromCache, isTrue);
-      expect(client.callCount, 1);
-    });
+        expect(result.fromCache, isTrue);
+        expect(client.callCount, 1);
+      },
+    );
   });
 
   group('CachingFeedRepository — pagination', () {
@@ -137,17 +153,32 @@ void main() {
       final pages = [
         ParsedFeed(
           title: 'Feed',
-          entries: [NavigationEntry(title: 'A', url: Uri.parse('https://example.com/a'))],
+          entries: [
+            NavigationEntry(
+              title: 'A',
+              url: Uri.parse('https://example.com/a'),
+            ),
+          ],
           nextPageUrl: Uri.parse('https://example.com/opds?page=2'),
         ),
         ParsedFeed(
           title: 'Feed p2',
-          entries: [NavigationEntry(title: 'B', url: Uri.parse('https://example.com/b'))],
+          entries: [
+            NavigationEntry(
+              title: 'B',
+              url: Uri.parse('https://example.com/b'),
+            ),
+          ],
           nextPageUrl: Uri.parse('https://example.com/opds?page=3'),
         ),
         ParsedFeed(
           title: 'Feed p3',
-          entries: [NavigationEntry(title: 'C', url: Uri.parse('https://example.com/c'))],
+          entries: [
+            NavigationEntry(
+              title: 'C',
+              url: Uri.parse('https://example.com/c'),
+            ),
+          ],
           nextPageUrl: null,
         ),
       ];
@@ -187,7 +218,10 @@ void main() {
         (i) => ParsedFeed(
           title: 'Feed',
           entries: [
-            NavigationEntry(title: 'E$i', url: Uri.parse('https://example.com/$i')),
+            NavigationEntry(
+              title: 'E$i',
+              url: Uri.parse('https://example.com/$i'),
+            ),
           ],
           nextPageUrl: Uri.parse('https://example.com/opds?page=${i + 2}'),
         ),

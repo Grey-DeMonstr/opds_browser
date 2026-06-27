@@ -47,8 +47,10 @@ const _win1251 = <int>[
 String decodeXmlBytes(List<int> bytes) {
   // Peek first 200 bytes as latin1 (ASCII-safe) to read the prolog.
   final prolog = String.fromCharCodes(bytes.take(200));
-  final match = RegExp(r'''encoding=["']([^"']+)["']''', caseSensitive: false)
-      .firstMatch(prolog);
+  final match = RegExp(
+    r'''encoding=["']([^"']+)["']''',
+    caseSensitive: false,
+  ).firstMatch(prolog);
   final declared = match?.group(1)?.toLowerCase() ?? 'utf-8';
 
   if (declared == 'utf-8' || declared == 'utf8') {
@@ -69,14 +71,14 @@ String decodeXmlBytes(List<int> bytes) {
 }
 
 String mimeToLabel(String mimeType) => switch (mimeType) {
-      'application/fb2' || 'application/x-fictionbook+xml' => 'FB2',
-      'application/fb2+zip' || 'application/x-zip-compressed-fb2' => 'FB2.ZIP',
-      'application/epub+zip' => 'EPUB',
-      'application/pdf' => 'PDF',
-      'application/x-mobipocket-ebook' => 'MOBI',
-      '' => 'FILE',
-      _ => mimeType.split('/').last.toUpperCase(),
-    };
+  'application/fb2' || 'application/x-fictionbook+xml' => 'FB2',
+  'application/fb2+zip' || 'application/x-zip-compressed-fb2' => 'FB2.ZIP',
+  'application/epub+zip' => 'EPUB',
+  'application/pdf' => 'PDF',
+  'application/x-mobipocket-ebook' => 'MOBI',
+  '' => 'FILE',
+  _ => mimeType.split('/').last.toUpperCase(),
+};
 
 /// Strips HTML tags and collapses whitespace to single spaces.
 String stripHtml(String input) => input
@@ -107,10 +109,13 @@ const _imageRel = 'http://opds-spec.org/image';
     if (name.isNotEmpty) {
       final indexEl = entry.childElements
           .where(
-              (e) => e.localName == 'series_index' && e.namespaceUri == _calibreNs)
+            (e) =>
+                e.localName == 'series_index' && e.namespaceUri == _calibreNs,
+          )
           .firstOrNull;
-      final index =
-          indexEl != null ? double.tryParse(indexEl.innerText.trim()) : null;
+      final index = indexEl != null
+          ? double.tryParse(indexEl.innerText.trim())
+          : null;
       return (series: name, seriesIndex: index);
     }
   }
@@ -149,14 +154,14 @@ class Opds1FeedParser implements OpdsFeedParser {
     final baseAttr = feed.getAttribute('base', namespaceUri: _xmlNs);
     final base = baseAttr != null ? feedUrl.resolve(baseAttr) : feedUrl;
 
-    final titleEl =
-        feed.childElements.where((e) => e.localName == 'title').firstOrNull;
+    final titleEl = feed.childElements
+        .where((e) => e.localName == 'title')
+        .firstOrNull;
     final title = titleEl?.innerText.trim() ?? '';
 
     // Feed-level rel="next" link → nextPageUrl.
     Uri? nextPageUrl;
-    for (final link
-        in feed.childElements.where((e) => e.localName == 'link')) {
+    for (final link in feed.childElements.where((e) => e.localName == 'link')) {
       if (link.getAttribute('rel') == 'next') {
         final href = link.getAttribute('href');
         if (href != null) {
@@ -167,8 +172,9 @@ class Opds1FeedParser implements OpdsFeedParser {
     }
 
     final entries = <FeedEntry>[];
-    for (final entry
-        in feed.childElements.where((e) => e.localName == 'entry')) {
+    for (final entry in feed.childElements.where(
+      (e) => e.localName == 'entry',
+    )) {
       final parsed = _parseEntry(entry, base);
       if (parsed != null) entries.add(parsed);
     }
@@ -177,8 +183,9 @@ class Opds1FeedParser implements OpdsFeedParser {
   }
 
   FeedEntry? _parseEntry(XmlElement entry, Uri base) {
-    final links =
-        entry.childElements.where((e) => e.localName == 'link').toList();
+    final links = entry.childElements
+        .where((e) => e.localName == 'link')
+        .toList();
 
     final hasAcquisition = links.any((l) {
       final rel = l.getAttribute('rel') ?? '';
@@ -196,8 +203,12 @@ class Opds1FeedParser implements OpdsFeedParser {
   }
 
   BookEntry _parseBookEntry(
-      XmlElement entry, List<XmlElement> links, Uri base) {
-    final title = entry.childElements
+    XmlElement entry,
+    List<XmlElement> links,
+    Uri base,
+  ) {
+    final title =
+        entry.childElements
             .where((e) => e.localName == 'title')
             .firstOrNull
             ?.innerText
@@ -206,30 +217,34 @@ class Opds1FeedParser implements OpdsFeedParser {
 
     final authors = entry.childElements
         .where((e) => e.localName == 'author')
-        .map((a) => a.childElements
-            .where((e) => e.localName == 'name')
-            .firstOrNull
-            ?.innerText
-            .trim())
+        .map(
+          (a) => a.childElements
+              .where((e) => e.localName == 'name')
+              .firstOrNull
+              ?.innerText
+              .trim(),
+        )
         .whereType<String>()
         .where((n) => n.isNotEmpty)
         .toList();
 
-    final summaryEl =
-        entry.childElements.where((e) => e.localName == 'summary').firstOrNull;
-    final summary =
-        summaryEl != null ? stripHtml(summaryEl.innerText) : null;
+    final summaryEl = entry.childElements
+        .where((e) => e.localName == 'summary')
+        .firstOrNull;
+    final summary = summaryEl != null ? stripHtml(summaryEl.innerText) : null;
 
     // Cover: prefer thumbnail, fall back to full image.
     Uri? coverUrl;
-    final thumbLink =
-        links.where((l) => l.getAttribute('rel') == _thumbRel).firstOrNull;
+    final thumbLink = links
+        .where((l) => l.getAttribute('rel') == _thumbRel)
+        .firstOrNull;
     if (thumbLink != null) {
       final href = thumbLink.getAttribute('href');
       if (href != null) coverUrl = resolveHref(href, base);
     } else {
-      final imgLink =
-          links.where((l) => l.getAttribute('rel') == _imageRel).firstOrNull;
+      final imgLink = links
+          .where((l) => l.getAttribute('rel') == _imageRel)
+          .firstOrNull;
       if (imgLink != null) {
         final href = imgLink.getAttribute('href');
         if (href != null) coverUrl = resolveHref(href, base);
@@ -269,8 +284,12 @@ class Opds1FeedParser implements OpdsFeedParser {
   }
 
   NavigationEntry _parseNavEntry(
-      XmlElement entry, List<XmlElement> links, Uri base) {
-    final title = entry.childElements
+    XmlElement entry,
+    List<XmlElement> links,
+    Uri base,
+  ) {
+    final title =
+        entry.childElements
             .where((e) => e.localName == 'title')
             .firstOrNull
             ?.innerText
@@ -282,8 +301,9 @@ class Opds1FeedParser implements OpdsFeedParser {
         .firstOrNull
         ?.innerText
         .trim();
-    final subtitle =
-        (subtitleRaw == null || subtitleRaw.isEmpty) ? null : subtitleRaw;
+    final subtitle = (subtitleRaw == null || subtitleRaw.isEmpty)
+        ? null
+        : subtitleRaw;
 
     final navLink = links.firstWhere(
       (l) => (l.getAttribute('type') ?? '').contains('application/atom+xml'),

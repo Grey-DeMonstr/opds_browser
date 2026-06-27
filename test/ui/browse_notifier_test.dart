@@ -12,8 +12,11 @@ class FakeFeedRepository implements FeedRepository {
   FakeFeedRepository({required this.initialFeed, this.refreshFeed});
 
   @override
-  Future<CachedFeed> getFeed(int catalogId, Uri url,
-      {bool forceRefresh = false}) async {
+  Future<CachedFeed> getFeed(
+    int catalogId,
+    Uri url, {
+    bool forceRefresh = false,
+  }) async {
     if (forceRefresh) {
       forceRefreshCalled = true;
       if (refreshFeed != null) return refreshFeed!;
@@ -33,9 +36,9 @@ void main() {
   final (int, Uri) args = (1, testUri);
 
   ProviderContainer makeContainer(FakeFeedRepository repo) {
-    final c = ProviderContainer(overrides: [
-      feedRepositoryProvider.overrideWithValue(repo),
-    ]);
+    final c = ProviderContainer(
+      overrides: [feedRepositoryProvider.overrideWithValue(repo)],
+    );
     addTearDown(c.dispose);
     return c;
   }
@@ -57,7 +60,10 @@ void main() {
       fetchedAt: DateTime(2026, 6, 13, 1),
       fromCache: false,
     );
-    final repo = FakeFeedRepository(initialFeed: testFeed, refreshFeed: updated);
+    final repo = FakeFeedRepository(
+      initialFeed: testFeed,
+      refreshFeed: updated,
+    );
     final container = makeContainer(repo);
     final sub = container.listen(browseProvider(args), (_, _) {});
     addTearDown(sub.close);
@@ -72,7 +78,9 @@ void main() {
   });
 
   test('refresh() on failure preserves old feed and rethrows', () async {
-    final repo = FakeFeedRepository(initialFeed: testFeed); // refreshFeed=null → throws
+    final repo = FakeFeedRepository(
+      initialFeed: testFeed,
+    ); // refreshFeed=null → throws
     final container = makeContainer(repo);
     final sub = container.listen(browseProvider(args), (_, _) {});
     addTearDown(sub.close);

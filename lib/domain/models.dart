@@ -10,12 +10,13 @@ class AcquisitionLink {
   });
 
   Map<String, dynamic> toJson() => {
-        'url': url.toString(),
-        'mimeType': mimeType,
-        'formatLabel': formatLabel,
-      };
+    'url': url.toString(),
+    'mimeType': mimeType,
+    'formatLabel': formatLabel,
+  };
 
-  factory AcquisitionLink.fromJson(Map<String, dynamic> json) => AcquisitionLink(
+  factory AcquisitionLink.fromJson(Map<String, dynamic> json) =>
+      AcquisitionLink(
         url: Uri.parse(json['url'] as String),
         mimeType: json['mimeType'] as String,
         formatLabel: json['formatLabel'] as String,
@@ -49,13 +50,14 @@ class NavigationEntry extends FeedEntry {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'nav',
-        'title': title,
-        if (subtitle != null) 'subtitle': subtitle,
-        'url': url.toString(),
-      };
+    'type': 'nav',
+    'title': title,
+    if (subtitle != null) 'subtitle': subtitle,
+    'url': url.toString(),
+  };
 
-  factory NavigationEntry.fromJson(Map<String, dynamic> json) => NavigationEntry(
+  factory NavigationEntry.fromJson(Map<String, dynamic> json) =>
+      NavigationEntry(
         title: json['title'] as String,
         subtitle: json['subtitle'] as String?,
         url: Uri.parse(json['url'] as String),
@@ -83,31 +85,31 @@ class BookEntry extends FeedEntry {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'book',
-        'title': title,
-        'authors': authors,
-        if (series != null) 'series': series,
-        if (seriesIndex != null) 'seriesIndex': seriesIndex,
-        if (summary != null) 'summary': summary,
-        if (coverUrl != null) 'coverUrl': coverUrl.toString(),
-        'acquisitionLinks': acquisitionLinks.map((l) => l.toJson()).toList(),
-      };
+    'type': 'book',
+    'title': title,
+    'authors': authors,
+    if (series != null) 'series': series,
+    if (seriesIndex != null) 'seriesIndex': seriesIndex,
+    if (summary != null) 'summary': summary,
+    if (coverUrl != null) 'coverUrl': coverUrl.toString(),
+    'acquisitionLinks': acquisitionLinks.map((l) => l.toJson()).toList(),
+  };
 
   factory BookEntry.fromJson(Map<String, dynamic> json) => BookEntry(
-        title: json['title'] as String,
-        authors: (json['authors'] as List<dynamic>)
-            .map((e) => e as String)
-            .toList(),
-        series: json['series'] as String?,
-        seriesIndex: (json['seriesIndex'] as num?)?.toDouble(),
-        summary: json['summary'] as String?,
-        coverUrl: json['coverUrl'] != null
-            ? Uri.parse(json['coverUrl'] as String)
-            : null,
-        acquisitionLinks: (json['acquisitionLinks'] as List<dynamic>)
-            .map((l) => AcquisitionLink.fromJson(l as Map<String, dynamic>))
-            .toList(),
-      );
+    title: json['title'] as String,
+    authors: (json['authors'] as List<dynamic>)
+        .map((e) => e as String)
+        .toList(),
+    series: json['series'] as String?,
+    seriesIndex: (json['seriesIndex'] as num?)?.toDouble(),
+    summary: json['summary'] as String?,
+    coverUrl: json['coverUrl'] != null
+        ? Uri.parse(json['coverUrl'] as String)
+        : null,
+    acquisitionLinks: (json['acquisitionLinks'] as List<dynamic>)
+        .map((l) => AcquisitionLink.fromJson(l as Map<String, dynamic>))
+        .toList(),
+  );
 }
 
 class ParsedFeed {
@@ -122,20 +124,20 @@ class ParsedFeed {
   });
 
   Map<String, dynamic> toJson() => {
-        'title': title,
-        'entries': entries.map((e) => e.toJson()).toList(),
-        if (nextPageUrl != null) 'nextPageUrl': nextPageUrl.toString(),
-      };
+    'title': title,
+    'entries': entries.map((e) => e.toJson()).toList(),
+    if (nextPageUrl != null) 'nextPageUrl': nextPageUrl.toString(),
+  };
 
   factory ParsedFeed.fromJson(Map<String, dynamic> json) => ParsedFeed(
-        title: json['title'] as String,
-        entries: (json['entries'] as List<dynamic>)
-            .map((e) => FeedEntry.fromJson(e as Map<String, dynamic>))
-            .toList(),
-        nextPageUrl: json['nextPageUrl'] != null
-            ? Uri.parse(json['nextPageUrl'] as String)
-            : null,
-      );
+    title: json['title'] as String,
+    entries: (json['entries'] as List<dynamic>)
+        .map((e) => FeedEntry.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    nextPageUrl: json['nextPageUrl'] != null
+        ? Uri.parse(json['nextPageUrl'] as String)
+        : null,
+  );
 }
 
 class CachedFeed {

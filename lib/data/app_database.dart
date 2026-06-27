@@ -9,9 +9,9 @@ class AppDatabase {
   /// The parameter is named 'path' (public) not '_path' (private) to match the API contract.
   // ignore: prefer_initializing_formals
   AppDatabase({DatabaseFactory? factory, String? path})
-      : _factory = factory ?? databaseFactory,
-        // ignore: prefer_initializing_formals
-        _path = path;
+    : _factory = factory ?? databaseFactory,
+      // ignore: prefer_initializing_formals
+      _path = path;
 
   Future<Database> get database async => _db ??= await _open();
 

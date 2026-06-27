@@ -4,10 +4,10 @@ import 'package:opds_browser/domain/entities.dart';
 import 'package:opds_browser/domain/models.dart';
 
 AcquisitionLink _link(String label) => AcquisitionLink(
-      url: Uri.parse('https://example.com/${label.toLowerCase()}'),
-      mimeType: 'application/octet-stream',
-      formatLabel: label,
-    );
+  url: Uri.parse('https://example.com/${label.toLowerCase()}'),
+  mimeType: 'application/octet-stream',
+  formatLabel: label,
+);
 
 BookEntry _book({
   String title = 'Book Title',
@@ -15,20 +15,23 @@ BookEntry _book({
   String? series,
   double? seriesIndex,
   List<AcquisitionLink>? links,
-}) =>
-    BookEntry(
-      title: title,
-      authors: authors,
-      series: series,
-      seriesIndex: seriesIndex,
-      acquisitionLinks: links ?? [_link('FB2')],
-    );
+}) => BookEntry(
+  title: title,
+  authors: authors,
+  series: series,
+  seriesIndex: seriesIndex,
+  acquisitionLinks: links ?? [_link('FB2')],
+);
 
 const _noFolders = AppSettings(target: SystemDownloads());
-const _authorFolder =
-    AppSettings(target: SystemDownloads(), createAuthorFolder: true);
-const _seriesFolder =
-    AppSettings(target: SystemDownloads(), createSeriesFolder: true);
+const _authorFolder = AppSettings(
+  target: SystemDownloads(),
+  createAuthorFolder: true,
+);
+const _seriesFolder = AppSettings(
+  target: SystemDownloads(),
+  createSeriesFolder: true,
+);
 const _bothFolders = AppSettings(
   target: SystemDownloads(),
   createAuthorFolder: true,
@@ -87,7 +90,10 @@ void main() {
 
     test('three or more authors appends et al.', () {
       final book = _book(authors: ['A', 'B', 'C']);
-      expect(buildFileName(book, _link('PDF'), _noFolders), 'A et al. - Book Title.pdf');
+      expect(
+        buildFileName(book, _link('PDF'), _noFolders),
+        'A et al. - Book Title.pdf',
+      );
     });
 
     test('no authors — author segment omitted entirely', () {
@@ -96,35 +102,56 @@ void main() {
     });
 
     test('no series — series segment omitted', () {
-      expect(buildFileName(_book(), _link('FB2'), _noFolders), 'Jane Doe - Book Title.fb2');
+      expect(
+        buildFileName(_book(), _link('FB2'), _noFolders),
+        'Jane Doe - Book Title.fb2',
+      );
     });
 
     test('series with no index — no #index', () {
       final book = _book(series: 'My Series');
-      expect(buildFileName(book, _link('FB2'), _noFolders), 'Jane Doe - My Series - Book Title.fb2');
+      expect(
+        buildFileName(book, _link('FB2'), _noFolders),
+        'Jane Doe - My Series - Book Title.fb2',
+      );
     });
 
     test('seriesIndex 1.0 formats as "1"', () {
       final book = _book(series: 'S', seriesIndex: 1.0);
-      expect(buildFileName(book, _link('FB2'), _noFolders), 'Jane Doe - S #1 - Book Title.fb2');
+      expect(
+        buildFileName(book, _link('FB2'), _noFolders),
+        'Jane Doe - S #1 - Book Title.fb2',
+      );
     });
 
     test('seriesIndex 1.5 formats as "1.5"', () {
       final book = _book(series: 'S', seriesIndex: 1.5);
-      expect(buildFileName(book, _link('FB2'), _noFolders), 'Jane Doe - S #1.5 - Book Title.fb2');
+      expect(
+        buildFileName(book, _link('FB2'), _noFolders),
+        'Jane Doe - S #1.5 - Book Title.fb2',
+      );
     });
 
     test('FB2.ZIP extension is fb2.zip', () {
-      expect(buildFileName(_book(), _link('FB2.ZIP'), _noFolders), 'Jane Doe - Book Title.fb2.zip');
+      expect(
+        buildFileName(_book(), _link('FB2.ZIP'), _noFolders),
+        'Jane Doe - Book Title.fb2.zip',
+      );
     });
 
     test('EPUB extension is epub', () {
-      expect(buildFileName(_book(), _link('EPUB'), _noFolders), 'Jane Doe - Book Title.epub');
+      expect(
+        buildFileName(_book(), _link('EPUB'), _noFolders),
+        'Jane Doe - Book Title.epub',
+      );
     });
 
     test('illegal chars in title replaced with _', () {
       final book = _book(title: 'Title: A/B*C');
-      expect(buildFileName(book, _link('FB2'), _noFolders), 'Jane Doe - Title_ A_B_C.fb2');
+      expect(
+        buildFileName(book, _link('FB2'), _noFolders),
+        'Jane Doe - Title_ A_B_C.fb2',
+      );
     });
 
     test('filename capped at 200 chars, extension preserved', () {
@@ -152,42 +179,69 @@ void main() {
 
     test('both folders enabled — author and series omitted from filename', () {
       final book = _book(series: 'Great Series', seriesIndex: 1.0);
-      expect(
-        buildFileName(book, _link('FB2'), _bothFolders),
-        'Book Title.fb2',
-      );
+      expect(buildFileName(book, _link('FB2'), _bothFolders), 'Book Title.fb2');
     });
 
     test('author folder enabled but no authors — title only', () {
       final book = _book(authors: [], series: 'S', seriesIndex: 1.0);
-      expect(buildFileName(book, _link('FB2'), _authorFolder), 'S #1 - Book Title.fb2');
-    });
-
-    test('series folder enabled but no series — author still included', () {
-      expect(buildFileName(_book(), _link('FB2'), _seriesFolder), 'Jane Doe - Book Title.fb2');
-    });
-
-    test('entry.series null, inferredSeries provided, series folder off — inferred series in filename', () {
       expect(
-        buildFileName(_book(), _link('FB2'), _noFolders, inferredSeries: 'Inferred Series'),
-        'Jane Doe - Inferred Series - Book Title.fb2',
+        buildFileName(book, _link('FB2'), _authorFolder),
+        'S #1 - Book Title.fb2',
       );
     });
 
-    test('entry.series null, inferredSeries provided, series folder on — series omitted from filename', () {
+    test('series folder enabled but no series — author still included', () {
       expect(
-        buildFileName(_book(), _link('FB2'), _seriesFolder, inferredSeries: 'Inferred Series'),
+        buildFileName(_book(), _link('FB2'), _seriesFolder),
         'Jane Doe - Book Title.fb2',
       );
     });
 
-    test('entry.series set — real series used in filename, inferredSeries ignored', () {
-      final book = _book(series: 'Real Series');
-      expect(
-        buildFileName(book, _link('FB2'), _noFolders, inferredSeries: 'Inferred Series'),
-        'Jane Doe - Real Series - Book Title.fb2',
-      );
-    });
+    test(
+      'entry.series null, inferredSeries provided, series folder off — inferred series in filename',
+      () {
+        expect(
+          buildFileName(
+            _book(),
+            _link('FB2'),
+            _noFolders,
+            inferredSeries: 'Inferred Series',
+          ),
+          'Jane Doe - Inferred Series - Book Title.fb2',
+        );
+      },
+    );
+
+    test(
+      'entry.series null, inferredSeries provided, series folder on — series omitted from filename',
+      () {
+        expect(
+          buildFileName(
+            _book(),
+            _link('FB2'),
+            _seriesFolder,
+            inferredSeries: 'Inferred Series',
+          ),
+          'Jane Doe - Book Title.fb2',
+        );
+      },
+    );
+
+    test(
+      'entry.series set — real series used in filename, inferredSeries ignored',
+      () {
+        final book = _book(series: 'Real Series');
+        expect(
+          buildFileName(
+            book,
+            _link('FB2'),
+            _noFolders,
+            inferredSeries: 'Inferred Series',
+          ),
+          'Jane Doe - Real Series - Book Title.fb2',
+        );
+      },
+    );
   });
 
   // ── buildPathSegments ──────────────────────────────────────────────────────
@@ -200,13 +254,21 @@ void main() {
     });
 
     test('author flag on — author segment added', () {
-      const s = AppSettings(target: SystemDownloads(), createAuthorFolder: true);
+      const s = AppSettings(
+        target: SystemDownloads(),
+        createAuthorFolder: true,
+      );
       expect(buildPathSegments(s, _book()), ['Jane Doe']);
     });
 
     test('series flag on — series segment added', () {
-      const s = AppSettings(target: SystemDownloads(), createSeriesFolder: true);
-      expect(buildPathSegments(s, _book(series: 'Great Series')), ['Great Series']);
+      const s = AppSettings(
+        target: SystemDownloads(),
+        createSeriesFolder: true,
+      );
+      expect(buildPathSegments(s, _book(series: 'Great Series')), [
+        'Great Series',
+      ]);
     });
 
     test('both flags on — author then series', () {
@@ -215,42 +277,70 @@ void main() {
         createAuthorFolder: true,
         createSeriesFolder: true,
       );
-      expect(
-        buildPathSegments(s, _book(series: 'Great Series')),
-        ['Jane Doe', 'Great Series'],
-      );
+      expect(buildPathSegments(s, _book(series: 'Great Series')), [
+        'Jane Doe',
+        'Great Series',
+      ]);
     });
 
     test('author flag on but authors empty — no folder created', () {
-      const s = AppSettings(target: SystemDownloads(), createAuthorFolder: true);
+      const s = AppSettings(
+        target: SystemDownloads(),
+        createAuthorFolder: true,
+      );
       expect(buildPathSegments(s, _book(authors: [])), isEmpty);
     });
 
     test('series flag on but series null — no folder created', () {
-      const s = AppSettings(target: SystemDownloads(), createSeriesFolder: true);
+      const s = AppSettings(
+        target: SystemDownloads(),
+        createSeriesFolder: true,
+      );
       expect(buildPathSegments(s, _book()), isEmpty);
     });
 
-    test('series flag on, entry.series null, inferredSeries provided — inferred series folder created', () {
-      const s = AppSettings(target: SystemDownloads(), createSeriesFolder: true);
-      expect(
-        buildPathSegments(s, _book(), inferredSeries: 'Inferred Series'),
-        ['Inferred Series'],
-      );
-    });
+    test(
+      'series flag on, entry.series null, inferredSeries provided — inferred series folder created',
+      () {
+        const s = AppSettings(
+          target: SystemDownloads(),
+          createSeriesFolder: true,
+        );
+        expect(
+          buildPathSegments(s, _book(), inferredSeries: 'Inferred Series'),
+          ['Inferred Series'],
+        );
+      },
+    );
 
-    test('series flag on — real entry.series takes precedence over inferredSeries', () {
-      const s = AppSettings(target: SystemDownloads(), createSeriesFolder: true);
-      expect(
-        buildPathSegments(s, _book(series: 'Real Series'), inferredSeries: 'Inferred Series'),
-        ['Real Series'],
-      );
-    });
+    test(
+      'series flag on — real entry.series takes precedence over inferredSeries',
+      () {
+        const s = AppSettings(
+          target: SystemDownloads(),
+          createSeriesFolder: true,
+        );
+        expect(
+          buildPathSegments(
+            s,
+            _book(series: 'Real Series'),
+            inferredSeries: 'Inferred Series',
+          ),
+          ['Real Series'],
+        );
+      },
+    );
 
-    test('series flag on, entry.series null, inferredSeries null — no folder', () {
-      const s = AppSettings(target: SystemDownloads(), createSeriesFolder: true);
-      expect(buildPathSegments(s, _book(), inferredSeries: null), isEmpty);
-    });
+    test(
+      'series flag on, entry.series null, inferredSeries null — no folder',
+      () {
+        const s = AppSettings(
+          target: SystemDownloads(),
+          createSeriesFolder: true,
+        );
+        expect(buildPathSegments(s, _book(), inferredSeries: null), isEmpty);
+      },
+    );
   });
 
   // ── folderPreferredLink ───────────────────────────────────────────────────
@@ -318,7 +408,8 @@ void main() {
     test('decodes percent-encoded characters', () {
       // series=%D0%92%D0%BE%D0%B9%D0%BD%D0%B0 → "Война"
       final url = Uri.parse(
-          'http://example.com/feed?series=%D0%92%D0%BE%D0%B9%D0%BD%D0%B0');
+        'http://example.com/feed?series=%D0%92%D0%BE%D0%B9%D0%BD%D0%B0',
+      );
       expect(inferSeriesFromUrl(url), 'Война');
     });
 

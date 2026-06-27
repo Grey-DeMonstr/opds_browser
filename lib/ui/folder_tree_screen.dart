@@ -90,8 +90,8 @@ class _SelectionViewState extends ConsumerState<_SelectionView> {
                     checkedBooks: state.checkedBooks,
                     onChanged: notifier.updateSelection,
                     subtreeBooks: _collectBookUrls(node),
-                    isCollapsed: node is DownloadFolder &&
-                        _collapsed.contains(node),
+                    isCollapsed:
+                        node is DownloadFolder && _collapsed.contains(node),
                     onToggle: node is DownloadFolder
                         ? () => _toggleFolder(node)
                         : () {},
@@ -167,8 +167,8 @@ class _TreeRow extends StatelessWidget {
     final triState = checkedCount == 0
         ? false
         : checkedCount == subtreeBooks.length
-            ? true
-            : null; // indeterminate
+        ? true
+        : null; // indeterminate
 
     return Padding(
       padding: EdgeInsets.only(left: indent),
@@ -239,10 +239,10 @@ List<(DownloadTreeNode, int)> _flattenTree(
   return switch (node) {
     DownloadBook() => [(node, depth)],
     DownloadFolder() => [
-        (node, depth),
-        if (!collapsed.contains(node))
-          ...node.children.expand((c) => _flattenTree(c, depth + 1, collapsed)),
-      ],
+      (node, depth),
+      if (!collapsed.contains(node))
+        ...node.children.expand((c) => _flattenTree(c, depth + 1, collapsed)),
+    ],
   };
 }
 
@@ -251,18 +251,17 @@ Set<Uri> _collectBookUrls(DownloadTreeNode node) {
   return switch (node) {
     DownloadBook() => {node.link.url},
     DownloadFolder() => node.children.fold(
-        <Uri>{},
-        (acc, c) => acc..addAll(_collectBookUrls(c)),
-      ),
+      <Uri>{},
+      (acc, c) => acc..addAll(_collectBookUrls(c)),
+    ),
   };
 }
 
 /// Returns the total number of book descendants under [node].
 int _countBooks(DownloadTreeNode node) => switch (node) {
-      DownloadBook() => 1,
-      DownloadFolder() =>
-        node.children.fold(0, (sum, c) => sum + _countBooks(c)),
-    };
+  DownloadBook() => 1,
+  DownloadFolder() => node.children.fold(0, (sum, c) => sum + _countBooks(c)),
+};
 
 // ── Download view ─────────────────────────────────────────────────────────────
 
@@ -282,8 +281,7 @@ class _DownloadViewState extends ConsumerState<_DownloadView> {
     final state = widget.state;
     final notifier = ref.read(folderDownloadProvider.notifier);
     final rows = _flattenTree(state.root, 0, _collapsed);
-    final progress =
-        state.total > 0 ? state.completedCount / state.total : 0.0;
+    final progress = state.total > 0 ? state.completedCount / state.total : 0.0;
 
     return PopScope(
       canPop: false,
@@ -307,12 +305,15 @@ class _DownloadViewState extends ConsumerState<_DownloadView> {
                     return Padding(
                       padding: EdgeInsets.only(left: depth * 16.0),
                       child: ListTile(
-                        leading: Icon(isCollapsed
-                            ? Icons.keyboard_arrow_right
-                            : Icons.keyboard_arrow_down),
+                        leading: Icon(
+                          isCollapsed
+                              ? Icons.keyboard_arrow_right
+                              : Icons.keyboard_arrow_down,
+                        ),
                         title: Text(node.title),
                         subtitle: Text(
-                            '$bookCount book${bookCount == 1 ? '' : 's'}'),
+                          '$bookCount book${bookCount == 1 ? '' : 's'}',
+                        ),
                         onTap: () => setState(() {
                           if (_collapsed.contains(node)) {
                             _collapsed.remove(node);
@@ -329,18 +330,19 @@ class _DownloadViewState extends ConsumerState<_DownloadView> {
                   return Padding(
                     padding: EdgeInsets.only(left: depth * 16.0),
                     child: ListTile(
-                      leading:
-                          _bookIcon(book.link.url, isCurrent, result, context),
+                      leading: _bookIcon(
+                        book.link.url,
+                        isCurrent,
+                        result,
+                        context,
+                      ),
                       title: Text(book.entry.title),
                     ),
                   );
                 },
               ),
             ),
-            _DownloadBottomBar(
-              progress: progress,
-              onCancel: notifier.cancel,
-            ),
+            _DownloadBottomBar(progress: progress, onCancel: notifier.cancel),
           ],
         ),
       ),
@@ -408,12 +410,15 @@ class _DoneViewState extends ConsumerState<_DoneView> {
                     return Padding(
                       padding: EdgeInsets.only(left: depth * 16.0),
                       child: ListTile(
-                        leading: Icon(isCollapsed
-                            ? Icons.keyboard_arrow_right
-                            : Icons.keyboard_arrow_down),
+                        leading: Icon(
+                          isCollapsed
+                              ? Icons.keyboard_arrow_right
+                              : Icons.keyboard_arrow_down,
+                        ),
                         title: Text(node.title),
                         subtitle: Text(
-                            '$bookCount book${bookCount == 1 ? '' : 's'}'),
+                          '$bookCount book${bookCount == 1 ? '' : 's'}',
+                        ),
                         onTap: () => setState(() {
                           if (_collapsed.contains(node)) {
                             _collapsed.remove(node);
@@ -455,7 +460,11 @@ class _DoneViewState extends ConsumerState<_DoneView> {
 // ── Shared book status icon ───────────────────────────────────────────────────
 
 Widget _bookIcon(
-    Uri linkUrl, bool isCurrent, BookDownloadResult? result, BuildContext context) {
+  Uri linkUrl,
+  bool isCurrent,
+  BookDownloadResult? result,
+  BuildContext context,
+) {
   if (isCurrent) {
     return const SizedBox(
       width: 24,
@@ -467,30 +476,32 @@ Widget _bookIcon(
     return const SizedBox(width: 24);
   }
   return switch (result.status) {
-    BookDownloadStatus.done =>
-      const Icon(Icons.check_circle, color: Colors.green),
+    BookDownloadStatus.done => const Icon(
+      Icons.check_circle,
+      color: Colors.green,
+    ),
     BookDownloadStatus.skipped => const Icon(Icons.skip_next),
     BookDownloadStatus.failed => GestureDetector(
-        onTap: () => showDialog<void>(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: const Text('Download failed'),
-            content: Text(result.error ?? 'Unknown error'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
+      onTap: () => showDialog<void>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Download failed'),
+          content: Text(result.error ?? 'Unknown error'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
         ),
-        child: const Icon(Icons.warning_rounded, color: Colors.red),
       ),
+      child: const Icon(Icons.warning_rounded, color: Colors.red),
+    ),
     BookDownloadStatus.downloading => const SizedBox(
-        width: 24,
-        height: 24,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      ),
+      width: 24,
+      height: 24,
+      child: CircularProgressIndicator(strokeWidth: 2),
+    ),
   };
 }
 

@@ -77,9 +77,9 @@ class CatalogsNotifier extends AsyncNotifier<List<Catalog>> {
   }
 }
 
-final catalogsProvider =
-    AsyncNotifierProvider<CatalogsNotifier, List<Catalog>>(
-        CatalogsNotifier.new);
+final catalogsProvider = AsyncNotifierProvider<CatalogsNotifier, List<Catalog>>(
+  CatalogsNotifier.new,
+);
 
 class FavoritesNotifier extends AsyncNotifier<List<Favorite>> {
   @override
@@ -96,9 +96,9 @@ class FavoritesNotifier extends AsyncNotifier<List<Favorite>> {
   Future<void> toggle(int catalogId, Uri url, String title) async {
     final repo = ref.read(favoritesRepositoryProvider);
     final currentFavorites = state.value;
-    final existing = currentFavorites?.where(
-      (f) => f.catalogId == catalogId && f.url == url,
-    ).firstOrNull;
+    final existing = currentFavorites
+        ?.where((f) => f.catalogId == catalogId && f.url == url)
+        .firstOrNull;
     if (existing != null) {
       await repo.remove(existing.id);
     } else {
@@ -110,7 +110,8 @@ class FavoritesNotifier extends AsyncNotifier<List<Favorite>> {
 
 final favoritesProvider =
     AsyncNotifierProvider<FavoritesNotifier, List<Favorite>>(
-        FavoritesNotifier.new);
+      FavoritesNotifier.new,
+    );
 
 // ── Browse screen ─────────────────────────────────────────────────────────────
 
@@ -121,9 +122,9 @@ class BrowseState {
   const BrowseState({required this.feed, this.isRefreshing = false});
 
   BrowseState copyWith({CachedFeed? feed, bool? isRefreshing}) => BrowseState(
-        feed: feed ?? this.feed,
-        isRefreshing: isRefreshing ?? this.isRefreshing,
-      );
+    feed: feed ?? this.feed,
+    isRefreshing: isRefreshing ?? this.isRefreshing,
+  );
 }
 
 typedef BrowseArgs = (int, Uri);
@@ -138,8 +139,7 @@ class BrowseNotifier extends AsyncNotifier<BrowseState> {
   @override
   Future<BrowseState> build() async {
     final (catalogId, url) = _args;
-    final feed =
-        await ref.read(feedRepositoryProvider).getFeed(catalogId, url);
+    final feed = await ref.read(feedRepositoryProvider).getFeed(catalogId, url);
     return BrowseState(feed: feed);
   }
 
@@ -163,11 +163,13 @@ class BrowseNotifier extends AsyncNotifier<BrowseState> {
 
 final browseProvider = AsyncNotifierProvider.autoDispose
     .family<BrowseNotifier, BrowseState, BrowseArgs>((args) {
-  return BrowseNotifier().._setArgs(args);
-});
+      return BrowseNotifier().._setArgs(args);
+    });
 
-final isFavoriteProvider =
-    Provider.autoDispose.family<bool, BrowseArgs>((ref, args) {
+final isFavoriteProvider = Provider.autoDispose.family<bool, BrowseArgs>((
+  ref,
+  args,
+) {
   final (catalogId, url) = args;
   final favoritesAsync = ref.watch(favoritesProvider);
   return favoritesAsync.whenData((favorites) {
@@ -178,8 +180,9 @@ final isFavoriteProvider =
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 
-final safPermissionCheckerProvider =
-    Provider<Future<bool> Function(String)>((ref) {
+final safPermissionCheckerProvider = Provider<Future<bool> Function(String)>((
+  ref,
+) {
   if (!Platform.isAndroid) {
     return (path) => Directory(path).exists();
   }
@@ -211,10 +214,11 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
       final dirPath = await getDirectoryPath();
       if (dirPath == null) return false;
       final name = p.basename(dirPath);
-      final newSettings = (state.value ??
-              const AppSettings(target: SystemDownloads()))
-          .copyWith(
-              target: CustomSafFolder(dirPath, name.isEmpty ? dirPath : name));
+      final newSettings =
+          (state.value ?? const AppSettings(target: SystemDownloads()))
+              .copyWith(
+                target: CustomSafFolder(dirPath, name.isEmpty ? dirPath : name),
+              );
       await ref.read(settingsRepositoryProvider).save(newSettings);
       state = AsyncData(newSettings);
       return true;
@@ -225,9 +229,10 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
     );
     if (dir == null) return false;
     final name = dir.name.isNotEmpty ? dir.name : dir.uri;
-    final newSettings = (state.value ??
-            const AppSettings(target: SystemDownloads()))
-        .copyWith(target: CustomSafFolder(dir.uri, name));
+    final newSettings =
+        (state.value ?? const AppSettings(target: SystemDownloads())).copyWith(
+          target: CustomSafFolder(dir.uri, name),
+        );
     await ref.read(settingsRepositoryProvider).save(newSettings);
     state = AsyncData(newSettings);
     return true;
@@ -258,8 +263,9 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
   }
 }
 
-final settingsProvider =
-    AsyncNotifierProvider<SettingsNotifier, AppSettings>(SettingsNotifier.new);
+final settingsProvider = AsyncNotifierProvider<SettingsNotifier, AppSettings>(
+  SettingsNotifier.new,
+);
 
 final downloadStorageProvider = Provider<DownloadStorage?>((ref) {
   final target = ref.watch(settingsProvider).value?.target;
@@ -330,8 +336,8 @@ class _LastDownloadResultNotifier extends Notifier<DownloadDone?> {
 
 final lastDownloadResultProvider =
     NotifierProvider<_LastDownloadResultNotifier, DownloadDone?>(
-  _LastDownloadResultNotifier.new,
-);
+      _LastDownloadResultNotifier.new,
+    );
 
 class DownloadNotifier extends Notifier<DownloadState> {
   late Uri _linkUrl;
@@ -351,12 +357,19 @@ class DownloadNotifier extends Notifier<DownloadState> {
 
     final downloader = ref.read(bookDownloaderProvider);
     if (downloader == null) {
-      state = const DownloadFailed('Downloads are not supported on this platform.');
+      state = const DownloadFailed(
+        'Downloads are not supported on this platform.',
+      );
       return;
     }
 
     final link = entry.acquisitionLinks.firstWhere((l) => l.url == _linkUrl);
-    final fileName = buildFileName(entry, link, settings, inferredSeries: inferredSeries);
+    final fileName = buildFileName(
+      entry,
+      link,
+      settings,
+      inferredSeries: inferredSeries,
+    );
 
     try {
       final result = await downloader.download(
@@ -378,7 +391,11 @@ class DownloadNotifier extends Notifier<DownloadState> {
               alreadyExisted: false,
               mimeType: link.mimeType,
             );
-      ref.read<_LastDownloadResultNotifier>(lastDownloadResultProvider.notifier).set(done);
+      ref
+          .read<_LastDownloadResultNotifier>(
+            lastDownloadResultProvider.notifier,
+          )
+          .set(done);
       state = done;
     } on OpdsException catch (e) {
       state = DownloadFailed(_mapError(e));
@@ -390,20 +407,19 @@ class DownloadNotifier extends Notifier<DownloadState> {
 
 final downloadNotifierProvider =
     NotifierProvider.family<DownloadNotifier, DownloadState, Uri>(
-  (url) => DownloadNotifier().._setUrl(url),
-);
+      (url) => DownloadNotifier().._setUrl(url),
+    );
 
 String _mapError(OpdsException e) => switch (e) {
-      NetworkException() =>
-        'Network error. Check your connection and try again.',
-      HttpStatusException(statusCode: 404) =>
-        'The book file was not found on the server (HTTP 404).',
-      HttpStatusException(statusCode: 401 || 403) =>
-        'This catalogue requires authentication, which is not supported.',
-      HttpStatusException(statusCode: final code) => 'Server error (HTTP $code).',
-      ParseException() => 'The server response is not a valid OPDS feed.',
-      UnsupportedProtocolException() => 'Not a supported OPDS catalogue.',
-    };
+  NetworkException() => 'Network error. Check your connection and try again.',
+  HttpStatusException(statusCode: 404) =>
+    'The book file was not found on the server (HTTP 404).',
+  HttpStatusException(statusCode: 401 || 403) =>
+    'This catalogue requires authentication, which is not supported.',
+  HttpStatusException(statusCode: final code) => 'Server error (HTTP $code).',
+  ParseException() => 'The server response is not a valid OPDS feed.',
+  UnsupportedProtocolException() => 'Not a supported OPDS catalogue.',
+};
 
 // ── Folder download ───────────────────────────────────────────────────────────
 
@@ -413,7 +429,9 @@ class FolderDownloadNotifier extends Notifier<FolderJobState> {
 
   @override
   FolderJobState build() {
-    ref.watch(bookDownloaderProvider); // warm up settings so first start() sees non-null
+    ref.watch(
+      bookDownloaderProvider,
+    ); // warm up settings so first start() sees non-null
     return const FolderJobIdle();
   }
 
@@ -456,7 +474,9 @@ class FolderDownloadNotifier extends Notifier<FolderJobState> {
 
   void updateSelection(Set<Uri> checkedBooks) {
     if (state is FolderJobTreeReady) {
-      state = (state as FolderJobTreeReady).copyWith(checkedBooks: checkedBooks);
+      state = (state as FolderJobTreeReady).copyWith(
+        checkedBooks: checkedBooks,
+      );
     }
   }
 
@@ -474,4 +494,5 @@ class FolderDownloadNotifier extends Notifier<FolderJobState> {
 
 final folderDownloadProvider =
     NotifierProvider<FolderDownloadNotifier, FolderJobState>(
-        FolderDownloadNotifier.new);
+      FolderDownloadNotifier.new,
+    );

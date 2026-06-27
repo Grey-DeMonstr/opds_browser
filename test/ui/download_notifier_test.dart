@@ -27,7 +27,11 @@ class FakeDownloadStorage implements DownloadStorage {
 
   @override
   Future<String> write(
-      List<String> p, String f, Stream<List<int>> b, String mimeType) async {
+    List<String> p,
+    String f,
+    Stream<List<int>> b,
+    String mimeType,
+  ) async {
     writtenMimeType = mimeType;
     writtenSegments = p;
     await b.drain<void>();
@@ -43,15 +47,18 @@ ProviderContainer _makeContainer({
   bool storageExists = false,
   String storageWriteResult = 'content://fake/1',
 }) {
-  final s = storage ??
+  final s =
+      storage ??
       FakeDownloadStorage(
         existsResult: storageExists,
         writeResult: storageWriteResult,
       );
-  final c = ProviderContainer(overrides: [
-    httpClientProvider.overrideWith((ref) => client),
-    downloadStorageProvider.overrideWith((ref) => s),
-  ]);
+  final c = ProviderContainer(
+    overrides: [
+      httpClientProvider.overrideWith((ref) => client),
+      downloadStorageProvider.overrideWith((ref) => s),
+    ],
+  );
   addTearDown(c.dispose);
   return c;
 }
@@ -78,7 +85,9 @@ const _settings = AppSettings(target: SystemDownloads());
 
 void main() {
   test('initial state is DownloadIdle', () {
-    final c = _makeContainer(client: MockClient((_) async => http.Response('', 200)));
+    final c = _makeContainer(
+      client: MockClient((_) async => http.Response('', 200)),
+    );
     expect(c.read(downloadNotifierProvider(_linkUrl)), isA<DownloadIdle>());
   });
 
@@ -88,7 +97,9 @@ void main() {
       storageWriteResult: 'content://result/42',
     );
 
-    await c.read(downloadNotifierProvider(_linkUrl).notifier).start(_book, _settings);
+    await c
+        .read(downloadNotifierProvider(_linkUrl).notifier)
+        .start(_book, _settings);
 
     final state = c.read(downloadNotifierProvider(_linkUrl));
     expect(state, isA<DownloadDone>());
@@ -98,25 +109,32 @@ void main() {
     expect(done.fileName, isNotEmpty);
   });
 
-  test('start() with already-existing file → DownloadDone(alreadyExisted: true)', () async {
-    final c = _makeContainer(
-      client: MockClient((_) async => http.Response('', 200)),
-      storageExists: true,
-    );
+  test(
+    'start() with already-existing file → DownloadDone(alreadyExisted: true)',
+    () async {
+      final c = _makeContainer(
+        client: MockClient((_) async => http.Response('', 200)),
+        storageExists: true,
+      );
 
-    await c.read(downloadNotifierProvider(_linkUrl).notifier).start(_book, _settings);
+      await c
+          .read(downloadNotifierProvider(_linkUrl).notifier)
+          .start(_book, _settings);
 
-    final done = c.read(downloadNotifierProvider(_linkUrl)) as DownloadDone;
-    expect(done.alreadyExisted, isTrue);
-    expect(done.contentUri, '');
-  });
+      final done = c.read(downloadNotifierProvider(_linkUrl)) as DownloadDone;
+      expect(done.alreadyExisted, isTrue);
+      expect(done.contentUri, '');
+    },
+  );
 
   test('start() with non-2xx response → DownloadFailed', () async {
     final c = _makeContainer(
       client: MockClient((_) async => http.Response('Not found', 404)),
     );
 
-    await c.read(downloadNotifierProvider(_linkUrl).notifier).start(_book, _settings);
+    await c
+        .read(downloadNotifierProvider(_linkUrl).notifier)
+        .start(_book, _settings);
 
     expect(c.read(downloadNotifierProvider(_linkUrl)), isA<DownloadFailed>());
     final failed = c.read(downloadNotifierProvider(_linkUrl)) as DownloadFailed;
@@ -138,7 +156,10 @@ void main() {
     final firstFuture = notifier.start(_book, _settings);
     // Yield so the first start() can run up to the await point
     await Future<void>.delayed(Duration.zero);
-    expect(c.read(downloadNotifierProvider(_linkUrl)), isA<DownloadInProgress>());
+    expect(
+      c.read(downloadNotifierProvider(_linkUrl)),
+      isA<DownloadInProgress>(),
+    );
 
     // Second call — should be no-op
     await notifier.start(_book, _settings);
@@ -154,7 +175,9 @@ void main() {
       client: MockClient((_) async => http.Response.bytes([1, 2, 3], 200)),
     );
 
-    await c.read(downloadNotifierProvider(_linkUrl).notifier).start(_book, _settings);
+    await c
+        .read(downloadNotifierProvider(_linkUrl).notifier)
+        .start(_book, _settings);
 
     final done = c.read(downloadNotifierProvider(_linkUrl)) as DownloadDone;
     expect(done.mimeType, 'application/fb2');
@@ -165,7 +188,9 @@ void main() {
       client: MockClient((_) async => http.Response.bytes([1, 2, 3], 200)),
     );
 
-    await c.read(downloadNotifierProvider(_linkUrl).notifier).start(_book, _settings);
+    await c
+        .read(downloadNotifierProvider(_linkUrl).notifier)
+        .start(_book, _settings);
 
     expect(c.read(lastDownloadResultProvider), isA<DownloadDone>());
   });
@@ -176,28 +201,33 @@ void main() {
       storageExists: true,
     );
 
-    await c.read(downloadNotifierProvider(_linkUrl).notifier).start(_book, _settings);
+    await c
+        .read(downloadNotifierProvider(_linkUrl).notifier)
+        .start(_book, _settings);
 
     final result = c.read(lastDownloadResultProvider);
     expect(result, isA<DownloadDone>());
     expect((result as DownloadDone).alreadyExisted, isTrue);
   });
 
-  test('start() with inferredSeries — inferred series used for path segments when createSeriesFolder is true', () async {
-    final storage = FakeDownloadStorage(writeResult: 'content://result');
-    final c = _makeContainer(
-      client: MockClient((_) async => http.Response.bytes([1], 200)),
-      storage: storage,
-    );
-    const settings = AppSettings(
-      target: SystemDownloads(),
-      createSeriesFolder: true,
-    );
+  test(
+    'start() with inferredSeries — inferred series used for path segments when createSeriesFolder is true',
+    () async {
+      final storage = FakeDownloadStorage(writeResult: 'content://result');
+      final c = _makeContainer(
+        client: MockClient((_) async => http.Response.bytes([1], 200)),
+        storage: storage,
+      );
+      const settings = AppSettings(
+        target: SystemDownloads(),
+        createSeriesFolder: true,
+      );
 
-    await c
-        .read(downloadNotifierProvider(_linkUrl).notifier)
-        .start(_book, settings, inferredSeries: 'My Series');
+      await c
+          .read(downloadNotifierProvider(_linkUrl).notifier)
+          .start(_book, settings, inferredSeries: 'My Series');
 
-    expect(storage.writtenSegments, ['My Series']);
-  });
+      expect(storage.writtenSegments, ['My Series']);
+    },
+  );
 }

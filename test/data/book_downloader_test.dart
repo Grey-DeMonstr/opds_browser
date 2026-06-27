@@ -63,34 +63,40 @@ const _settings = AppSettings(target: SystemDownloads());
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 void main() {
-  test('file already exists — returns "already_exists" without HTTP call', () async {
-    var httpCalled = false;
-    final client = MockClient((_) async {
-      httpCalled = true;
-      return http.Response('', 200);
-    });
-    final storage = FakeDownloadStorage(existsResult: true);
-    final downloader = BookDownloader(client, storage);
+  test(
+    'file already exists — returns "already_exists" without HTTP call',
+    () async {
+      var httpCalled = false;
+      final client = MockClient((_) async {
+        httpCalled = true;
+        return http.Response('', 200);
+      });
+      final storage = FakeDownloadStorage(existsResult: true);
+      final downloader = BookDownloader(client, storage);
 
-    final result = await downloader.download(_book, _link, _settings);
+      final result = await downloader.download(_book, _link, _settings);
 
-    expect(result, 'already_exists');
-    expect(httpCalled, isFalse);
-  });
+      expect(result, 'already_exists');
+      expect(httpCalled, isFalse);
+    },
+  );
 
-  test('successful download — correct fileName and segments passed to storage', () async {
-    final client = MockClient(
-      (_) async => http.Response.bytes([1, 2, 3], 200),
-    );
-    final storage = FakeDownloadStorage(writeResult: 'content://uri/123');
-    final downloader = BookDownloader(client, storage);
+  test(
+    'successful download — correct fileName and segments passed to storage',
+    () async {
+      final client = MockClient(
+        (_) async => http.Response.bytes([1, 2, 3], 200),
+      );
+      final storage = FakeDownloadStorage(writeResult: 'content://uri/123');
+      final downloader = BookDownloader(client, storage);
 
-    final result = await downloader.download(_book, _link, _settings);
+      final result = await downloader.download(_book, _link, _settings);
 
-    expect(result, 'content://uri/123');
-    expect(storage.writtenFileName, buildFileName(_book, _link, _settings));
-    expect(storage.writtenSegments, isEmpty);
-  });
+      expect(result, 'content://uri/123');
+      expect(storage.writtenFileName, buildFileName(_book, _link, _settings));
+      expect(storage.writtenSegments, isEmpty);
+    },
+  );
 
   test('mimeType from link is passed to storage.write()', () async {
     final client = MockClient((_) async => http.Response.bytes([1], 200));
@@ -110,7 +116,11 @@ void main() {
     await expectLater(
       downloader.download(_book, _link, _settings),
       throwsA(
-        isA<HttpStatusException>().having((e) => e.statusCode, 'statusCode', 404),
+        isA<HttpStatusException>().having(
+          (e) => e.statusCode,
+          'statusCode',
+          404,
+        ),
       ),
     );
   });
@@ -142,17 +152,25 @@ void main() {
     expect(storage.writtenSegments, ['Jane Doe']);
   });
 
-  test('inferred series used for path segments when entry.series is null and createSeriesFolder is true', () async {
-    final client = MockClient((_) async => http.Response.bytes([1], 200));
-    final storage = FakeDownloadStorage();
-    final downloader = BookDownloader(client, storage);
-    const settings = AppSettings(
-      target: SystemDownloads(),
-      createSeriesFolder: true,
-    );
+  test(
+    'inferred series used for path segments when entry.series is null and createSeriesFolder is true',
+    () async {
+      final client = MockClient((_) async => http.Response.bytes([1], 200));
+      final storage = FakeDownloadStorage();
+      final downloader = BookDownloader(client, storage);
+      const settings = AppSettings(
+        target: SystemDownloads(),
+        createSeriesFolder: true,
+      );
 
-    await downloader.download(_book, _link, settings, inferredSeries: 'My Series');
+      await downloader.download(
+        _book,
+        _link,
+        settings,
+        inferredSeries: 'My Series',
+      );
 
-    expect(storage.writtenSegments, ['My Series']);
-  });
+      expect(storage.writtenSegments, ['My Series']);
+    },
+  );
 }

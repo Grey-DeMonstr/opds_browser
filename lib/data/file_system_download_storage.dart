@@ -9,7 +9,8 @@ class FileSystemDownloadStorage implements DownloadStorage {
   final String _basePath;
 
   static FileSystemDownloadStorage downloads() {
-    final home = Platform.environment['USERPROFILE'] ??
+    final home =
+        Platform.environment['USERPROFILE'] ??
         Platform.environment['HOME'] ??
         Directory.current.path;
     return FileSystemDownloadStorage(p.join(home, 'Downloads'));

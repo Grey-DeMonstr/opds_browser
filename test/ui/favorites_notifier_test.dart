@@ -9,10 +9,9 @@ class FakeFavoritesRepository implements FavoritesRepository {
   var _nextId = 1;
 
   FakeFavoritesRepository({List<Favorite> initial = const []})
-      : _data = List.of(initial) {
+    : _data = List.of(initial) {
     if (initial.isNotEmpty) {
-      _nextId =
-          initial.map((f) => f.id).reduce((a, b) => a > b ? a : b) + 1;
+      _nextId = initial.map((f) => f.id).reduce((a, b) => a > b ? a : b) + 1;
     }
   }
 
@@ -21,13 +20,15 @@ class FakeFavoritesRepository implements FavoritesRepository {
 
   @override
   Future<void> add(int catalogId, Uri url, String title) async {
-    _data.add(Favorite(
-      id: _nextId++,
-      catalogId: catalogId,
-      url: url,
-      title: title,
-      sortOrder: _data.length,
-    ));
+    _data.add(
+      Favorite(
+        id: _nextId++,
+        catalogId: catalogId,
+        url: url,
+        title: title,
+        sortOrder: _data.length,
+      ),
+    );
   }
 
   @override
@@ -41,21 +42,24 @@ class FakeFavoritesRepository implements FavoritesRepository {
 }
 
 ProviderContainer makeContainer({List<Favorite> initial = const []}) {
-  return ProviderContainer(overrides: [
-    favoritesRepositoryProvider.overrideWithValue(
-      FakeFavoritesRepository(initial: initial),
-    ),
-  ]);
+  return ProviderContainer(
+    overrides: [
+      favoritesRepositoryProvider.overrideWithValue(
+        FakeFavoritesRepository(initial: initial),
+      ),
+    ],
+  );
 }
 
 void main() {
   test('build() loads favorites from repository', () async {
     final seed = Favorite(
-        id: 1,
-        catalogId: 1,
-        url: Uri.parse('https://a.com/feed'),
-        title: 'Science',
-        sortOrder: 0);
+      id: 1,
+      catalogId: 1,
+      url: Uri.parse('https://a.com/feed'),
+      title: 'Science',
+      sortOrder: 0,
+    );
     final container = makeContainer(initial: [seed]);
     addTearDown(container.dispose);
 
@@ -66,11 +70,12 @@ void main() {
 
   test('remove() deletes favorite and refreshes state', () async {
     final seed = Favorite(
-        id: 1,
-        catalogId: 1,
-        url: Uri.parse('https://a.com/feed'),
-        title: 'Science',
-        sortOrder: 0);
+      id: 1,
+      catalogId: 1,
+      url: Uri.parse('https://a.com/feed'),
+      title: 'Science',
+      sortOrder: 0,
+    );
     final container = makeContainer(initial: [seed]);
     addTearDown(container.dispose);
 
@@ -86,9 +91,9 @@ void main() {
     addTearDown(container.dispose);
 
     await container.read(favoritesProvider.future);
-    await container.read(favoritesProvider.notifier).toggle(
-          1, Uri.parse('https://a.com/feed'), 'Science',
-        );
+    await container
+        .read(favoritesProvider.notifier)
+        .toggle(1, Uri.parse('https://a.com/feed'), 'Science');
 
     final favorites = container.read(favoritesProvider).value!;
     expect(favorites, hasLength(1));
@@ -98,18 +103,19 @@ void main() {
 
   test('toggle() removes favorite when already present', () async {
     final seed = Favorite(
-        id: 1,
-        catalogId: 1,
-        url: Uri.parse('https://a.com/feed'),
-        title: 'Science',
-        sortOrder: 0);
+      id: 1,
+      catalogId: 1,
+      url: Uri.parse('https://a.com/feed'),
+      title: 'Science',
+      sortOrder: 0,
+    );
     final container = makeContainer(initial: [seed]);
     addTearDown(container.dispose);
 
     await container.read(favoritesProvider.future);
-    await container.read(favoritesProvider.notifier).toggle(
-          1, Uri.parse('https://a.com/feed'), 'Science',
-        );
+    await container
+        .read(favoritesProvider.notifier)
+        .toggle(1, Uri.parse('https://a.com/feed'), 'Science');
 
     final favorites = container.read(favoritesProvider).value!;
     expect(favorites, isEmpty);

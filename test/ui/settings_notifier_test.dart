@@ -19,12 +19,16 @@ ProviderContainer _makeContainer({
   required AppSettings initial,
   bool permissionGranted = true,
 }) {
-  return ProviderContainer(overrides: [
-    settingsRepositoryProvider
-        .overrideWithValue(FakeSettingsRepository(initial)),
-    safPermissionCheckerProvider
-        .overrideWithValue((_) async => permissionGranted),
-  ]);
+  return ProviderContainer(
+    overrides: [
+      settingsRepositoryProvider.overrideWithValue(
+        FakeSettingsRepository(initial),
+      ),
+      safPermissionCheckerProvider.overrideWithValue(
+        (_) async => permissionGranted,
+      ),
+    ],
+  );
 }
 
 void main() {
@@ -39,19 +43,21 @@ void main() {
     expect(settings.createAuthorFolder, isFalse);
   });
 
-  test('build() reverts to SystemDownloads when permission is revoked',
-      () async {
-    const uri = 'content://example/tree/primary';
-    final c = _makeContainer(
-      initial: const AppSettings(target: CustomSafFolder(uri, 'Downloads')),
-      permissionGranted: false,
-    );
-    addTearDown(c.dispose);
+  test(
+    'build() reverts to SystemDownloads when permission is revoked',
+    () async {
+      const uri = 'content://example/tree/primary';
+      final c = _makeContainer(
+        initial: const AppSettings(target: CustomSafFolder(uri, 'Downloads')),
+        permissionGranted: false,
+      );
+      addTearDown(c.dispose);
 
-    final settings = await c.read(settingsProvider.future);
-    expect(settings.target, isA<SystemDownloads>());
-    expect(c.read(settingsProvider.notifier).permissionRevoked, isTrue);
-  });
+      final settings = await c.read(settingsProvider.future);
+      expect(settings.target, isA<SystemDownloads>());
+      expect(c.read(settingsProvider.notifier).permissionRevoked, isTrue);
+    },
+  );
 
   test('build() keeps CustomSafFolder when permission is granted', () async {
     const uri = 'content://example/tree/primary';
@@ -68,12 +74,15 @@ void main() {
 
   test('setSystemDownloads() updates state and persists', () async {
     const uri = 'content://example/tree/primary';
-    final repo =
-        FakeSettingsRepository(const AppSettings(target: CustomSafFolder(uri, 'D')));
-    final c = ProviderContainer(overrides: [
-      settingsRepositoryProvider.overrideWithValue(repo),
-      safPermissionCheckerProvider.overrideWithValue((_) async => true),
-    ]);
+    final repo = FakeSettingsRepository(
+      const AppSettings(target: CustomSafFolder(uri, 'D')),
+    );
+    final c = ProviderContainer(
+      overrides: [
+        settingsRepositoryProvider.overrideWithValue(repo),
+        safPermissionCheckerProvider.overrideWithValue((_) async => true),
+      ],
+    );
     addTearDown(c.dispose);
 
     await c.read(settingsProvider.future);
@@ -84,12 +93,15 @@ void main() {
   });
 
   test('setCreateAuthorFolder(true) updates state and persists', () async {
-    final repo =
-        FakeSettingsRepository(const AppSettings(target: SystemDownloads()));
-    final c = ProviderContainer(overrides: [
-      settingsRepositoryProvider.overrideWithValue(repo),
-      safPermissionCheckerProvider.overrideWithValue((_) async => true),
-    ]);
+    final repo = FakeSettingsRepository(
+      const AppSettings(target: SystemDownloads()),
+    );
+    final c = ProviderContainer(
+      overrides: [
+        settingsRepositoryProvider.overrideWithValue(repo),
+        safPermissionCheckerProvider.overrideWithValue((_) async => true),
+      ],
+    );
     addTearDown(c.dispose);
 
     await c.read(settingsProvider.future);
@@ -100,12 +112,15 @@ void main() {
   });
 
   test('setCreateSeriesFolder(true) updates state and persists', () async {
-    final repo =
-        FakeSettingsRepository(const AppSettings(target: SystemDownloads()));
-    final c = ProviderContainer(overrides: [
-      settingsRepositoryProvider.overrideWithValue(repo),
-      safPermissionCheckerProvider.overrideWithValue((_) async => true),
-    ]);
+    final repo = FakeSettingsRepository(
+      const AppSettings(target: SystemDownloads()),
+    );
+    final c = ProviderContainer(
+      overrides: [
+        settingsRepositoryProvider.overrideWithValue(repo),
+        safPermissionCheckerProvider.overrideWithValue((_) async => true),
+      ],
+    );
     addTearDown(c.dispose);
 
     await c.read(settingsProvider.future);

@@ -66,7 +66,11 @@ void main() {
       await repo.add(catalogId, Uri.parse('https://example.com/b'), 'Second');
       await repo.add(catalogId, Uri.parse('https://example.com/c'), 'Third');
       final all = await repo.getAll();
-      expect(all.map((Favorite f) => f.title).toList(), ['First', 'Second', 'Third']);
+      expect(all.map((Favorite f) => f.title).toList(), [
+        'First',
+        'Second',
+        'Third',
+      ]);
     });
 
     test('sort_order starts at 0 and increments per add', () async {

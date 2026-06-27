@@ -13,7 +13,10 @@ class SafDownloadStorage implements DownloadStorage {
 
   @override
   Future<bool> exists(List<String> pathSegments, String fileName) async {
-    final file = await _safUtil.child(_treeUriString, [...pathSegments, fileName]);
+    final file = await _safUtil.child(_treeUriString, [
+      ...pathSegments,
+      fileName,
+    ]);
     return file != null;
   }
 

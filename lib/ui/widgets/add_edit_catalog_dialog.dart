@@ -24,10 +24,10 @@ class _AddEditCatalogDialogState extends ConsumerState<AddEditCatalogDialog> {
   @override
   void initState() {
     super.initState();
-    _titleCtrl =
-        TextEditingController(text: widget.catalog?.title ?? '');
+    _titleCtrl = TextEditingController(text: widget.catalog?.title ?? '');
     _urlCtrl = TextEditingController(
-        text: widget.catalog?.rootUrl.toString() ?? '');
+      text: widget.catalog?.rootUrl.toString() ?? '',
+    );
   }
 
   @override
@@ -39,7 +39,9 @@ class _AddEditCatalogDialogState extends ConsumerState<AddEditCatalogDialog> {
 
   Uri _parseUrl(String raw) {
     final trimmed = raw.trim();
-    return trimmed.contains('://') ? Uri.parse(trimmed) : Uri.parse('https://$trimmed');
+    return trimmed.contains('://')
+        ? Uri.parse(trimmed)
+        : Uri.parse('https://$trimmed');
   }
 
   Future<void> _submit({bool skipProbe = false}) async {
@@ -57,12 +59,22 @@ class _AddEditCatalogDialogState extends ConsumerState<AddEditCatalogDialog> {
       try {
         ok = await ref.read(opdsClientProvider).probe(url);
       } on OpdsException catch (e) {
-        if (mounted) setState(() { _probing = false; _probeError = e.message; });
+        if (mounted)
+          setState(() {
+            _probing = false;
+            _probeError = e.message;
+          });
         return;
       }
-      if (mounted) setState(() { _probing = false; });
+      if (mounted)
+        setState(() {
+          _probing = false;
+        });
       if (!ok) {
-        if (mounted) setState(() { _probeError = 'Not a supported OPDS catalogue'; });
+        if (mounted)
+          setState(() {
+            _probeError = 'Not a supported OPDS catalogue';
+          });
         return;
       }
     }
@@ -70,7 +82,9 @@ class _AddEditCatalogDialogState extends ConsumerState<AddEditCatalogDialog> {
     if (widget.catalog == null) {
       await ref.read(catalogsProvider.notifier).add(title, url);
     } else {
-      await ref.read(catalogsProvider.notifier).updateCatalog(
+      await ref
+          .read(catalogsProvider.notifier)
+          .updateCatalog(
             Catalog(
               id: widget.catalog!.id,
               title: title,
@@ -112,7 +126,9 @@ class _AddEditCatalogDialogState extends ConsumerState<AddEditCatalogDialog> {
               Text(
                 _probeError!,
                 style: TextStyle(
-                    color: Theme.of(context).colorScheme.error, fontSize: 13),
+                  color: Theme.of(context).colorScheme.error,
+                  fontSize: 13,
+                ),
               ),
               TextButton(
                 onPressed: _probing ? null : () => _submit(skipProbe: true),

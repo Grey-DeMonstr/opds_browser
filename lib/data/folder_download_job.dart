@@ -8,9 +8,13 @@ import 'package:opds_browser/domain/entities.dart';
 import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/domain/repositories.dart';
 
-typedef DownloadFn = Future<String> Function(
-    BookEntry entry, AcquisitionLink link, AppSettings settings,
-    {String? inferredSeries});
+typedef DownloadFn =
+    Future<String> Function(
+      BookEntry entry,
+      AcquisitionLink link,
+      AppSettings settings, {
+      String? inferredSeries,
+    });
 
 // ── Tree model ────────────────────────────────────────────────────────────────
 
@@ -72,10 +76,10 @@ class FolderJobTreeReady extends FolderJobState {
   final bool stoppedAtLimit;
 
   FolderJobTreeReady copyWith({Set<Uri>? checkedBooks}) => FolderJobTreeReady(
-        root: root,
-        checkedBooks: checkedBooks ?? this.checkedBooks,
-        stoppedAtLimit: stoppedAtLimit,
-      );
+    root: root,
+    checkedBooks: checkedBooks ?? this.checkedBooks,
+    stoppedAtLimit: stoppedAtLimit,
+  );
 }
 
 /// Download in progress — root is the checked-only subtree.
@@ -116,11 +120,11 @@ class FolderDownloadJob {
     required AppSettings settings,
     required void Function(FolderJobState) onProgress,
     Duration downloadDelay = const Duration(seconds: 5),
-  })  : _feedRepository = feedRepository,
-        _downloadFn = downloadFn,
-        _settings = settings,
-        _onProgress = onProgress,
-        _downloadDelay = downloadDelay;
+  }) : _feedRepository = feedRepository,
+       _downloadFn = downloadFn,
+       _settings = settings,
+       _onProgress = onProgress,
+       _downloadDelay = downloadDelay;
 
   final FeedRepository _feedRepository;
   final DownloadFn _downloadFn;
@@ -172,16 +176,20 @@ class FolderDownloadJob {
       for (final entry in cached.feed.entries) {
         if (entry is NavigationEntry) {
           final folderChildren = <DownloadTreeNode>[];
-          targetChildren.add(DownloadFolder(title: entry.title, children: folderChildren));
+          targetChildren.add(
+            DownloadFolder(title: entry.title, children: folderChildren),
+          );
           queue.add((entry.url, depth + 1, folderChildren));
         } else if (entry is BookEntry &&
             entry.acquisitionLinks.isNotEmpty &&
             bookCount < 2000) {
-          targetChildren.add(DownloadBook(
-            entry: entry,
-            link: folderPreferredLink(entry.acquisitionLinks),
-            inferredSeries: inferredSeries,
-          ));
+          targetChildren.add(
+            DownloadBook(
+              entry: entry,
+              link: folderPreferredLink(entry.acquisitionLinks),
+              inferredSeries: inferredSeries,
+            ),
+          );
           bookCount++;
         }
       }
@@ -196,37 +204,44 @@ class FolderDownloadJob {
     final collapsed = _collapseTree(rawRoot);
 
     if (_cancelled || bookCount == 0) {
-      _onProgress(FolderJobDone(
-        root: collapsed ?? DownloadFolder(title: '', children: []),
-        results: const {},
-        wasCancelled: _cancelled,
-        stoppedAtLimit: _stoppedAtLimit,
-      ));
+      _onProgress(
+        FolderJobDone(
+          root: collapsed ?? DownloadFolder(title: '', children: []),
+          results: const {},
+          wasCancelled: _cancelled,
+          stoppedAtLimit: _stoppedAtLimit,
+        ),
+      );
       return;
     }
 
     _scannedRoot = collapsed!;
     final allBookUrls = _collectBookUrls(_scannedRoot!);
-    _onProgress(FolderJobTreeReady(
-      root: _scannedRoot!,
-      checkedBooks: allBookUrls,
-      stoppedAtLimit: _stoppedAtLimit,
-    ));
+    _onProgress(
+      FolderJobTreeReady(
+        root: _scannedRoot!,
+        checkedBooks: allBookUrls,
+        stoppedAtLimit: _stoppedAtLimit,
+      ),
+    );
   }
 
   /// Phase 2: sequential download — call after run() emits FolderJobTreeReady.
   Future<void> download(Set<Uri> checkedBooks) async {
     if (_scannedRoot == null || checkedBooks.isEmpty) {
-      _onProgress(FolderJobDone(
-        root: DownloadFolder(title: '', children: []),
-        results: const {},
-        wasCancelled: _cancelled,
-        stoppedAtLimit: _stoppedAtLimit,
-      ));
+      _onProgress(
+        FolderJobDone(
+          root: DownloadFolder(title: '', children: []),
+          results: const {},
+          wasCancelled: _cancelled,
+          stoppedAtLimit: _stoppedAtLimit,
+        ),
+      );
       return;
     }
 
-    final displayRoot = _filterTree(_scannedRoot!, checkedBooks) ??
+    final displayRoot =
+        _filterTree(_scannedRoot!, checkedBooks) ??
         DownloadFolder(title: '', children: []);
     final tasks = _collectTasks(displayRoot);
     final results = <Uri, BookDownloadResult>{};
@@ -235,17 +250,21 @@ class FolderDownloadJob {
       if (_cancelled) break;
 
       final task = tasks[i];
-      _onProgress(FolderJobDownloading(
-        root: displayRoot,
-        currentBook: task.link.url,
-        results: Map.of(results),
-        total: tasks.length,
-        completedCount: results.length,
-      ));
+      _onProgress(
+        FolderJobDownloading(
+          root: displayRoot,
+          currentBook: task.link.url,
+          results: Map.of(results),
+          total: tasks.length,
+          completedCount: results.length,
+        ),
+      );
 
       try {
         final outcome = await _downloadFn(
-          task.entry, task.link, _settings,
+          task.entry,
+          task.link,
+          _settings,
           inferredSeries: task.inferredSeries,
         );
         results[task.link.url] = BookDownloadResult(
@@ -260,25 +279,29 @@ class FolderDownloadJob {
         );
       }
 
-      _onProgress(FolderJobDownloading(
-        root: displayRoot,
-        currentBook: null,
-        results: Map.of(results),
-        total: tasks.length,
-        completedCount: results.length,
-      ));
+      _onProgress(
+        FolderJobDownloading(
+          root: displayRoot,
+          currentBook: null,
+          results: Map.of(results),
+          total: tasks.length,
+          completedCount: results.length,
+        ),
+      );
 
       if (!_cancelled && i < tasks.length - 1) {
         await Future<void>.delayed(_downloadDelay);
       }
     }
 
-    _onProgress(FolderJobDone(
-      root: displayRoot,
-      results: Map.unmodifiable(results),
-      wasCancelled: _cancelled,
-      stoppedAtLimit: _stoppedAtLimit,
-    ));
+    _onProgress(
+      FolderJobDone(
+        root: displayRoot,
+        results: Map.unmodifiable(results),
+        wasCancelled: _cancelled,
+        stoppedAtLimit: _stoppedAtLimit,
+      ),
+    );
   }
 }
 
@@ -289,8 +312,10 @@ class FolderDownloadJob {
 DownloadTreeNode? _collapseTree(DownloadTreeNode node) {
   if (node is DownloadBook) return node;
   final folder = node as DownloadFolder;
-  final collapsed =
-      folder.children.map(_collapseTree).whereType<DownloadTreeNode>().toList();
+  final collapsed = folder.children
+      .map(_collapseTree)
+      .whereType<DownloadTreeNode>()
+      .toList();
   if (collapsed.isEmpty) return null;
   if (collapsed.length == 1) return collapsed.first;
   return DownloadFolder(title: folder.title, children: collapsed);
@@ -310,8 +335,10 @@ DownloadTreeNode? _filterTree(DownloadTreeNode node, Set<Uri> checkedBooks) {
     return checkedBooks.contains(node.link.url) ? node : null;
   }
   final folder = node as DownloadFolder;
-  final filtered =
-      folder.children.map((c) => _filterTree(c, checkedBooks)).whereType<DownloadTreeNode>().toList();
+  final filtered = folder.children
+      .map((c) => _filterTree(c, checkedBooks))
+      .whereType<DownloadTreeNode>()
+      .toList();
   if (filtered.isEmpty) return null;
   if (filtered.length == 1) return filtered.first;
   return DownloadFolder(title: folder.title, children: filtered);

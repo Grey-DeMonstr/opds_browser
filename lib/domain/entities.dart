@@ -57,10 +57,9 @@ class AppSettings {
     DownloadTarget? target,
     bool? createAuthorFolder,
     bool? createSeriesFolder,
-  }) =>
-      AppSettings(
-        target: target ?? this.target,
-        createAuthorFolder: createAuthorFolder ?? this.createAuthorFolder,
-        createSeriesFolder: createSeriesFolder ?? this.createSeriesFolder,
-      );
+  }) => AppSettings(
+    target: target ?? this.target,
+    createAuthorFolder: createAuthorFolder ?? this.createAuthorFolder,
+    createSeriesFolder: createSeriesFolder ?? this.createSeriesFolder,
+  );
 }

@@ -29,20 +29,33 @@ void main() {
 
   test('write saves bytes and returns absolute path', () async {
     final result = await storage.write(
-        <String>[], 'book.epub', Stream<List<int>>.value([1, 2, 3]), 'application/epub+zip');
+      <String>[],
+      'book.epub',
+      Stream<List<int>>.value([1, 2, 3]),
+      'application/epub+zip',
+    );
     expect(p.isAbsolute(result), isTrue);
     expect(await File(result).readAsBytes(), equals([1, 2, 3]));
   });
 
   test('write creates intermediate path segments as directories', () async {
     await storage.write(
-        ['Author', 'Series'], 'book.epub', Stream<List<int>>.value([42]), 'application/epub+zip');
+      ['Author', 'Series'],
+      'book.epub',
+      Stream<List<int>>.value([42]),
+      'application/epub+zip',
+    );
     final file = File(p.join(tempDir.path, 'Author', 'Series', 'book.epub'));
     expect(await file.exists(), isTrue);
   });
 
   test('exists with path segments mirrors write location', () async {
-    await storage.write(['A', 'B'], 'x.epub', Stream<List<int>>.value([1]), 'application/epub+zip');
+    await storage.write(
+      ['A', 'B'],
+      'x.epub',
+      Stream<List<int>>.value([1]),
+      'application/epub+zip',
+    );
     expect(await storage.exists(['A', 'B'], 'x.epub'), isTrue);
     expect(await storage.exists(<String>[], 'x.epub'), isFalse);
   });

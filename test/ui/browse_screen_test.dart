@@ -24,8 +24,11 @@ class FakeFeedRepository implements FeedRepository {
   FakeFeedRepository({required this.initialFeed, this.refreshFeed});
 
   @override
-  Future<CachedFeed> getFeed(int catalogId, Uri url,
-      {bool forceRefresh = false}) async {
+  Future<CachedFeed> getFeed(
+    int catalogId,
+    Uri url, {
+    bool forceRefresh = false,
+  }) async {
     if (forceRefresh) {
       forceRefreshCalled = true;
       if (refreshFeed != null) return refreshFeed!;
@@ -40,7 +43,7 @@ class FakeFavoritesRepository implements FavoritesRepository {
   var _nextId = 1;
 
   FakeFavoritesRepository({List<Favorite> initial = const []})
-      : _data = List.of(initial) {
+    : _data = List.of(initial) {
     if (initial.isNotEmpty) {
       _nextId = initial.map((f) => f.id).reduce((a, b) => a > b ? a : b) + 1;
     }
@@ -53,13 +56,15 @@ class FakeFavoritesRepository implements FavoritesRepository {
 
   @override
   Future<void> add(int catalogId, Uri url, String title) async {
-    _data.add(Favorite(
-      id: _nextId++,
-      catalogId: catalogId,
-      url: url,
-      title: title,
-      sortOrder: _data.length,
-    ));
+    _data.add(
+      Favorite(
+        id: _nextId++,
+        catalogId: catalogId,
+        url: url,
+        title: title,
+        sortOrder: _data.length,
+      ),
+    );
   }
 
   @override
@@ -87,39 +92,36 @@ CachedFeed makeFeed({
   String title = 'Test Feed',
   List<FeedEntry> entries = const [],
   DateTime? fetchedAt,
-}) =>
-    CachedFeed(
-      feed: ParsedFeed(title: title, entries: entries),
-      fetchedAt: fetchedAt ?? DateTime(2026, 6, 13, 10, 0, 0),
-      fromCache: true,
-    );
+}) => CachedFeed(
+  feed: ParsedFeed(title: title, entries: entries),
+  fetchedAt: fetchedAt ?? DateTime(2026, 6, 13, 10, 0, 0),
+  fromCache: true,
+);
 
 NavigationEntry navEntry({
   String title = 'Sub Folder',
   String? subtitle,
   String url = 'http://example.com/sub',
-}) =>
-    NavigationEntry(title: title, subtitle: subtitle, url: Uri.parse(url));
+}) => NavigationEntry(title: title, subtitle: subtitle, url: Uri.parse(url));
 
 BookEntry bookEntry({
   String title = 'My Book',
   List<String> authors = const ['Jane Doe'],
   String? series,
   double? seriesIndex,
-}) =>
-    BookEntry(
-      title: title,
-      authors: authors,
-      series: series,
-      seriesIndex: seriesIndex,
-      acquisitionLinks: [
-        AcquisitionLink(
-          url: Uri.parse('http://example.com/book.fb2'),
-          mimeType: 'application/fb2',
-          formatLabel: 'FB2',
-        ),
-      ],
-    );
+}) => BookEntry(
+  title: title,
+  authors: authors,
+  series: series,
+  seriesIndex: seriesIndex,
+  acquisitionLinks: [
+    AcquisitionLink(
+      url: Uri.parse('http://example.com/book.fb2'),
+      mimeType: 'application/fb2',
+      formatLabel: 'FB2',
+    ),
+  ],
+);
 
 Widget buildApp({
   required CachedFeed feed,
@@ -130,18 +132,18 @@ Widget buildApp({
   void Function(GoRouterState)? onBrowse,
   FolderJobState folderJobState = const FolderJobIdle(),
 }) {
-  final feedRepo =
-      FakeFeedRepository(initialFeed: feed, refreshFeed: refreshFeed);
+  final feedRepo = FakeFeedRepository(
+    initialFeed: feed,
+    refreshFeed: refreshFeed,
+  );
   final favRepo = FakeFavoritesRepository(initial: favorites);
   final router = GoRouter(
     initialLocation: '/',
     routes: [
       GoRoute(
         path: '/',
-        builder: (_, _) => BrowseScreen(
-          catalogId: catalogId,
-          url: url ?? _feedUrl,
-        ),
+        builder: (_, _) =>
+            BrowseScreen(catalogId: catalogId, url: url ?? _feedUrl),
       ),
       GoRoute(
         path: '/browse',
@@ -220,8 +222,9 @@ void main() {
     expect(find.text('This folder is empty.'), findsOneWidget);
   });
 
-  testWidgets('initial load error shows error text and Retry button',
-      (tester) async {
+  testWidgets('initial load error shows error text and Retry button', (
+    tester,
+  ) async {
     // Use a FakeFeedRepository that always throws on first call.
     final feedRepo = _ThrowingFeedRepository();
     final router = GoRouter(
@@ -233,14 +236,17 @@ void main() {
         ),
       ],
     );
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        feedRepositoryProvider.overrideWithValue(feedRepo),
-        favoritesRepositoryProvider
-            .overrideWithValue(FakeFavoritesRepository()),
-      ],
-      child: MaterialApp.router(routerConfig: router),
-    ));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          feedRepositoryProvider.overrideWithValue(feedRepo),
+          favoritesRepositoryProvider.overrideWithValue(
+            FakeFavoritesRepository(),
+          ),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Error'), findsOneWidget);
@@ -258,7 +264,8 @@ void main() {
 
   testWidgets('navigation entry renders subtitle when present', (tester) async {
     final feed = makeFeed(
-        entries: [navEntry(title: 'Science', subtitle: 'Physics and more')]);
+      entries: [navEntry(title: 'Science', subtitle: 'Physics and more')],
+    );
     await tester.pumpWidget(buildApp(feed: feed));
     await tester.pumpAndSettle();
 
@@ -268,7 +275,10 @@ void main() {
 
   testWidgets('book entry renders title and author', (tester) async {
     final feed = makeFeed(
-        entries: [bookEntry(title: 'Dune', authors: ['Frank Herbert'])]);
+      entries: [
+        bookEntry(title: 'Dune', authors: ['Frank Herbert']),
+      ],
+    );
     await tester.pumpWidget(buildApp(feed: feed));
     await tester.pumpAndSettle();
 
@@ -279,20 +289,25 @@ void main() {
   });
 
   testWidgets('book entry renders series line when present', (tester) async {
-    final feed = makeFeed(entries: [
-      bookEntry(title: 'Dune', series: 'Dune Chronicles', seriesIndex: 1)
-    ]);
+    final feed = makeFeed(
+      entries: [
+        bookEntry(title: 'Dune', series: 'Dune Chronicles', seriesIndex: 1),
+      ],
+    );
     await tester.pumpWidget(buildApp(feed: feed));
     await tester.pumpAndSettle();
 
     expect(find.text('Dune Chronicles #1'), findsOneWidget);
   });
 
-  testWidgets('book entry with authors and no series sets isThreeLine true',
-      (tester) async {
-    final feed = makeFeed(entries: [
-      bookEntry(title: 'Dune', authors: ['Frank Herbert']),
-    ]);
+  testWidgets('book entry with authors and no series sets isThreeLine true', (
+    tester,
+  ) async {
+    final feed = makeFeed(
+      entries: [
+        bookEntry(title: 'Dune', authors: ['Frank Herbert']),
+      ],
+    );
     await tester.pumpWidget(buildApp(feed: feed));
     await tester.pumpAndSettle();
 
@@ -308,8 +323,9 @@ void main() {
     expect(find.byIcon(Icons.download_outlined), findsOneWidget);
   });
 
-  testWidgets('tapping book row download button triggers download',
-      (tester) async {
+  testWidgets('tapping book row download button triggers download', (
+    tester,
+  ) async {
     final feed = makeFeed(entries: [bookEntry(title: 'My Book')]);
     await tester.pumpWidget(buildAppWithDownload(feed: feed));
     await tester.pumpAndSettle();
@@ -321,11 +337,13 @@ void main() {
   });
 
   testWidgets('mixed feed preserves entry order', (tester) async {
-    final feed = makeFeed(entries: [
-      navEntry(title: 'Folder A'),
-      bookEntry(title: 'Book B'),
-      navEntry(title: 'Folder C'),
-    ]);
+    final feed = makeFeed(
+      entries: [
+        navEntry(title: 'Folder A'),
+        bookEntry(title: 'Book B'),
+        navEntry(title: 'Folder C'),
+      ],
+    );
     await tester.pumpWidget(buildApp(feed: feed));
     await tester.pumpAndSettle();
 
@@ -349,19 +367,21 @@ void main() {
       routes: [
         GoRoute(
           path: '/',
-          builder: (_, s) =>
-              BrowseScreen(catalogId: 1, url: _feedUrl),
+          builder: (_, s) => BrowseScreen(catalogId: 1, url: _feedUrl),
         ),
       ],
     );
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        feedRepositoryProvider.overrideWithValue(slowRepo),
-        favoritesRepositoryProvider
-            .overrideWithValue(FakeFavoritesRepository()),
-      ],
-      child: MaterialApp.router(routerConfig: router),
-    ));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          feedRepositoryProvider.overrideWithValue(slowRepo),
+          favoritesRepositoryProvider.overrideWithValue(
+            FakeFavoritesRepository(),
+          ),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
     await tester.pumpAndSettle();
 
     // Trigger refresh — do NOT await (we want mid-refresh state)
@@ -381,12 +401,12 @@ void main() {
     expect(find.byType(LinearProgressIndicator), findsNothing);
   });
 
-  testWidgets('refresh failure shows snackbar and keeps old content',
-      (tester) async {
+  testWidgets('refresh failure shows snackbar and keeps old content', (
+    tester,
+  ) async {
     final initial = makeFeed(title: 'Initial');
     // refreshFeed=null → throws on forceRefresh
-    await tester.pumpWidget(
-        buildApp(feed: initial, refreshFeed: null));
+    await tester.pumpWidget(buildApp(feed: initial, refreshFeed: null));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byIcon(Icons.refresh));
@@ -399,7 +419,9 @@ void main() {
     expect(find.textContaining('Refresh failed'), findsOneWidget);
   });
 
-  testWidgets('star icon is unfilled when URL is not a favorite', (tester) async {
+  testWidgets('star icon is unfilled when URL is not a favorite', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildApp(feed: makeFeed(), favorites: []));
     await tester.pumpAndSettle();
 
@@ -422,7 +444,9 @@ void main() {
     expect(find.byIcon(Icons.star_border), findsNothing);
   });
 
-  testWidgets('tapping star when not favorited adds to favorites', (tester) async {
+  testWidgets('tapping star when not favorited adds to favorites', (
+    tester,
+  ) async {
     // Use a repo we can inspect afterward.
     final favRepo = FakeFavoritesRepository();
     final feedRepo = FakeFeedRepository(initialFeed: makeFeed());
@@ -435,13 +459,15 @@ void main() {
         ),
       ],
     );
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        feedRepositoryProvider.overrideWithValue(feedRepo),
-        favoritesRepositoryProvider.overrideWithValue(favRepo),
-      ],
-      child: MaterialApp.router(routerConfig: router),
-    ));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          feedRepositoryProvider.overrideWithValue(feedRepo),
+          favoritesRepositoryProvider.overrideWithValue(favRepo),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.byIcon(Icons.star_border));
@@ -451,7 +477,9 @@ void main() {
     expect(favRepo.favorites.first.url, _feedUrl);
   });
 
-  testWidgets('tapping a book entry tile opens BookDetailsSheet', (tester) async {
+  testWidgets('tapping a book entry tile opens BookDetailsSheet', (
+    tester,
+  ) async {
     final feed = makeFeed(entries: [bookEntry(title: 'My Book')]);
     await tester.pumpWidget(buildAppWithDownload(feed: feed));
     await tester.pumpAndSettle();
@@ -462,33 +490,41 @@ void main() {
     expect(find.byType(BookDetailsSheet), findsOneWidget);
   });
 
-  testWidgets('tapping navigation entry pushes /browse with catalogId, url, and title',
-      (tester) async {
-    final subUrl = 'http://example.com/sub';
-    final feed = makeFeed(entries: [navEntry(title: 'Sub Folder', url: subUrl)]);
+  testWidgets(
+    'tapping navigation entry pushes /browse with catalogId, url, and title',
+    (tester) async {
+      final subUrl = 'http://example.com/sub';
+      final feed = makeFeed(
+        entries: [navEntry(title: 'Sub Folder', url: subUrl)],
+      );
 
-    String? capturedUri;
-    await tester.pumpWidget(buildApp(
-      feed: feed,
-      catalogId: 1,
-      onBrowse: (state) => capturedUri = state.uri.toString(),
-    ));
-    await tester.pumpAndSettle();
+      String? capturedUri;
+      await tester.pumpWidget(
+        buildApp(
+          feed: feed,
+          catalogId: 1,
+          onBrowse: (state) => capturedUri = state.uri.toString(),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Sub Folder'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Sub Folder'));
+      await tester.pumpAndSettle();
 
-    expect(capturedUri, isNotNull);
-    expect(capturedUri, contains('catalogId=1'));
-    expect(capturedUri, contains(Uri.encodeComponent(subUrl)));
-    expect(capturedUri, contains(Uri.encodeComponent('Sub Folder')));
-  });
+      expect(capturedUri, isNotNull);
+      expect(capturedUri, contains('catalogId=1'));
+      expect(capturedUri, contains(Uri.encodeComponent(subUrl)));
+      expect(capturedUri, contains(Uri.encodeComponent('Sub Folder')));
+    },
+  );
 
-  testWidgets('tapping star uses navTitle as bookmark title when provided',
-      (tester) async {
+  testWidgets('tapping star uses navTitle as bookmark title when provided', (
+    tester,
+  ) async {
     final favRepo = FakeFavoritesRepository();
-    final feedRepo =
-        FakeFeedRepository(initialFeed: makeFeed(title: 'Feed Title'));
+    final feedRepo = FakeFeedRepository(
+      initialFeed: makeFeed(title: 'Feed Title'),
+    );
     final router = GoRouter(
       initialLocation: '/',
       routes: [
@@ -502,14 +538,18 @@ void main() {
         ),
       ],
     );
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        feedRepositoryProvider.overrideWithValue(feedRepo),
-        favoritesRepositoryProvider.overrideWithValue(favRepo),
-        folderDownloadProvider.overrideWith(() => _FolderJobStub(const FolderJobIdle())),
-      ],
-      child: MaterialApp.router(routerConfig: router),
-    ));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          feedRepositoryProvider.overrideWithValue(feedRepo),
+          favoritesRepositoryProvider.overrideWithValue(favRepo),
+          folderDownloadProvider.overrideWith(
+            () => _FolderJobStub(const FolderJobIdle()),
+          ),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.byIcon(Icons.star_border));
@@ -519,11 +559,13 @@ void main() {
     expect(favRepo.favorites.first.title, 'Nav Entry Title');
   });
 
-  testWidgets('tapping star uses feed title when navTitle is not provided',
-      (tester) async {
+  testWidgets('tapping star uses feed title when navTitle is not provided', (
+    tester,
+  ) async {
     final favRepo = FakeFavoritesRepository();
-    final feedRepo =
-        FakeFeedRepository(initialFeed: makeFeed(title: 'Feed Title'));
+    final feedRepo = FakeFeedRepository(
+      initialFeed: makeFeed(title: 'Feed Title'),
+    );
     final router = GoRouter(
       initialLocation: '/',
       routes: [
@@ -533,14 +575,18 @@ void main() {
         ),
       ],
     );
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        feedRepositoryProvider.overrideWithValue(feedRepo),
-        favoritesRepositoryProvider.overrideWithValue(favRepo),
-        folderDownloadProvider.overrideWith(() => _FolderJobStub(const FolderJobIdle())),
-      ],
-      child: MaterialApp.router(routerConfig: router),
-    ));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          feedRepositoryProvider.overrideWithValue(feedRepo),
+          favoritesRepositoryProvider.overrideWithValue(favRepo),
+          folderDownloadProvider.overrideWith(
+            () => _FolderJobStub(const FolderJobIdle()),
+          ),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.byIcon(Icons.star_border));
@@ -550,128 +596,154 @@ void main() {
     expect(favRepo.favorites.first.title, 'Feed Title');
   });
 
-
-  testWidgets('BrowseScreen with inferredSeries param shows series on book tiles when URL has no series',
-      (tester) async {
-    // Simulates the book-folder page: URL has no series param, but the
-    // parent series-list page propagated inferredSeries via the route.
-    final bookPageUrl = Uri.parse('http://example.com/book?uid=abc123');
-    final feed = makeFeed(entries: [bookEntry(title: 'Dune')]);
-    final router = GoRouter(
-      initialLocation: '/',
-      routes: [
-        GoRoute(
-          path: '/',
-          builder: (_, _) => BrowseScreen(
-            catalogId: 1,
-            url: bookPageUrl,
-            inferredSeries: 'Dune Chronicles',
+  testWidgets(
+    'BrowseScreen with inferredSeries param shows series on book tiles when URL has no series',
+    (tester) async {
+      // Simulates the book-folder page: URL has no series param, but the
+      // parent series-list page propagated inferredSeries via the route.
+      final bookPageUrl = Uri.parse('http://example.com/book?uid=abc123');
+      final feed = makeFeed(entries: [bookEntry(title: 'Dune')]);
+      final router = GoRouter(
+        initialLocation: '/',
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => BrowseScreen(
+              catalogId: 1,
+              url: bookPageUrl,
+              inferredSeries: 'Dune Chronicles',
+            ),
           ),
+        ],
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            feedRepositoryProvider.overrideWithValue(
+              FakeFeedRepository(initialFeed: feed),
+            ),
+            favoritesRepositoryProvider.overrideWithValue(
+              FakeFavoritesRepository(),
+            ),
+            folderDownloadProvider.overrideWith(
+              () => _FolderJobStub(const FolderJobIdle()),
+            ),
+          ],
+          child: MaterialApp.router(routerConfig: router),
         ),
-      ],
-    );
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        feedRepositoryProvider.overrideWithValue(
-            FakeFeedRepository(initialFeed: feed)),
-        favoritesRepositoryProvider
-            .overrideWithValue(FakeFavoritesRepository()),
-        folderDownloadProvider
-            .overrideWith(() => _FolderJobStub(const FolderJobIdle())),
-      ],
-      child: MaterialApp.router(routerConfig: router),
-    ));
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    final textWidget = tester.widget<Text>(find.text('Dune Chronicles'));
-    expect(textWidget.style?.fontStyle, FontStyle.italic);
-  });
+      final textWidget = tester.widget<Text>(find.text('Dune Chronicles'));
+      expect(textWidget.style?.fontStyle, FontStyle.italic);
+    },
+  );
 
-  testWidgets('navigation tile push includes series param when inferredSeries is non-null',
-      (tester) async {
-    // When on a series page, tapping a nav entry should carry inferredSeries
-    // into the child route so book tiles on the child page inherit it.
-    final seriesUrl = Uri.parse('http://example.com/feed?series=Dune+Chronicles');
-    final feed = makeFeed(entries: [navEntry(title: 'Book Folder')]);
+  testWidgets(
+    'navigation tile push includes series param when inferredSeries is non-null',
+    (tester) async {
+      // When on a series page, tapping a nav entry should carry inferredSeries
+      // into the child route so book tiles on the child page inherit it.
+      final seriesUrl = Uri.parse(
+        'http://example.com/feed?series=Dune+Chronicles',
+      );
+      final feed = makeFeed(entries: [navEntry(title: 'Book Folder')]);
 
-    String? capturedUri;
-    await tester.pumpWidget(buildApp(
-      feed: feed,
-      catalogId: 1,
-      url: seriesUrl,
-      onBrowse: (state) => capturedUri = state.uri.toString(),
-    ));
-    await tester.pumpAndSettle();
+      String? capturedUri;
+      await tester.pumpWidget(
+        buildApp(
+          feed: feed,
+          catalogId: 1,
+          url: seriesUrl,
+          onBrowse: (state) => capturedUri = state.uri.toString(),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Book Folder'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Book Folder'));
+      await tester.pumpAndSettle();
 
-    expect(capturedUri, isNotNull);
-    expect(capturedUri, contains('series='));
-    expect(capturedUri, contains('Dune'));
-  });
+      expect(capturedUri, isNotNull);
+      expect(capturedUri, contains('series='));
+      expect(capturedUri, contains('Dune'));
+    },
+  );
 
-  testWidgets('navigation tile push omits series param when inferredSeries is null',
-      (tester) async {
-    final feed = makeFeed(entries: [navEntry(title: 'Folder')]);
+  testWidgets(
+    'navigation tile push omits series param when inferredSeries is null',
+    (tester) async {
+      final feed = makeFeed(entries: [navEntry(title: 'Folder')]);
 
-    String? capturedUri;
-    await tester.pumpWidget(buildApp(
-      feed: feed,
-      catalogId: 1,
-      onBrowse: (state) => capturedUri = state.uri.toString(),
-    ));
-    await tester.pumpAndSettle();
+      String? capturedUri;
+      await tester.pumpWidget(
+        buildApp(
+          feed: feed,
+          catalogId: 1,
+          onBrowse: (state) => capturedUri = state.uri.toString(),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Folder'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Folder'));
+      await tester.pumpAndSettle();
 
-    expect(capturedUri, isNotNull);
-    expect(capturedUri, isNot(contains('series=')));
-  });
+      expect(capturedUri, isNotNull);
+      expect(capturedUri, isNot(contains('series=')));
+    },
+  );
 
-  testWidgets('book with no series shows inferred series in italics when URL has series param',
-      (tester) async {
-    final seriesUrl = Uri.parse('http://example.com/feed?series=Dune+Chronicles');
-    final feed = makeFeed(entries: [bookEntry(title: 'Dune')]);
-    await tester.pumpWidget(buildApp(feed: feed, url: seriesUrl));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'book with no series shows inferred series in italics when URL has series param',
+    (tester) async {
+      final seriesUrl = Uri.parse(
+        'http://example.com/feed?series=Dune+Chronicles',
+      );
+      final feed = makeFeed(entries: [bookEntry(title: 'Dune')]);
+      await tester.pumpWidget(buildApp(feed: feed, url: seriesUrl));
+      await tester.pumpAndSettle();
 
-    final textWidget = tester.widget<Text>(find.text('Dune Chronicles'));
-    expect(textWidget.style?.fontStyle, FontStyle.italic);
-  });
+      final textWidget = tester.widget<Text>(find.text('Dune Chronicles'));
+      expect(textWidget.style?.fontStyle, FontStyle.italic);
+    },
+  );
 
-  testWidgets('book with own series uses real series — not italic, URL series ignored',
-      (tester) async {
-    final seriesUrl = Uri.parse('http://example.com/feed?series=URL+Series');
-    final feed = makeFeed(
-        entries: [bookEntry(title: 'Dune', series: 'Real Series', seriesIndex: 1)]);
-    await tester.pumpWidget(buildApp(feed: feed, url: seriesUrl));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'book with own series uses real series — not italic, URL series ignored',
+    (tester) async {
+      final seriesUrl = Uri.parse('http://example.com/feed?series=URL+Series');
+      final feed = makeFeed(
+        entries: [
+          bookEntry(title: 'Dune', series: 'Real Series', seriesIndex: 1),
+        ],
+      );
+      await tester.pumpWidget(buildApp(feed: feed, url: seriesUrl));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Real Series #1'), findsOneWidget);
-    expect(find.text('URL Series'), findsNothing);
-    final textWidget = tester.widget<Text>(find.text('Real Series #1'));
-    expect(textWidget.style?.fontStyle, isNot(FontStyle.italic));
-  });
+      expect(find.text('Real Series #1'), findsOneWidget);
+      expect(find.text('URL Series'), findsNothing);
+      final textWidget = tester.widget<Text>(find.text('Real Series #1'));
+      expect(textWidget.style?.fontStyle, isNot(FontStyle.italic));
+    },
+  );
 
-  testWidgets('book with no series and no URL series param shows empty series area',
-      (tester) async {
-    final feed = makeFeed(entries: [bookEntry(title: 'Dune')]);
-    await tester.pumpWidget(buildApp(feed: feed));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'book with no series and no URL series param shows empty series area',
+    (tester) async {
+      final feed = makeFeed(entries: [bookEntry(title: 'Dune')]);
+      await tester.pumpWidget(buildApp(feed: feed));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Dune'), findsOneWidget);
-    // No unexpected series text visible
-    expect(find.text('Dune Chronicles'), findsNothing);
-  });
+      expect(find.text('Dune'), findsOneWidget);
+      // No unexpected series text visible
+      expect(find.text('Dune Chronicles'), findsNothing);
+    },
+  );
 
   group('Download-folder button', () {
     testWidgets('button enabled when FolderJobIdle', (tester) async {
-      await tester.pumpWidget(buildApp(
-        feed: makeFeed(),
-        folderJobState: const FolderJobIdle(),
-      ));
+      await tester.pumpWidget(
+        buildApp(feed: makeFeed(), folderJobState: const FolderJobIdle()),
+      );
       await tester.pumpAndSettle();
       final btn = tester.widget<IconButton>(
         find.widgetWithIcon(IconButton, Icons.download_for_offline_outlined),
@@ -680,10 +752,12 @@ void main() {
     });
 
     testWidgets('button disabled during FolderJobScanning', (tester) async {
-      await tester.pumpWidget(buildApp(
-        feed: makeFeed(),
-        folderJobState: const FolderJobScanning(foldersFound: 1),
-      ));
+      await tester.pumpWidget(
+        buildApp(
+          feed: makeFeed(),
+          folderJobState: const FolderJobScanning(foldersFound: 1),
+        ),
+      );
       await tester.pumpAndSettle();
       final btn = tester.widget<IconButton>(
         find.widgetWithIcon(IconButton, Icons.download_for_offline_outlined),
@@ -711,15 +785,18 @@ void main() {
           ),
         ],
       );
-      await tester.pumpWidget(ProviderScope(
-        overrides: [
-          feedRepositoryProvider.overrideWithValue(feedRepo),
-          favoritesRepositoryProvider.overrideWithValue(favRepo),
-          folderDownloadProvider
-              .overrideWith(() => _FolderJobStub(const FolderJobIdle())),
-        ],
-        child: MaterialApp.router(routerConfig: router),
-      ));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            feedRepositoryProvider.overrideWithValue(feedRepo),
+            favoritesRepositoryProvider.overrideWithValue(favRepo),
+            folderDownloadProvider.overrideWith(
+              () => _FolderJobStub(const FolderJobIdle()),
+            ),
+          ],
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(
@@ -733,15 +810,17 @@ void main() {
     });
 
     testWidgets('button disabled when FolderJobDone', (tester) async {
-      await tester.pumpWidget(buildApp(
-        feed: makeFeed(),
-        folderJobState: FolderJobDone(
-          root: DownloadFolder(title: '', children: []),
-          results: const {},
-          wasCancelled: false,
-          stoppedAtLimit: false,
+      await tester.pumpWidget(
+        buildApp(
+          feed: makeFeed(),
+          folderJobState: FolderJobDone(
+            root: DownloadFolder(title: '', children: []),
+            results: const {},
+            wasCancelled: false,
+            stoppedAtLimit: false,
+          ),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
       final btn = tester.widget<IconButton>(
         find.widgetWithIcon(IconButton, Icons.download_for_offline_outlined),
@@ -753,9 +832,11 @@ void main() {
 
 class _ThrowingFeedRepository implements FeedRepository {
   @override
-  Future<CachedFeed> getFeed(int catalogId, Uri url,
-          {bool forceRefresh = false}) async =>
-      throw Exception('no connection');
+  Future<CachedFeed> getFeed(
+    int catalogId,
+    Uri url, {
+    bool forceRefresh = false,
+  }) async => throw Exception('no connection');
 }
 
 class _SlowFeedRepository implements FeedRepository {
@@ -767,8 +848,11 @@ class _SlowFeedRepository implements FeedRepository {
   void complete(CachedFeed feed) => _refreshCompleter?.complete(feed);
 
   @override
-  Future<CachedFeed> getFeed(int catalogId, Uri url,
-      {bool forceRefresh = false}) async {
+  Future<CachedFeed> getFeed(
+    int catalogId,
+    Uri url, {
+    bool forceRefresh = false,
+  }) async {
     if (forceRefresh) {
       _refreshCompleter = Completer<CachedFeed>();
       return _refreshCompleter!.future;

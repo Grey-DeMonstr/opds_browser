@@ -22,8 +22,17 @@ class BookDownloader {
     AppSettings settings, {
     String? inferredSeries,
   }) async {
-    final segments = buildPathSegments(settings, entry, inferredSeries: inferredSeries);
-    final fileName = buildFileName(entry, link, settings, inferredSeries: inferredSeries);
+    final segments = buildPathSegments(
+      settings,
+      entry,
+      inferredSeries: inferredSeries,
+    );
+    final fileName = buildFileName(
+      entry,
+      link,
+      settings,
+      inferredSeries: inferredSeries,
+    );
 
     if (await _storage.exists(segments, fileName)) {
       return _alreadyExists;
