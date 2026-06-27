@@ -19,14 +19,18 @@ class Fb2MetadataParser {
           (f) => f.name.toLowerCase().endsWith('.fb2'),
           orElse: () => throw FormatException('No .fb2 file found in zip'),
         );
-    return entry.content as Uint8List;
+    final contentBytes = entry.content as List<int>;
+    final raw = contentBytes is Uint8List
+        ? contentBytes
+        : Uint8List.fromList(contentBytes);
+    return raw;
   }
 
   LocalBookMetadata parseXml(String xml) {
     final XmlDocument doc;
     try {
       doc = XmlDocument.parse(xml);
-    } on XmlParserException catch (e) {
+    } on XmlException catch (e) {
       throw FormatException('Invalid FB2 XML: $e');
     }
 
