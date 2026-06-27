@@ -16,6 +16,7 @@ import 'package:opds_browser/data/shared_prefs_settings_repository.dart';
 import 'package:opds_browser/data/sqflite_catalog_repository.dart';
 import 'package:opds_browser/data/sqflite_favorites_repository.dart';
 import 'package:opds_browser/data/fb2_metadata_parser.dart';
+import 'package:opds_browser/data/fb2_metadata_writer.dart';
 import 'package:opds_browser/data/saf_book_read_writer.dart';
 import 'package:opds_browser/data/saf_local_library_scanner.dart';
 import 'package:opds_browser/data/sqflite_local_library_cache.dart';
@@ -525,4 +526,8 @@ final fb2MetadataParserProvider = Provider<Fb2MetadataParser>(
 
 final localBookReadWriterProvider = Provider<LocalBookReadWriter>(
   (ref) => SafBookReadWriter(),
+);
+
+final fb2MetadataWriterProvider = Provider<Fb2MetadataWriter>(
+  (ref) => Fb2MetadataWriter(),
 );
