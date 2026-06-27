@@ -1,4 +1,6 @@
 import 'dart:typed_data';
+import 'package:opds_browser/data/fb2_metadata_writer.dart';
+import 'package:opds_browser/data/sqflite_local_library_cache.dart';
 
 class LocalBookMetadata {
   const LocalBookMetadata({
@@ -148,4 +150,92 @@ abstract interface class LocalBookReadWriter {
     String mimeType,
     Uint8List bytes,
   );
+}
+
+class FixResult {
+  final int fixed;
+  final int skipped;
+  const FixResult({required this.fixed, required this.skipped});
+}
+
+class LocalLibraryFixer {
+  final LocalBookReadWriter readWriter;
+  final Fb2MetadataWriter writer;
+  final SqfliteLocalLibraryCache cache;
+
+  const LocalLibraryFixer({
+    required this.readWriter,
+    required this.writer,
+    required this.cache,
+  });
+
+  Future<(FixResult, LibraryFolder)> fix(LibraryFolder root) async {
+    var fixed = 0;
+    var skipped = 0;
+
+    Future<LibraryFolder> processFolder(LibraryFolder folder) async {
+      final newChildren = <LibraryNode>[];
+      for (final node in folder.children) {
+        switch (node) {
+          case LibraryBook b when b.isInvalid:
+            final result = await _fixBook(b);
+            if (result != null) {
+              newChildren.add(b.copyWith(meta: result));
+              fixed++;
+            } else {
+              newChildren.add(b);
+              skipped++;
+            }
+          case LibraryFolder f:
+            newChildren.add(await processFolder(f));
+          default:
+            newChildren.add(node);
+        }
+      }
+      return folder.copyWith(children: newChildren);
+    }
+
+    final newRoot = await processFolder(root);
+    return (FixResult(fixed: fixed, skipped: skipped), newRoot);
+  }
+
+  Future<LocalBookMetadata?> _fixBook(LibraryBook book) async {
+    final parts = book.relativePath.split('/');
+    final segments = parts.sublist(0, parts.length - 1);
+    final depth = segments.length;
+
+    final LocalBookMetadata newMeta;
+    switch (depth) {
+      case 0:
+        return null;
+      case 1:
+        newMeta = book.meta.copyWith(
+          author: segments[0],
+          clearSeries: true,
+          clearSeriesIndex: true,
+        );
+      case 2:
+        newMeta = book.meta.copyWith(author: segments[0], series: segments[1]);
+      default:
+        return null;
+    }
+
+    final isZip = book.relativePath.toLowerCase().endsWith('.fb2.zip');
+    final fileName = parts.last;
+    final mimeType = isZip
+        ? 'application/zip'
+        : 'application/x-fictionbook+xml';
+
+    final bytes = await readWriter.readBytes(book.documentUri);
+    final patched = writer.patchBytes(bytes, newMeta, isZip: isZip);
+    await readWriter.writeBytes(
+      book.documentUri,
+      book.parentUri,
+      fileName,
+      mimeType,
+      patched,
+    );
+    await cache.put(book.relativePath, newMeta);
+    return newMeta;
+  }
 }
