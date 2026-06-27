@@ -12,8 +12,8 @@ class Opds1Client implements OpdsClient {
   /// Production constructor: wraps [httpClient] in an [OpdsHttpFetcher]
   /// and uses the default [Opds1FeedParser].
   Opds1Client(http.Client httpClient)
-      : _fetcher = OpdsHttpFetcher(httpClient),
-        _parser = Opds1FeedParser();
+    : _fetcher = OpdsHttpFetcher(httpClient),
+      _parser = Opds1FeedParser();
 
   /// Test constructor: inject both collaborators directly.
   Opds1Client.withDependencies(this._fetcher, this._parser);

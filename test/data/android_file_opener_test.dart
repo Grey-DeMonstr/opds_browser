@@ -11,9 +11,9 @@ void main() {
   setUp(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
-      log.add(call);
-      return null;
-    });
+          log.add(call);
+          return null;
+        });
   });
 
   tearDown(() {
@@ -31,9 +31,12 @@ void main() {
     expect(log.first.arguments['mimeType'], 'application/epub+zip');
   });
 
-  test('openFile with different mimeType passes it through unchanged', () async {
-    await openFile('content://test/document/2', 'application/pdf');
+  test(
+    'openFile with different mimeType passes it through unchanged',
+    () async {
+      await openFile('content://test/document/2', 'application/pdf');
 
-    expect(log.first.arguments['mimeType'], 'application/pdf');
-  });
+      expect(log.first.arguments['mimeType'], 'application/pdf');
+    },
+  );
 }

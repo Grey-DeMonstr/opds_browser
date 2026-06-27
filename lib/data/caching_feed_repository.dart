@@ -34,7 +34,9 @@ class CachingFeedRepository implements FeedRepository {
           feed: ParsedFeed.fromJson(
             jsonDecode(row['feed_json'] as String) as Map<String, dynamic>,
           ),
-          fetchedAt: DateTime.fromMillisecondsSinceEpoch(row['fetched_at'] as int),
+          fetchedAt: DateTime.fromMillisecondsSinceEpoch(
+            row['fetched_at'] as int,
+          ),
           fromCache: true,
         );
       }
@@ -42,16 +44,12 @@ class CachingFeedRepository implements FeedRepository {
 
     final feed = await _fetchAllPages(url);
     final nowMs = DateTime.now().millisecondsSinceEpoch;
-    await db.insert(
-      'feed_cache',
-      {
-        'catalog_id': catalogId,
-        'url': key,
-        'feed_json': jsonEncode(feed.toJson()),
-        'fetched_at': nowMs,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert('feed_cache', {
+      'catalog_id': catalogId,
+      'url': key,
+      'feed_json': jsonEncode(feed.toJson()),
+      'fetched_at': nowMs,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
     return CachedFeed(
       feed: feed,
       fetchedAt: DateTime.fromMillisecondsSinceEpoch(nowMs),

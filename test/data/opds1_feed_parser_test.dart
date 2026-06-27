@@ -9,24 +9,42 @@ import 'package:opds_browser/domain/opds_client.dart';
 
 void main() {
   group('mimeToLabel', () {
-    test('maps application/fb2 → FB2', () =>
-        expect(mimeToLabel('application/fb2'), 'FB2'));
-    test('maps application/x-fictionbook+xml → FB2', () =>
-        expect(mimeToLabel('application/x-fictionbook+xml'), 'FB2'));
-    test('maps application/fb2+zip → FB2.ZIP', () =>
-        expect(mimeToLabel('application/fb2+zip'), 'FB2.ZIP'));
-    test('maps application/x-zip-compressed-fb2 → FB2.ZIP', () =>
-        expect(mimeToLabel('application/x-zip-compressed-fb2'), 'FB2.ZIP'));
-    test('maps application/epub+zip → EPUB', () =>
-        expect(mimeToLabel('application/epub+zip'), 'EPUB'));
-    test('maps application/pdf → PDF', () =>
-        expect(mimeToLabel('application/pdf'), 'PDF'));
-    test('maps application/x-mobipocket-ebook → MOBI', () =>
-        expect(mimeToLabel('application/x-mobipocket-ebook'), 'MOBI'));
-    test('maps unknown type to uppercase subtype', () =>
-        expect(mimeToLabel('application/djvu'), 'DJVU'));
-    test('maps application/x-cb7 → X-CB7 (uppercase subtype)', () =>
-        expect(mimeToLabel('application/x-cb7'), 'X-CB7'));
+    test(
+      'maps application/fb2 → FB2',
+      () => expect(mimeToLabel('application/fb2'), 'FB2'),
+    );
+    test(
+      'maps application/x-fictionbook+xml → FB2',
+      () => expect(mimeToLabel('application/x-fictionbook+xml'), 'FB2'),
+    );
+    test(
+      'maps application/fb2+zip → FB2.ZIP',
+      () => expect(mimeToLabel('application/fb2+zip'), 'FB2.ZIP'),
+    );
+    test(
+      'maps application/x-zip-compressed-fb2 → FB2.ZIP',
+      () => expect(mimeToLabel('application/x-zip-compressed-fb2'), 'FB2.ZIP'),
+    );
+    test(
+      'maps application/epub+zip → EPUB',
+      () => expect(mimeToLabel('application/epub+zip'), 'EPUB'),
+    );
+    test(
+      'maps application/pdf → PDF',
+      () => expect(mimeToLabel('application/pdf'), 'PDF'),
+    );
+    test(
+      'maps application/x-mobipocket-ebook → MOBI',
+      () => expect(mimeToLabel('application/x-mobipocket-ebook'), 'MOBI'),
+    );
+    test(
+      'maps unknown type to uppercase subtype',
+      () => expect(mimeToLabel('application/djvu'), 'DJVU'),
+    );
+    test(
+      'maps application/x-cb7 → X-CB7 (uppercase subtype)',
+      () => expect(mimeToLabel('application/x-cb7'), 'X-CB7'),
+    );
     test('maps empty string → FILE', () => expect(mimeToLabel(''), 'FILE'));
   });
 
@@ -44,8 +62,9 @@ void main() {
     });
 
     test('decodes windows-1251 fixture to correct Cyrillic text', () {
-      final bytes =
-          File('test/fixtures/windows1251.xml').readAsBytesSync().toList();
+      final bytes = File(
+        'test/fixtures/windows1251.xml',
+      ).readAsBytesSync().toList();
       final result = decodeXmlBytes(bytes);
       expect(result, contains('Кириллический каталог'));
       expect(result, contains('Мастер и Маргарита'));
@@ -96,12 +115,12 @@ void main() {
   group('extractSeries', () {
     // Helper: parse an <entry> element from a minimal feed string.
     XmlElement parseEntry(String entryXml) => XmlDocument.parse(
-          '<feed xmlns="http://www.w3.org/2005/Atom" '
-          'xmlns:calibre="http://calibre.kovidgoyal.net/2009/#" '
-          'xmlns:dcterms="http://purl.org/dc/terms/">'
-          '$entryXml'
-          '</feed>',
-        ).rootElement.childElements.first;
+      '<feed xmlns="http://www.w3.org/2005/Atom" '
+      'xmlns:calibre="http://calibre.kovidgoyal.net/2009/#" '
+      'xmlns:dcterms="http://purl.org/dc/terms/">'
+      '$entryXml'
+      '</feed>',
+    ).rootElement.childElements.first;
 
     test('extracts Calibre series and index', () {
       final entry = parseEntry(
@@ -163,8 +182,9 @@ void main() {
     final base = Uri.parse('https://example.com/opds');
 
     test('parses minimal navigation feed — 3 entries in order', () {
-      final bytes =
-          File('test/fixtures/minimal_navigation_feed.xml').readAsBytesSync();
+      final bytes = File(
+        'test/fixtures/minimal_navigation_feed.xml',
+      ).readAsBytesSync();
       final feed = parser.parse(bytes, base);
 
       expect(feed.title, 'Test Navigation Feed');
@@ -196,10 +216,7 @@ void main() {
 
     test('malformed XML throws ParseException', () {
       final bytes = File('test/fixtures/malformed.xml').readAsBytesSync();
-      expect(
-        () => parser.parse(bytes, base),
-        throwsA(isA<ParseException>()),
-      );
+      expect(() => parser.parse(bytes, base), throwsA(isA<ParseException>()));
     });
   });
 
@@ -208,8 +225,9 @@ void main() {
     final base = Uri.parse('https://example.com/opds');
 
     test('multi-format book — all 4 acquisition links, thumbnail cover', () {
-      final bytes =
-          File('test/fixtures/book_multi_format_fb2.xml').readAsBytesSync();
+      final bytes = File(
+        'test/fixtures/book_multi_format_fb2.xml',
+      ).readAsBytesSync();
       final feed = parser.parse(bytes, base);
 
       expect(feed.entries.length, 1);
@@ -217,8 +235,10 @@ void main() {
       expect(book.title, 'Sample Book');
       expect(book.authors, ['Alice Author', 'Bob Coauthor']);
       expect(book.summary, 'A book available in multiple formats.');
-      expect(book.coverUrl,
-          Uri.parse('https://example.com/covers/sample-thumb.jpg'));
+      expect(
+        book.coverUrl,
+        Uri.parse('https://example.com/covers/sample-thumb.jpg'),
+      );
 
       final labels = book.acquisitionLinks.map((l) => l.formatLabel).toList();
       expect(labels, ['FB2', 'FB2.ZIP', 'EPUB', 'PDF']);
@@ -259,8 +279,10 @@ void main() {
       expect(dart.title, 'The Dart Programming Language');
       expect(dart.authors, ['John Doe']);
       expect(dart.summary, 'A book about Dart.');
-      expect(dart.coverUrl,
-          Uri.parse('https://example.com/covers/dart-thumb.jpg'));
+      expect(
+        dart.coverUrl,
+        Uri.parse('https://example.com/covers/dart-thumb.jpg'),
+      );
       expect(dart.acquisitionLinks.first.formatLabel, 'EPUB');
 
       expect(feed.entries[2], isA<NavigationEntry>());
@@ -279,8 +301,7 @@ void main() {
     final base = Uri.parse('https://example.com/opds');
 
     test('Calibre series — name and index extracted', () {
-      final bytes =
-          File('test/fixtures/series_calibre.xml').readAsBytesSync();
+      final bytes = File('test/fixtures/series_calibre.xml').readAsBytesSync();
       final feed = parser.parse(bytes, base);
       final book = feed.entries.first as BookEntry;
       expect(book.title, 'The Fellowship of the Ring');
@@ -298,23 +319,22 @@ void main() {
     });
 
     test('relative hrefs — resolved against xml:base', () {
-      final bytes =
-          File('test/fixtures/relative_hrefs.xml').readAsBytesSync();
+      final bytes = File('test/fixtures/relative_hrefs.xml').readAsBytesSync();
       // feedUrl is irrelevant here — xml:base="https://example.com/catalog/" overrides.
-      final feed =
-          parser.parse(bytes, Uri.parse('https://example.com/opds'));
+      final feed = parser.parse(bytes, Uri.parse('https://example.com/opds'));
 
       final nav = feed.entries[0] as NavigationEntry;
       expect(nav.url, Uri.parse('https://example.com/catalog/sub/'));
 
       final book = feed.entries[1] as BookEntry;
-      expect(book.acquisitionLinks.first.url,
-          Uri.parse('https://example.com/books/rel.epub'));
+      expect(
+        book.acquisitionLinks.first.url,
+        Uri.parse('https://example.com/books/rel.epub'),
+      );
     });
 
     test('windows-1251 feed — Cyrillic text decoded correctly', () {
-      final bytes =
-          File('test/fixtures/windows1251.xml').readAsBytesSync();
+      final bytes = File('test/fixtures/windows1251.xml').readAsBytesSync();
       final feed = parser.parse(bytes, base);
 
       expect(feed.title, 'Кириллический каталог');
@@ -329,18 +349,18 @@ void main() {
     final base = Uri.parse('https://example.com/opds/books');
 
     test('page 1 — nextPageUrl points to page 2', () {
-      final bytes =
-          File('test/fixtures/paginated_page1.xml').readAsBytesSync();
+      final bytes = File('test/fixtures/paginated_page1.xml').readAsBytesSync();
       final feed = parser.parse(bytes, base);
       expect(feed.title, 'Paginated Feed — Page 1');
       expect(feed.entries.length, 5);
-      expect(feed.nextPageUrl,
-          Uri.parse('https://example.com/opds/books?page=2'));
+      expect(
+        feed.nextPageUrl,
+        Uri.parse('https://example.com/opds/books?page=2'),
+      );
     });
 
     test('page 2 — nextPageUrl is null (last page)', () {
-      final bytes =
-          File('test/fixtures/paginated_page2.xml').readAsBytesSync();
+      final bytes = File('test/fixtures/paginated_page2.xml').readAsBytesSync();
       final feed = parser.parse(bytes, base);
       expect(feed.title, 'Paginated Feed — Page 2');
       expect(feed.entries.length, 5);

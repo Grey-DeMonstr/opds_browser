@@ -43,9 +43,9 @@ class SqfliteCatalogRepository implements CatalogRepository {
   }
 
   Catalog _fromRow(Map<String, Object?> row) => Catalog(
-        id: row['id'] as int,
-        title: row['title'] as String,
-        rootUrl: Uri.parse(row['root_url'] as String),
-        protocol: row['protocol'] as String,
-      );
+    id: row['id'] as int,
+    title: row['title'] as String,
+    rootUrl: Uri.parse(row['root_url'] as String),
+    protocol: row['protocol'] as String,
+  );
 }

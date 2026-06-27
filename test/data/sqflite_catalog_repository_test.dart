@@ -20,7 +20,10 @@ void main() {
     });
 
     test('add returns Catalog with assigned id', () async {
-      final cat = await repo.add('My Catalog', Uri.parse('https://example.com/opds'));
+      final cat = await repo.add(
+        'My Catalog',
+        Uri.parse('https://example.com/opds'),
+      );
       expect(cat.id, isPositive);
       expect(cat.title, 'My Catalog');
       expect(cat.rootUrl, Uri.parse('https://example.com/opds'));
@@ -38,12 +41,14 @@ void main() {
 
     test('update persists title and rootUrl', () async {
       final cat = await repo.add('Original', Uri.parse('https://original.com'));
-      await repo.update(Catalog(
-        id: cat.id,
-        title: 'Updated',
-        rootUrl: Uri.parse('https://updated.com'),
-        protocol: cat.protocol,
-      ));
+      await repo.update(
+        Catalog(
+          id: cat.id,
+          title: 'Updated',
+          rootUrl: Uri.parse('https://updated.com'),
+          protocol: cat.protocol,
+        ),
+      );
       final all = await repo.getAll();
       expect(all.single.title, 'Updated');
       expect(all.single.rootUrl, Uri.parse('https://updated.com'));
@@ -51,12 +56,14 @@ void main() {
 
     test('update does not change protocol', () async {
       final cat = await repo.add('Test', Uri.parse('https://example.com'));
-      await repo.update(Catalog(
-        id: cat.id,
-        title: 'Test',
-        rootUrl: Uri.parse('https://example.com'),
-        protocol: 'opds2', // ignored by the implementation
-      ));
+      await repo.update(
+        Catalog(
+          id: cat.id,
+          title: 'Test',
+          rootUrl: Uri.parse('https://example.com'),
+          protocol: 'opds2', // ignored by the implementation
+        ),
+      );
       final all = await repo.getAll();
       expect(all.single.protocol, 'opds1');
     });

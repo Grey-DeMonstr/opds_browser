@@ -16,7 +16,10 @@ void main() {
     });
 
     test('keeps non-default port', () {
-      expect(normalizeUrl(Uri.parse('http://a.com:8080/p')), 'http://a.com:8080/p');
+      expect(
+        normalizeUrl(Uri.parse('http://a.com:8080/p')),
+        'http://a.com:8080/p',
+      );
     });
 
     test('lowercases scheme and host (via Uri.parse)', () {
@@ -24,7 +27,10 @@ void main() {
     });
 
     test('preserves query string', () {
-      expect(normalizeUrl(Uri.parse('http://a.com/p?q=1')), 'http://a.com/p?q=1');
+      expect(
+        normalizeUrl(Uri.parse('http://a.com/p?q=1')),
+        'http://a.com/p?q=1',
+      );
     });
 
     test('strips fragment and default port together', () {

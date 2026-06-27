@@ -21,16 +21,12 @@ class SqfliteFavoritesRepository implements FavoritesRepository {
       'SELECT COALESCE(MAX(sort_order) + 1, 0) AS next FROM favorites',
     );
     final nextOrder = (result.first['next'] as num).toInt();
-    await db.insert(
-      'favorites',
-      {
-        'catalog_id': catalogId,
-        'url': url.toString(),
-        'title': title,
-        'sort_order': nextOrder,
-      },
-      conflictAlgorithm: ConflictAlgorithm.ignore,
-    );
+    await db.insert('favorites', {
+      'catalog_id': catalogId,
+      'url': url.toString(),
+      'title': title,
+      'sort_order': nextOrder,
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
   }
 
   @override
@@ -50,10 +46,10 @@ class SqfliteFavoritesRepository implements FavoritesRepository {
   }
 
   Favorite _fromRow(Map<String, Object?> row) => Favorite(
-        id: row['id'] as int,
-        catalogId: row['catalog_id'] as int,
-        url: Uri.parse(row['url'] as String),
-        title: row['title'] as String,
-        sortOrder: row['sort_order'] as int,
-      );
+    id: row['id'] as int,
+    catalogId: row['catalog_id'] as int,
+    url: Uri.parse(row['url'] as String),
+    title: row['title'] as String,
+    sortOrder: row['sort_order'] as int,
+  );
 }

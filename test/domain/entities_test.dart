@@ -47,7 +47,10 @@ void main() {
     });
 
     test('CustomSafFolder stores displayName', () {
-      const d = CustomSafFolder('content://com.example/tree/doc', 'My Downloads');
+      const d = CustomSafFolder(
+        'content://com.example/tree/doc',
+        'My Downloads',
+      );
       expect(d.displayName, 'My Downloads');
     });
   });
@@ -81,7 +84,10 @@ void main() {
     });
 
     test('copyWith can change target', () {
-      const s = AppSettings(target: SystemDownloads(), createAuthorFolder: true);
+      const s = AppSettings(
+        target: SystemDownloads(),
+        createAuthorFolder: true,
+      );
       final s2 = s.copyWith(target: const CustomSafFolder('u', 'F'));
       expect(s2.target, isA<CustomSafFolder>());
       expect(s2.createAuthorFolder, isTrue);

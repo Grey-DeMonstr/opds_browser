@@ -52,9 +52,9 @@ String buildFileName(
   final effectiveSeries = entry.series ?? inferredSeries;
   if (effectiveSeries != null && !settings.createSeriesFolder) {
     final idx = entry.seriesIndex;
-    parts.add(idx != null
-        ? '$effectiveSeries #${_formatIndex(idx)}'
-        : effectiveSeries);
+    parts.add(
+      idx != null ? '$effectiveSeries #${_formatIndex(idx)}' : effectiveSeries,
+    );
   }
   parts.add(entry.title);
   final ext = _formatExt(link.formatLabel);

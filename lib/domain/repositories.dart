@@ -9,7 +9,11 @@ abstract interface class CatalogRepository {
 }
 
 abstract interface class FeedRepository {
-  Future<CachedFeed> getFeed(int catalogId, Uri url, {bool forceRefresh = false});
+  Future<CachedFeed> getFeed(
+    int catalogId,
+    Uri url, {
+    bool forceRefresh = false,
+  });
 }
 
 abstract interface class FavoritesRepository {

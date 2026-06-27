@@ -17,8 +17,11 @@ class _FakeFeedRepository implements FeedRepository {
   void addError(Uri url, Exception e) => _errors[url.toString()] = e;
 
   @override
-  Future<CachedFeed> getFeed(int catalogId, Uri url,
-      {bool forceRefresh = false}) async {
+  Future<CachedFeed> getFeed(
+    int catalogId,
+    Uri url, {
+    bool forceRefresh = false,
+  }) async {
     callCount++;
     final key = url.toString();
     if (_errors.containsKey(key)) throw _errors[key]!;
@@ -34,40 +37,40 @@ class _FakeFeedRepository implements FeedRepository {
 
 const _settings = AppSettings(target: SystemDownloads());
 
-NavigationEntry _nav(String path) => NavigationEntry(
-      title: 'Nav',
-      url: Uri.parse('http://example.com$path'),
-    );
+NavigationEntry _nav(String path) =>
+    NavigationEntry(title: 'Nav', url: Uri.parse('http://example.com$path'));
 
 BookEntry _book(String id) => BookEntry(
-      title: 'Book $id',
-      authors: const ['Author'],
-      acquisitionLinks: [
-        AcquisitionLink(
-          url: Uri.parse('http://example.com/books/$id.epub'),
-          mimeType: 'application/epub+zip',
-          formatLabel: 'EPUB',
-        ),
-      ],
-    );
+  title: 'Book $id',
+  authors: const ['Author'],
+  acquisitionLinks: [
+    AcquisitionLink(
+      url: Uri.parse('http://example.com/books/$id.epub'),
+      mimeType: 'application/epub+zip',
+      formatLabel: 'EPUB',
+    ),
+  ],
+);
 
-Future<String> _noOp(BookEntry e, AcquisitionLink l, AppSettings s,
-        {String? inferredSeries}) async =>
-    'content://ok';
+Future<String> _noOp(
+  BookEntry e,
+  AcquisitionLink l,
+  AppSettings s, {
+  String? inferredSeries,
+}) async => 'content://ok';
 
 FolderDownloadJob _makeJob(
   _FakeFeedRepository repo, {
   DownloadFn? downloadFn,
   required List<FolderJobState> states,
   Duration downloadDelay = Duration.zero,
-}) =>
-    FolderDownloadJob(
-      feedRepository: repo,
-      downloadFn: downloadFn ?? _noOp,
-      settings: _settings,
-      onProgress: states.add,
-      downloadDelay: downloadDelay,
-    );
+}) => FolderDownloadJob(
+  feedRepository: repo,
+  downloadFn: downloadFn ?? _noOp,
+  settings: _settings,
+  onProgress: states.add,
+  downloadDelay: downloadDelay,
+);
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
@@ -145,7 +148,10 @@ void main() {
     test('cycle: same URL visited once, empty nav branch pruned', () async {
       final repo = _FakeFeedRepository();
       final root = Uri.parse('http://example.com/root');
-      repo.addFeed(root, [_nav('/root'), _book('1')]); // nav points back to root
+      repo.addFeed(root, [
+        _nav('/root'),
+        _book('1'),
+      ]); // nav points back to root
 
       final states = <FolderJobState>[];
       await _makeJob(repo, states: states).run(1, root);
@@ -156,60 +162,80 @@ void main() {
       expect(ready.root, isA<DownloadBook>());
     });
 
-    test('inaccessible feed is skipped; accessible feed still included', () async {
-      final repo = _FakeFeedRepository();
-      final root = Uri.parse('http://example.com/root');
-      repo.addFeed(root, [_nav('/bad'), _nav('/good')]);
-      repo.addError(Uri.parse('http://example.com/bad'), Exception('timeout'));
-      repo.addFeed(Uri.parse('http://example.com/good'), [_book('ok')]);
-
-      final states = <FolderJobState>[];
-      await _makeJob(repo, states: states).run(1, root);
-
-      final ready = states.last as FolderJobTreeReady;
-      expect(ready.checkedBooks.length, 1);
-    });
-
-    test('empty root feed emits FolderJobDone (not FolderJobTreeReady)', () async {
-      final repo = _FakeFeedRepository();
-      final root = Uri.parse('http://example.com/root');
-      repo.addFeed(root, []);
-
-      final states = <FolderJobState>[];
-      await _makeJob(repo, states: states).run(1, root);
-
-      expect(states.last, isA<FolderJobDone>());
-      final done = states.last as FolderJobDone;
-      expect(done.wasCancelled, false);
-      expect(done.stoppedAtLimit, false);
-    });
-
-    test('depth > 10 skipped; stoppedAtLimit = true in FolderJobDone', () async {
-      final repo = _FakeFeedRepository();
-      // f0(depth=0) → f1 → ... → f10(depth=10) → f11(depth=11, book inside)
-      for (var i = 0; i <= 10; i++) {
-        repo.addFeed(
-          Uri.parse('http://example.com/f$i'),
-          [NavigationEntry(title: 'F', url: Uri.parse('http://example.com/f${i + 1}'))],
+    test(
+      'inaccessible feed is skipped; accessible feed still included',
+      () async {
+        final repo = _FakeFeedRepository();
+        final root = Uri.parse('http://example.com/root');
+        repo.addFeed(root, [_nav('/bad'), _nav('/good')]);
+        repo.addError(
+          Uri.parse('http://example.com/bad'),
+          Exception('timeout'),
         );
-      }
-      // f11 has a book but depth 11 is over limit
-      repo.addFeed(Uri.parse('http://example.com/f11'), [_book('deep')]);
+        repo.addFeed(Uri.parse('http://example.com/good'), [_book('ok')]);
 
-      final states = <FolderJobState>[];
-      await _makeJob(repo, states: states).run(1, Uri.parse('http://example.com/f0'));
+        final states = <FolderJobState>[];
+        await _makeJob(repo, states: states).run(1, root);
 
-      // No books found (f11 was skipped) → FolderJobDone
-      expect(states.last, isA<FolderJobDone>());
-      expect((states.last as FolderJobDone).stoppedAtLimit, isTrue);
-    });
+        final ready = states.last as FolderJobTreeReady;
+        expect(ready.checkedBooks.length, 1);
+      },
+    );
+
+    test(
+      'empty root feed emits FolderJobDone (not FolderJobTreeReady)',
+      () async {
+        final repo = _FakeFeedRepository();
+        final root = Uri.parse('http://example.com/root');
+        repo.addFeed(root, []);
+
+        final states = <FolderJobState>[];
+        await _makeJob(repo, states: states).run(1, root);
+
+        expect(states.last, isA<FolderJobDone>());
+        final done = states.last as FolderJobDone;
+        expect(done.wasCancelled, false);
+        expect(done.stoppedAtLimit, false);
+      },
+    );
+
+    test(
+      'depth > 10 skipped; stoppedAtLimit = true in FolderJobDone',
+      () async {
+        final repo = _FakeFeedRepository();
+        // f0(depth=0) → f1 → ... → f10(depth=10) → f11(depth=11, book inside)
+        for (var i = 0; i <= 10; i++) {
+          repo.addFeed(Uri.parse('http://example.com/f$i'), [
+            NavigationEntry(
+              title: 'F',
+              url: Uri.parse('http://example.com/f${i + 1}'),
+            ),
+          ]);
+        }
+        // f11 has a book but depth 11 is over limit
+        repo.addFeed(Uri.parse('http://example.com/f11'), [_book('deep')]);
+
+        final states = <FolderJobState>[];
+        await _makeJob(
+          repo,
+          states: states,
+        ).run(1, Uri.parse('http://example.com/f0'));
+
+        // No books found (f11 was skipped) → FolderJobDone
+        expect(states.last, isA<FolderJobDone>());
+        expect((states.last as FolderJobDone).stoppedAtLimit, isTrue);
+      },
+    );
 
     test('500+ folders: stoppedAtLimit = true', () async {
       final repo = _FakeFeedRepository();
       final root = Uri.parse('http://example.com/root');
       final subs = List.generate(
         500,
-        (i) => NavigationEntry(title: 'F$i', url: Uri.parse('http://example.com/sub/$i')),
+        (i) => NavigationEntry(
+          title: 'F$i',
+          url: Uri.parse('http://example.com/sub/$i'),
+        ),
       );
       repo.addFeed(root, subs);
       for (var i = 0; i < 500; i++) {
@@ -224,38 +250,44 @@ void main() {
       expect((states.last as FolderJobDone).stoppedAtLimit, isTrue);
     });
 
-    test('at most 2000 books collected; stoppedAtLimit = true in FolderJobTreeReady', () async {
-      final repo = _FakeFeedRepository();
-      final root = Uri.parse('http://example.com/root');
-      repo.addFeed(root, List.generate(2001, (i) => _book('$i')));
+    test(
+      'at most 2000 books collected; stoppedAtLimit = true in FolderJobTreeReady',
+      () async {
+        final repo = _FakeFeedRepository();
+        final root = Uri.parse('http://example.com/root');
+        repo.addFeed(root, List.generate(2001, (i) => _book('$i')));
 
-      final states = <FolderJobState>[];
-      await _makeJob(repo, states: states).run(1, root);
+        final states = <FolderJobState>[];
+        await _makeJob(repo, states: states).run(1, root);
 
-      final ready = states.last as FolderJobTreeReady;
-      expect(ready.checkedBooks.length, 2000);
-      expect(ready.stoppedAtLimit, isTrue);
-    });
+        final ready = states.last as FolderJobTreeReady;
+        expect(ready.checkedBooks.length, 2000);
+        expect(ready.stoppedAtLimit, isTrue);
+      },
+    );
 
-    test('cancel during scan: FolderJobDone with wasCancelled = true', () async {
-      final repo = _CancellingFeedRepository(cancelAfterCalls: 2);
-      final root = Uri.parse('http://example.com/root');
-      repo.addFeed(root, [_nav('/sub')]);
-      repo.addFeed(Uri.parse('http://example.com/sub'), [_book('1')]);
+    test(
+      'cancel during scan: FolderJobDone with wasCancelled = true',
+      () async {
+        final repo = _CancellingFeedRepository(cancelAfterCalls: 2);
+        final root = Uri.parse('http://example.com/root');
+        repo.addFeed(root, [_nav('/sub')]);
+        repo.addFeed(Uri.parse('http://example.com/sub'), [_book('1')]);
 
-      final states = <FolderJobState>[];
-      final job = FolderDownloadJob(
-        feedRepository: repo,
-        downloadFn: _noOp,
-        settings: _settings,
-        onProgress: states.add,
-      );
-      repo.job = job;
-      await job.run(1, root);
+        final states = <FolderJobState>[];
+        final job = FolderDownloadJob(
+          feedRepository: repo,
+          downloadFn: _noOp,
+          settings: _settings,
+          onProgress: states.add,
+        );
+        repo.job = job;
+        await job.run(1, root);
 
-      expect(states.last, isA<FolderJobDone>());
-      expect((states.last as FolderJobDone).wasCancelled, isTrue);
-    });
+        expect(states.last, isA<FolderJobDone>());
+        expect((states.last as FolderJobDone).wasCancelled, isTrue);
+      },
+    );
 
     test('FolderJobScanning emitted with increasing foldersFound', () async {
       final repo = _FakeFeedRepository();
@@ -274,16 +306,19 @@ void main() {
   });
 
   group('download phase', () {
-    test('run() with books emits FolderJobTreeReady (not FolderJobDone)', () async {
-      final repo = _FakeFeedRepository();
-      final root = Uri.parse('http://example.com/root');
-      repo.addFeed(root, [_book('1'), _book('2')]);
+    test(
+      'run() with books emits FolderJobTreeReady (not FolderJobDone)',
+      () async {
+        final repo = _FakeFeedRepository();
+        final root = Uri.parse('http://example.com/root');
+        repo.addFeed(root, [_book('1'), _book('2')]);
 
-      final states = <FolderJobState>[];
-      await _makeJob(repo, states: states).run(1, root);
+        final states = <FolderJobState>[];
+        await _makeJob(repo, states: states).run(1, root);
 
-      expect(states.last, isA<FolderJobTreeReady>());
-    });
+        expect(states.last, isA<FolderJobTreeReady>());
+      },
+    );
 
     test('run() with single book emits FolderJobTreeReady', () async {
       final repo = _FakeFeedRepository();
@@ -339,62 +374,83 @@ void main() {
       expect(done.results.values.first.status, BookDownloadStatus.skipped);
     });
 
-    test('download exception: BookDownloadStatus.failed with error; job continues', () async {
-      final repo = _FakeFeedRepository();
-      final root = Uri.parse('http://example.com/root');
-      repo.addFeed(root, [_book('bad'), _book('good')]);
+    test(
+      'download exception: BookDownloadStatus.failed with error; job continues',
+      () async {
+        final repo = _FakeFeedRepository();
+        final root = Uri.parse('http://example.com/root');
+        repo.addFeed(root, [_book('bad'), _book('good')]);
 
-      var calls = 0;
-      final states = <FolderJobState>[];
-      final job = FolderDownloadJob(
-        feedRepository: repo,
-        downloadFn: (e, l, s, {inferredSeries}) async {
-          calls++;
-          if (e.title == 'Book bad') throw Exception('network error');
-          return 'content://ok';
-        },
-        settings: _settings,
-        onProgress: states.add,
-        downloadDelay: Duration.zero,
-      );
-      await job.run(1, root);
-      final ready = states.whereType<FolderJobTreeReady>().last;
-      await job.download(ready.checkedBooks);
+        var calls = 0;
+        final states = <FolderJobState>[];
+        final job = FolderDownloadJob(
+          feedRepository: repo,
+          downloadFn: (e, l, s, {inferredSeries}) async {
+            calls++;
+            if (e.title == 'Book bad') throw Exception('network error');
+            return 'content://ok';
+          },
+          settings: _settings,
+          onProgress: states.add,
+          downloadDelay: Duration.zero,
+        );
+        await job.run(1, root);
+        final ready = states.whereType<FolderJobTreeReady>().last;
+        await job.download(ready.checkedBooks);
 
-      final done = states.last as FolderJobDone;
-      expect(calls, 2); // both attempted
-      final statuses = done.results.values.map((r) => r.status).toSet();
-      expect(statuses, containsAll([BookDownloadStatus.failed, BookDownloadStatus.done]));
-      final failedResult = done.results.values.firstWhere((r) => r.status == BookDownloadStatus.failed);
-      expect(failedResult.error, contains('network error'));
-    });
+        final done = states.last as FolderJobDone;
+        expect(calls, 2); // both attempted
+        final statuses = done.results.values.map((r) => r.status).toSet();
+        expect(
+          statuses,
+          containsAll([BookDownloadStatus.failed, BookDownloadStatus.done]),
+        );
+        final failedResult = done.results.values.firstWhere(
+          (r) => r.status == BookDownloadStatus.failed,
+        );
+        expect(failedResult.error, contains('network error'));
+      },
+    );
 
-    test('FolderJobDownloading emitted before each book with currentBook set', () async {
-      final repo = _FakeFeedRepository();
-      final root = Uri.parse('http://example.com/root');
-      repo.addFeed(root, [_book('1'), _book('2')]);
+    test(
+      'FolderJobDownloading emitted before each book with currentBook set',
+      () async {
+        final repo = _FakeFeedRepository();
+        final root = Uri.parse('http://example.com/root');
+        repo.addFeed(root, [_book('1'), _book('2')]);
 
-      final states = <FolderJobState>[];
-      final job = FolderDownloadJob(
-        feedRepository: repo,
-        downloadFn: (e, l, s, {inferredSeries}) async => 'content://ok',
-        settings: _settings,
-        onProgress: states.add,
-        downloadDelay: Duration.zero,
-      );
-      await job.run(1, root);
-      final ready = states.whereType<FolderJobTreeReady>().last;
-      await job.download(ready.checkedBooks);
+        final states = <FolderJobState>[];
+        final job = FolderDownloadJob(
+          feedRepository: repo,
+          downloadFn: (e, l, s, {inferredSeries}) async => 'content://ok',
+          settings: _settings,
+          onProgress: states.add,
+          downloadDelay: Duration.zero,
+        );
+        await job.run(1, root);
+        final ready = states.whereType<FolderJobTreeReady>().last;
+        await job.download(ready.checkedBooks);
 
-      final downloading = states.whereType<FolderJobDownloading>().toList();
-      expect(downloading.length, 4); // one before + one after each book
-      final preEmits = downloading.where((d) => d.currentBook != null).toList();
-      final postEmits = downloading.where((d) => d.currentBook == null).toList();
-      expect(preEmits.length, 2);
-      expect(postEmits.length, 2);
-      expect(preEmits.last.completedCount, 1); // second book's pre-emit shows 1 done
-      expect(postEmits.last.completedCount, 2); // final post-emit shows 2 done
-    });
+        final downloading = states.whereType<FolderJobDownloading>().toList();
+        expect(downloading.length, 4); // one before + one after each book
+        final preEmits = downloading
+            .where((d) => d.currentBook != null)
+            .toList();
+        final postEmits = downloading
+            .where((d) => d.currentBook == null)
+            .toList();
+        expect(preEmits.length, 2);
+        expect(postEmits.length, 2);
+        expect(
+          preEmits.last.completedCount,
+          1,
+        ); // second book's pre-emit shows 1 done
+        expect(
+          postEmits.last.completedCount,
+          2,
+        ); // final post-emit shows 2 done
+      },
+    );
 
     test('state sequence for 2 books: pre, post, pre, post, Done', () async {
       final repo = _FakeFeedRepository();
@@ -471,7 +527,10 @@ void main() {
       final states = <FolderJobState>[];
       final job = FolderDownloadJob(
         feedRepository: repo,
-        downloadFn: (e, l, s, {inferredSeries}) async { calls++; return 'content://ok'; },
+        downloadFn: (e, l, s, {inferredSeries}) async {
+          calls++;
+          return 'content://ok';
+        },
         settings: _settings,
         onProgress: states.add,
         downloadDelay: Duration.zero,
@@ -488,33 +547,36 @@ void main() {
       expect(done.results.length, 2);
     });
 
-    test('cancel during download: remaining books not started; wasCancelled = true', () async {
-      final repo = _FakeFeedRepository();
-      final root = Uri.parse('http://example.com/root');
-      repo.addFeed(root, List.generate(5, (i) => _book('$i')));
+    test(
+      'cancel during download: remaining books not started; wasCancelled = true',
+      () async {
+        final repo = _FakeFeedRepository();
+        final root = Uri.parse('http://example.com/root');
+        repo.addFeed(root, List.generate(5, (i) => _book('$i')));
 
-      var downloadCount = 0;
-      FolderDownloadJob? job;
-      final states = <FolderJobState>[];
-      job = FolderDownloadJob(
-        feedRepository: repo,
-        downloadFn: (e, l, s, {inferredSeries}) async {
-          downloadCount++;
-          if (downloadCount == 2) job!.cancel();
-          return 'content://ok';
-        },
-        settings: _settings,
-        onProgress: states.add,
-        downloadDelay: Duration.zero,
-      );
-      await job.run(1, root);
-      final ready = states.whereType<FolderJobTreeReady>().last;
-      await job.download(ready.checkedBooks);
+        var downloadCount = 0;
+        FolderDownloadJob? job;
+        final states = <FolderJobState>[];
+        job = FolderDownloadJob(
+          feedRepository: repo,
+          downloadFn: (e, l, s, {inferredSeries}) async {
+            downloadCount++;
+            if (downloadCount == 2) job!.cancel();
+            return 'content://ok';
+          },
+          settings: _settings,
+          onProgress: states.add,
+          downloadDelay: Duration.zero,
+        );
+        await job.run(1, root);
+        final ready = states.whereType<FolderJobTreeReady>().last;
+        await job.download(ready.checkedBooks);
 
-      final done = states.last as FolderJobDone;
-      expect(done.wasCancelled, isTrue);
-      expect(downloadCount, lessThan(5)); // cancelled after 2nd book
-    });
+        final done = states.last as FolderJobDone;
+        expect(done.wasCancelled, isTrue);
+        expect(downloadCount, lessThan(5)); // cancelled after 2nd book
+      },
+    );
 
     test('FolderJobDone.stoppedAtLimit preserved from scan phase', () async {
       final repo = _FakeFeedRepository();
@@ -545,7 +607,11 @@ void main() {
         mimeType: 'application/epub+zip',
         formatLabel: 'EPUB',
       );
-      final entry = BookEntry(title: 'T', authors: const ['A'], acquisitionLinks: [link]);
+      final entry = BookEntry(
+        title: 'T',
+        authors: const ['A'],
+        acquisitionLinks: [link],
+      );
       final book = DownloadBook(entry: entry, link: link, inferredSeries: 'S');
       expect(book.entry.title, 'T');
       expect(book.link.formatLabel, 'EPUB');
@@ -559,7 +625,10 @@ void main() {
     });
 
     test('BookDownloadResult.failed carries error string', () {
-      const r = BookDownloadResult(status: BookDownloadStatus.failed, error: 'timeout');
+      const r = BookDownloadResult(
+        status: BookDownloadStatus.failed,
+        error: 'timeout',
+      );
       expect(r.status, BookDownloadStatus.failed);
       expect(r.error, 'timeout');
     });
@@ -582,8 +651,11 @@ class _CancellingFeedRepository implements FeedRepository {
       _feeds[url.toString()] = entries;
 
   @override
-  Future<CachedFeed> getFeed(int catalogId, Uri url,
-      {bool forceRefresh = false}) async {
+  Future<CachedFeed> getFeed(
+    int catalogId,
+    Uri url, {
+    bool forceRefresh = false,
+  }) async {
     _callCount++;
     if (_callCount >= cancelAfterCalls) job?.cancel();
     return CachedFeed(

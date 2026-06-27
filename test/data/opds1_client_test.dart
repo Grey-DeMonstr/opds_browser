@@ -27,8 +27,9 @@ void main() {
 
   group('Opds1Client.fetchFeed', () {
     test('returns ParsedFeed on 200 with valid OPDS XML', () async {
-      final client = MockClient((_) async =>
-          http.Response.bytes(_validFeedBytes, 200));
+      final client = MockClient(
+        (_) async => http.Response.bytes(_validFeedBytes, 200),
+      );
       final opds = Opds1Client(client);
       final feed = await opds.fetchFeed(feedUrl);
       expect(feed, isA<ParsedFeed>());
@@ -42,18 +43,30 @@ void main() {
       final opds = Opds1Client(client);
       expect(
         opds.fetchFeed(feedUrl),
-        throwsA(isA<HttpStatusException>()
-            .having((e) => e.statusCode, 'statusCode', 404)),
+        throwsA(
+          isA<HttpStatusException>().having(
+            (e) => e.statusCode,
+            'statusCode',
+            404,
+          ),
+        ),
       );
     });
 
     test('throws HttpStatusException on 401', () async {
-      final client = MockClient((_) async => http.Response('Unauthorized', 401));
+      final client = MockClient(
+        (_) async => http.Response('Unauthorized', 401),
+      );
       final opds = Opds1Client(client);
       expect(
         opds.fetchFeed(feedUrl),
-        throwsA(isA<HttpStatusException>()
-            .having((e) => e.statusCode, 'statusCode', 401)),
+        throwsA(
+          isA<HttpStatusException>().having(
+            (e) => e.statusCode,
+            'statusCode',
+            401,
+          ),
+        ),
       );
     });
 
@@ -66,8 +79,9 @@ void main() {
     });
 
     test('throws ParseException when 200 body is not valid OPDS XML', () async {
-      final client = MockClient((_) async =>
-          http.Response.bytes(utf8.encode('not xml at all'), 200));
+      final client = MockClient(
+        (_) async => http.Response.bytes(utf8.encode('not xml at all'), 200),
+      );
       final opds = Opds1Client(client);
       expect(opds.fetchFeed(feedUrl), throwsA(isA<ParseException>()));
     });
@@ -75,14 +89,16 @@ void main() {
 
   group('Opds1Client.probe', () {
     test('returns true for valid OPDS feed', () async {
-      final client = MockClient((_) async =>
-          http.Response.bytes(_validFeedBytes, 200));
+      final client = MockClient(
+        (_) async => http.Response.bytes(_validFeedBytes, 200),
+      );
       expect(await Opds1Client(client).probe(feedUrl), isTrue);
     });
 
     test('returns false when body is not parseable as OPDS', () async {
-      final client = MockClient((_) async =>
-          http.Response.bytes(utf8.encode('not xml'), 200));
+      final client = MockClient(
+        (_) async => http.Response.bytes(utf8.encode('not xml'), 200),
+      );
       expect(await Opds1Client(client).probe(feedUrl), isFalse);
     });
 

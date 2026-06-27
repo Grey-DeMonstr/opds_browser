@@ -28,7 +28,8 @@ GoRouter _makeRouter({String initialLocation = '/folder-scan'}) {
     routes: [
       GoRoute(
         path: '/',
-        builder: (context, state) => const Scaffold(body: Center(child: Text('HomeScreen'))),
+        builder: (context, state) =>
+            const Scaffold(body: Center(child: Text('HomeScreen'))),
       ),
       GoRoute(
         path: '/folder-scan',
@@ -45,17 +46,24 @@ GoRouter _makeRouter({String initialLocation = '/folder-scan'}) {
   );
 }
 
-Widget _wrap(ProviderContainer container, {String initialLocation = '/folder-scan'}) {
+Widget _wrap(
+  ProviderContainer container, {
+  String initialLocation = '/folder-scan',
+}) {
   return UncontrolledProviderScope(
     container: container,
-    child: MaterialApp.router(routerConfig: _makeRouter(initialLocation: initialLocation)),
+    child: MaterialApp.router(
+      routerConfig: _makeRouter(initialLocation: initialLocation),
+    ),
   );
 }
 
 ProviderContainer _container(FolderJobState initial) {
-  final c = ProviderContainer(overrides: [
-    folderDownloadProvider.overrideWith(() => _FakeScanNotifier(initial)),
-  ]);
+  final c = ProviderContainer(
+    overrides: [
+      folderDownloadProvider.overrideWith(() => _FakeScanNotifier(initial)),
+    ],
+  );
   addTearDown(c.dispose);
   return c;
 }
@@ -80,46 +88,50 @@ void main() {
   });
 
   testWidgets(
-      'navigates to /folder-tree when state becomes FolderJobTreeReady',
-      (tester) async {
-    final book = DownloadBook(
-      entry: BookEntry(
-        title: 'B',
-        authors: const ['A'],
-        acquisitionLinks: [
-          AcquisitionLink(
-            url: Uri.parse('http://x.com/b.epub'),
-            mimeType: 'application/epub+zip',
-            formatLabel: 'EPUB',
-          ),
-        ],
-      ),
-      link: AcquisitionLink(
-        url: Uri.parse('http://x.com/b.epub'),
-        mimeType: 'application/epub+zip',
-        formatLabel: 'EPUB',
-      ),
-    );
+    'navigates to /folder-tree when state becomes FolderJobTreeReady',
+    (tester) async {
+      final book = DownloadBook(
+        entry: BookEntry(
+          title: 'B',
+          authors: const ['A'],
+          acquisitionLinks: [
+            AcquisitionLink(
+              url: Uri.parse('http://x.com/b.epub'),
+              mimeType: 'application/epub+zip',
+              formatLabel: 'EPUB',
+            ),
+          ],
+        ),
+        link: AcquisitionLink(
+          url: Uri.parse('http://x.com/b.epub'),
+          mimeType: 'application/epub+zip',
+          formatLabel: 'EPUB',
+        ),
+      );
 
-    final container = _container(const FolderJobScanning(foldersFound: 0));
-    await tester.pumpWidget(_wrap(container));
-    await tester.pump();
+      final container = _container(const FolderJobScanning(foldersFound: 0));
+      await tester.pumpWidget(_wrap(container));
+      await tester.pump();
 
-    // Simulate state change to TreeReady
-    container.read(folderDownloadProvider.notifier).state = FolderJobTreeReady(
-      root: book,
-      checkedBooks: {Uri.parse('http://x.com/b.epub')},
-    );
-    // pump frames to process state change and navigation; avoid pumpAndSettle
-    // which loops forever with CircularProgressIndicator animating
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+      // Simulate state change to TreeReady
+      container
+          .read(folderDownloadProvider.notifier)
+          .state = FolderJobTreeReady(
+        root: book,
+        checkedBooks: {Uri.parse('http://x.com/b.epub')},
+      );
+      // pump frames to process state change and navigation; avoid pumpAndSettle
+      // which loops forever with CircularProgressIndicator animating
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('TreeScreen'), findsOneWidget);
-  });
+      expect(find.text('TreeScreen'), findsOneWidget);
+    },
+  );
 
-  testWidgets('navigates back (pop) when state becomes FolderJobDone',
-      (tester) async {
+  testWidgets('navigates back (pop) when state becomes FolderJobDone', (
+    tester,
+  ) async {
     // Start at home, then push to /folder-scan so there's something to pop back to
     final container = _container(const FolderJobScanning(foldersFound: 0));
     await tester.pumpWidget(_wrap(container, initialLocation: '/'));

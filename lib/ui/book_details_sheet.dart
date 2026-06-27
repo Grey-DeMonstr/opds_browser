@@ -25,7 +25,8 @@ class _BookDetailsSheetState extends ConsumerState<BookDetailsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = ref.watch(settingsProvider).value ??
+    final settings =
+        ref.watch(settingsProvider).value ??
         const AppSettings(target: SystemDownloads());
     final watchUrl = _activeDownloadUrl ?? _defaultWatchUrl;
     final downloadState = ref.watch(downloadNotifierProvider(watchUrl));
@@ -76,10 +77,9 @@ class _BookDetailsSheetState extends ConsumerState<BookDetailsSheet> {
             const SizedBox(height: 12),
             Text(
               entry.title,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             if (entry.authors.isNotEmpty) ...[
               const SizedBox(height: 4),
@@ -115,7 +115,8 @@ class _BookDetailsSheetState extends ConsumerState<BookDetailsSheet> {
                             setState(() => _activeDownloadUrl = link.url);
                             ref
                                 .read(
-                                    downloadNotifierProvider(link.url).notifier)
+                                  downloadNotifierProvider(link.url).notifier,
+                                )
                                 .start(entry, settings);
                           },
                   ),
@@ -173,8 +174,9 @@ class _BookDetailsSheetState extends ConsumerState<BookDetailsSheet> {
   String _seriesText(BookEntry entry) {
     final idx = entry.seriesIndex;
     if (idx == null) return entry.series!;
-    final idxStr =
-        idx == idx.truncateToDouble() ? idx.toInt().toString() : idx.toString();
+    final idxStr = idx == idx.truncateToDouble()
+        ? idx.toInt().toString()
+        : idx.toString();
     return '${entry.series} #$idxStr';
   }
 }

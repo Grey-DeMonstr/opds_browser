@@ -16,10 +16,9 @@ class FakeCatalogRepository implements CatalogRepository {
   var _nextId = 1;
 
   FakeCatalogRepository({List<Catalog> initial = const []})
-      : _data = List.of(initial) {
+    : _data = List.of(initial) {
     if (initial.isNotEmpty) {
-      _nextId =
-          initial.map((c) => c.id).reduce((a, b) => a > b ? a : b) + 1;
+      _nextId = initial.map((c) => c.id).reduce((a, b) => a > b ? a : b) + 1;
     }
   }
 
@@ -29,7 +28,11 @@ class FakeCatalogRepository implements CatalogRepository {
   @override
   Future<Catalog> add(String title, Uri rootUrl) async {
     final c = Catalog(
-        id: _nextId++, title: title, rootUrl: rootUrl, protocol: 'opds1');
+      id: _nextId++,
+      title: title,
+      rootUrl: rootUrl,
+      protocol: 'opds1',
+    );
     _data.add(c);
     return c;
   }
@@ -51,10 +54,9 @@ class FakeFavoritesRepository implements FavoritesRepository {
   var _nextId = 1;
 
   FakeFavoritesRepository({List<Favorite> initial = const []})
-      : _data = List.of(initial) {
+    : _data = List.of(initial) {
     if (initial.isNotEmpty) {
-      _nextId =
-          initial.map((f) => f.id).reduce((a, b) => a > b ? a : b) + 1;
+      _nextId = initial.map((f) => f.id).reduce((a, b) => a > b ? a : b) + 1;
     }
   }
 
@@ -63,13 +65,15 @@ class FakeFavoritesRepository implements FavoritesRepository {
 
   @override
   Future<void> add(int catalogId, Uri url, String title) async {
-    _data.add(Favorite(
-      id: _nextId++,
-      catalogId: catalogId,
-      url: url,
-      title: title,
-      sortOrder: _data.length,
-    ));
+    _data.add(
+      Favorite(
+        id: _nextId++,
+        catalogId: catalogId,
+        url: url,
+        title: title,
+        sortOrder: _data.length,
+      ),
+    );
   }
 
   @override
@@ -113,12 +117,15 @@ Widget buildApp({
 }) {
   return ProviderScope(
     overrides: [
-      catalogRepositoryProvider
-          .overrideWithValue(FakeCatalogRepository(initial: catalogs)),
-      favoritesRepositoryProvider
-          .overrideWithValue(FakeFavoritesRepository(initial: favorites)),
-      opdsClientProvider
-          .overrideWithValue(FakeOpdsClient(probeResult: probeResult)),
+      catalogRepositoryProvider.overrideWithValue(
+        FakeCatalogRepository(initial: catalogs),
+      ),
+      favoritesRepositoryProvider.overrideWithValue(
+        FakeFavoritesRepository(initial: favorites),
+      ),
+      opdsClientProvider.overrideWithValue(
+        FakeOpdsClient(probeResult: probeResult),
+      ),
     ],
     child: MaterialApp.router(routerConfig: router ?? _makeRouter()),
   );
@@ -138,15 +145,17 @@ void main() {
   testWidgets('catalog list: renders two catalogs with titles', (tester) async {
     final catalogs = [
       Catalog(
-          id: 1,
-          title: 'Project Gutenberg',
-          rootUrl: Uri.parse('https://gutenberg.org/opds'),
-          protocol: 'opds1'),
+        id: 1,
+        title: 'Project Gutenberg',
+        rootUrl: Uri.parse('https://gutenberg.org/opds'),
+        protocol: 'opds1',
+      ),
       Catalog(
-          id: 2,
-          title: 'Standard Ebooks',
-          rootUrl: Uri.parse('https://standardebooks.org/opds'),
-          protocol: 'opds1'),
+        id: 2,
+        title: 'Standard Ebooks',
+        rootUrl: Uri.parse('https://standardebooks.org/opds'),
+        protocol: 'opds1',
+      ),
     ];
     await tester.pumpWidget(buildApp(catalogs: catalogs));
     await tester.pumpAndSettle();
@@ -154,17 +163,17 @@ void main() {
     expect(find.text('Project Gutenberg'), findsOneWidget);
     expect(find.text('Standard Ebooks'), findsOneWidget);
     // Hint text must NOT appear when list is non-empty
-    expect(
-        find.text('No catalogues yet. Tap + to add one.'), findsNothing);
+    expect(find.text('No catalogues yet. Tap + to add one.'), findsNothing);
   });
 
   testWidgets('favorites section: hidden when list is empty', (tester) async {
     final catalogs = [
       Catalog(
-          id: 1,
-          title: 'Gutenberg',
-          rootUrl: Uri.parse('https://gutenberg.org/opds'),
-          protocol: 'opds1'),
+        id: 1,
+        title: 'Gutenberg',
+        rootUrl: Uri.parse('https://gutenberg.org/opds'),
+        protocol: 'opds1',
+      ),
     ];
     await tester.pumpWidget(buildApp(catalogs: catalogs, favorites: []));
     await tester.pumpAndSettle();
@@ -175,18 +184,20 @@ void main() {
   testWidgets('favorites section: shows when non-empty', (tester) async {
     final catalogs = [
       Catalog(
-          id: 1,
-          title: 'Gutenberg',
-          rootUrl: Uri.parse('https://gutenberg.org/opds'),
-          protocol: 'opds1'),
+        id: 1,
+        title: 'Gutenberg',
+        rootUrl: Uri.parse('https://gutenberg.org/opds'),
+        protocol: 'opds1',
+      ),
     ];
     final favorites = [
       Favorite(
-          id: 1,
-          catalogId: 1,
-          url: Uri.parse('https://gutenberg.org/opds/science'),
-          title: 'Science',
-          sortOrder: 0),
+        id: 1,
+        catalogId: 1,
+        url: Uri.parse('https://gutenberg.org/opds/science'),
+        title: 'Science',
+        sortOrder: 0,
+      ),
     ];
     await tester.pumpWidget(buildApp(catalogs: catalogs, favorites: favorites));
     await tester.pumpAndSettle();
@@ -215,36 +226,46 @@ void main() {
     await tester.pumpAndSettle();
 
     // Leave title empty, fill in URL
-    await tester.enterText(find.widgetWithText(TextFormField, 'URL'), 'example.com');
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'URL'),
+      'example.com',
+    );
     await tester.tap(find.widgetWithText(TextButton, 'Save'));
     await tester.pumpAndSettle();
 
     expect(find.text('Title is required'), findsOneWidget);
   });
 
-  testWidgets('dialog: add catalog when probe passes — catalog appears in list',
-      (tester) async {
-    await tester.pumpWidget(buildApp(probeResult: true));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'dialog: add catalog when probe passes — catalog appears in list',
+    (tester) async {
+      await tester.pumpWidget(buildApp(probeResult: true));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Add catalogue'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Add catalogue'));
+      await tester.pumpAndSettle();
 
-    await tester.enterText(
-        find.widgetWithText(TextFormField, 'Title'), 'My Library');
-    await tester.enterText(
-        find.widgetWithText(TextFormField, 'URL'), 'https://library.example.com/opds');
-    await tester.tap(find.widgetWithText(TextButton, 'Save'));
-    await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Title'),
+        'My Library',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'URL'),
+        'https://library.example.com/opds',
+      );
+      await tester.tap(find.widgetWithText(TextButton, 'Save'));
+      await tester.pumpAndSettle();
 
-    // Dialog should be dismissed
-    expect(find.byType(AlertDialog), findsNothing);
-    // Catalog should appear in the list
-    expect(find.text('My Library'), findsOneWidget);
-  });
+      // Dialog should be dismissed
+      expect(find.byType(AlertDialog), findsNothing);
+      // Catalog should appear in the list
+      expect(find.text('My Library'), findsOneWidget);
+    },
+  );
 
-  testWidgets('dialog: probe failure shows error and Save anyway button',
-      (tester) async {
+  testWidgets('dialog: probe failure shows error and Save anyway button', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildApp(probeResult: false));
     await tester.pumpAndSettle();
 
@@ -252,9 +273,13 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(
-        find.widgetWithText(TextFormField, 'Title'), 'Bad Feed');
+      find.widgetWithText(TextFormField, 'Title'),
+      'Bad Feed',
+    );
     await tester.enterText(
-        find.widgetWithText(TextFormField, 'URL'), 'https://notopds.example.com');
+      find.widgetWithText(TextFormField, 'URL'),
+      'https://notopds.example.com',
+    );
     await tester.tap(find.widgetWithText(TextButton, 'Save'));
     await tester.pumpAndSettle();
 
@@ -274,9 +299,13 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(
-        find.widgetWithText(TextFormField, 'Title'), 'Force Save');
+      find.widgetWithText(TextFormField, 'Title'),
+      'Force Save',
+    );
     await tester.enterText(
-        find.widgetWithText(TextFormField, 'URL'), 'https://notopds.example.com');
+      find.widgetWithText(TextFormField, 'URL'),
+      'https://notopds.example.com',
+    );
     await tester.tap(find.widgetWithText(TextButton, 'Save'));
     await tester.pumpAndSettle();
 
@@ -290,10 +319,11 @@ void main() {
 
   testWidgets('dialog: edit mode pre-fills title and URL', (tester) async {
     final catalog = Catalog(
-        id: 1,
-        title: 'Project Gutenberg',
-        rootUrl: Uri.parse('https://gutenberg.org/opds'),
-        protocol: 'opds1');
+      id: 1,
+      title: 'Project Gutenberg',
+      rootUrl: Uri.parse('https://gutenberg.org/opds'),
+      protocol: 'opds1',
+    );
     await tester.pumpWidget(buildApp(catalogs: [catalog]));
     await tester.pumpAndSettle();
 
@@ -315,12 +345,15 @@ void main() {
     );
   });
 
-  testWidgets('delete: tapping Delete shows confirmation dialog', (tester) async {
+  testWidgets('delete: tapping Delete shows confirmation dialog', (
+    tester,
+  ) async {
     final catalog = Catalog(
-        id: 1,
-        title: 'My Catalog',
-        rootUrl: Uri.parse('https://example.com/opds'),
-        protocol: 'opds1');
+      id: 1,
+      title: 'My Catalog',
+      rootUrl: Uri.parse('https://example.com/opds'),
+      protocol: 'opds1',
+    );
     await tester.pumpWidget(buildApp(catalogs: [catalog]));
     await tester.pumpAndSettle();
 
@@ -339,10 +372,11 @@ void main() {
 
   testWidgets('delete: confirming removes catalog from list', (tester) async {
     final catalog = Catalog(
-        id: 1,
-        title: 'My Catalog',
-        rootUrl: Uri.parse('https://example.com/opds'),
-        protocol: 'opds1');
+      id: 1,
+      title: 'My Catalog',
+      rootUrl: Uri.parse('https://example.com/opds'),
+      protocol: 'opds1',
+    );
     await tester.pumpWidget(buildApp(catalogs: [catalog]));
     await tester.pumpAndSettle();
 
@@ -361,13 +395,15 @@ void main() {
     expect(find.text('No catalogues yet. Tap + to add one.'), findsOneWidget);
   });
 
-  testWidgets('catalog row tap navigates to /browse with correct params',
-      (tester) async {
+  testWidgets('catalog row tap navigates to /browse with correct params', (
+    tester,
+  ) async {
     final catalog = Catalog(
-        id: 42,
-        title: 'My Library',
-        rootUrl: Uri.parse('https://library.example.com/opds'),
-        protocol: 'opds1');
+      id: 42,
+      title: 'My Library',
+      rootUrl: Uri.parse('https://library.example.com/opds'),
+      protocol: 'opds1',
+    );
 
     String? capturedUri;
     final router = GoRouter(
@@ -395,22 +431,26 @@ void main() {
     expect(capturedUri, contains('url='));
   });
 
-  testWidgets('remove favourite: item disappears after Remove tapped',
-      (tester) async {
+  testWidgets('remove favourite: item disappears after Remove tapped', (
+    tester,
+  ) async {
     final catalog = Catalog(
-        id: 1,
-        title: 'Gutenberg',
-        rootUrl: Uri.parse('https://gutenberg.org/opds'),
-        protocol: 'opds1');
+      id: 1,
+      title: 'Gutenberg',
+      rootUrl: Uri.parse('https://gutenberg.org/opds'),
+      protocol: 'opds1',
+    );
     final favorite = Favorite(
-        id: 1,
-        catalogId: 1,
-        url: Uri.parse('https://gutenberg.org/opds/science'),
-        title: 'Science',
-        sortOrder: 0);
+      id: 1,
+      catalogId: 1,
+      url: Uri.parse('https://gutenberg.org/opds/science'),
+      title: 'Science',
+      sortOrder: 0,
+    );
 
     await tester.pumpWidget(
-        buildApp(catalogs: [catalog], favorites: [favorite]));
+      buildApp(catalogs: [catalog], favorites: [favorite]),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Science'), findsOneWidget);

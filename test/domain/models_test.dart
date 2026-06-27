@@ -214,7 +214,10 @@ void main() {
       expect(restored.entries.length, 2);
       expect(restored.entries[0], isA<NavigationEntry>());
       expect(restored.entries[1], isA<BookEntry>());
-      expect(restored.nextPageUrl, Uri.parse('https://example.com/feed?page=2'));
+      expect(
+        restored.nextPageUrl,
+        Uri.parse('https://example.com/feed?page=2'),
+      );
     });
 
     test('toJson omits nextPageUrl when null; fromJson restores null', () {

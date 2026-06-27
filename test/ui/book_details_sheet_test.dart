@@ -23,7 +23,11 @@ class FakeDownloadStorage implements DownloadStorage {
 
   @override
   Future<String> write(
-      List<String> p, String f, Stream<List<int>> b, String mimeType) async {
+    List<String> p,
+    String f,
+    Stream<List<int>> b,
+    String mimeType,
+  ) async {
     await b.drain<void>();
     return 'content://fake/1';
   }
@@ -33,7 +37,9 @@ class FakeDownloadStorage implements DownloadStorage {
 
 class FakeSettingsNotifier extends SettingsNotifier {
   final AppSettings _initial;
-  FakeSettingsNotifier({this._initial = const AppSettings(target: SystemDownloads())});
+  FakeSettingsNotifier({
+    this._initial = const AppSettings(target: SystemDownloads()),
+  });
 
   @override
   Future<AppSettings> build() async => _initial;
@@ -42,10 +48,10 @@ class FakeSettingsNotifier extends SettingsNotifier {
 // ── Helper ────────────────────────────────────────────────────────────────────
 
 AcquisitionLink _link(String label) => AcquisitionLink(
-      url: Uri.parse('https://example.com/${label.toLowerCase()}'),
-      mimeType: 'application/octet-stream',
-      formatLabel: label,
-    );
+  url: Uri.parse('https://example.com/${label.toLowerCase()}'),
+  mimeType: 'application/octet-stream',
+  formatLabel: label,
+);
 
 Widget _buildApp({
   required BookEntry entry,
@@ -114,8 +120,9 @@ void main() {
   });
 
   group('Download button — direct download (FB2.ZIP present)', () {
-    testWidgets('tapping Download starts download without showing picker',
-        (tester) async {
+    testWidgets('tapping Download starts download without showing picker', (
+      tester,
+    ) async {
       var httpCalled = false;
       final entry = BookEntry(
         title: 'Book Title',
@@ -143,7 +150,9 @@ void main() {
   });
 
   group('Download button — format picker (no FB2)', () {
-    testWidgets('tapping Download shows "Choose format" dialog', (tester) async {
+    testWidgets('tapping Download shows "Choose format" dialog', (
+      tester,
+    ) async {
       final entry = BookEntry(
         title: 'Book Title',
         authors: ['Jane Doe'],
@@ -166,7 +175,9 @@ void main() {
       expect(find.text('PDF'), findsWidgets);
     });
 
-    testWidgets('choosing a format from picker starts download', (tester) async {
+    testWidgets('choosing a format from picker starts download', (
+      tester,
+    ) async {
       var httpCalled = false;
       final entry = BookEntry(
         title: 'Book Title',
@@ -219,8 +230,9 @@ void main() {
       expect(find.text('PDF'), findsOneWidget);
     });
 
-    testWidgets('FB2.ZIP preferred — FB2 still listed as secondary row',
-        (tester) async {
+    testWidgets('FB2.ZIP preferred — FB2 still listed as secondary row', (
+      tester,
+    ) async {
       // When both FB2.ZIP and FB2 are present, FB2.ZIP is preferred (auto-selected).
       // FB2 is "the other format" and must remain as a secondary row.
       // FB2.ZIP itself must NOT appear in secondary rows.
@@ -242,30 +254,33 @@ void main() {
       expect(find.text('FB2'), findsOneWidget);
     });
 
-    testWidgets('no preferred (EPUB+PDF): all formats shown as secondary rows',
-        (tester) async {
-      // No FB2 variant → preferred is null → picker dialog on Download tap.
-      // All formats must still be visible as secondary tap-to-download rows.
-      final entry = BookEntry(
-        title: 'Book Title',
-        authors: ['Jane Doe'],
-        acquisitionLinks: [_link('EPUB'), _link('PDF')],
-      );
+    testWidgets(
+      'no preferred (EPUB+PDF): all formats shown as secondary rows',
+      (tester) async {
+        // No FB2 variant → preferred is null → picker dialog on Download tap.
+        // All formats must still be visible as secondary tap-to-download rows.
+        final entry = BookEntry(
+          title: 'Book Title',
+          authors: ['Jane Doe'],
+          acquisitionLinks: [_link('EPUB'), _link('PDF')],
+        );
 
-      await tester.pumpWidget(
-        _buildApp(
-          entry: entry,
-          mockClient: MockClient((_) async => http.Response.bytes([1], 200)),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          _buildApp(
+            entry: entry,
+            mockClient: MockClient((_) async => http.Response.bytes([1], 200)),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('EPUB'), findsOneWidget);
-      expect(find.text('PDF'), findsOneWidget);
-    });
+        expect(find.text('EPUB'), findsOneWidget);
+        expect(find.text('PDF'), findsOneWidget);
+      },
+    );
 
-    testWidgets('tapping a secondary row starts download for that format',
-        (tester) async {
+    testWidgets('tapping a secondary row starts download for that format', (
+      tester,
+    ) async {
       Uri? requestedUrl;
       final entry = BookEntry(
         title: 'Book Title',
@@ -292,7 +307,9 @@ void main() {
   });
 
   group('DownloadInProgress state', () {
-    testWidgets('spinner replaces Download button while downloading', (tester) async {
+    testWidgets('spinner replaces Download button while downloading', (
+      tester,
+    ) async {
       final completer = Completer<http.Response>();
       final entry = BookEntry(
         title: 'Book Title',
@@ -322,7 +339,9 @@ void main() {
   });
 
   group('DownloadFailed snackbar', () {
-    testWidgets('shows error snackbar with Retry action on failure', (tester) async {
+    testWidgets('shows error snackbar with Retry action on failure', (
+      tester,
+    ) async {
       final entry = BookEntry(
         title: 'Book Title',
         authors: ['Jane Doe'],

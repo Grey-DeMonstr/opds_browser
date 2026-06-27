@@ -116,8 +116,7 @@ class _BrowseContent extends ConsumerWidget {
               ? null
               : SnackBarAction(
                   label: 'Open',
-                  onPressed: () =>
-                      openFile(result.contentUri, result.mimeType),
+                  onPressed: () => openFile(result.contentUri, result.mimeType),
                 ),
         ),
       );
@@ -151,8 +150,8 @@ class _BrowseContent extends ConsumerWidget {
             tooltip: 'Download folder',
             onPressed: jobState is FolderJobIdle
                 ? () => context.push(
-                      '/folder-scan?catalogId=$catalogId&url=${Uri.encodeComponent(url.toString())}',
-                    )
+                    '/folder-scan?catalogId=$catalogId&url=${Uri.encodeComponent(url.toString())}',
+                  )
                 : null,
           ),
         ],
@@ -248,11 +247,7 @@ class _BookEntryTile extends ConsumerStatefulWidget {
   final BookEntry entry;
   final String? inferredSeries;
 
-  const _BookEntryTile({
-    required this.entry,
-    this.inferredSeries,
-    super.key,
-  });
+  const _BookEntryTile({required this.entry, this.inferredSeries, super.key});
 
   @override
   ConsumerState<_BookEntryTile> createState() => _BookEntryTileState();
@@ -328,22 +323,23 @@ class _BookEntryTileState extends ConsumerState<_BookEntryTile> {
       isThreeLine: authors.isNotEmpty,
       trailing: hasLinks
           ? isDownloading
-              ? const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : IconButton(
-                  icon: const Icon(Icons.download_outlined),
-                  onPressed: () => _onDownloadTap(context),
-                )
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.download_outlined),
+                    onPressed: () => _onDownloadTap(context),
+                  )
           : null,
     );
   }
 
   Future<void> _onDownloadTap(BuildContext context) async {
     final entry = widget.entry;
-    final settings = ref.read(settingsProvider).value ??
+    final settings =
+        ref.read(settingsProvider).value ??
         const AppSettings(target: SystemDownloads());
     final preferred = preferredLink(entry.acquisitionLinks);
     if (preferred != null) {
@@ -352,8 +348,7 @@ class _BookEntryTileState extends ConsumerState<_BookEntryTile> {
           .read(downloadNotifierProvider(preferred.url).notifier)
           .start(entry, settings, inferredSeries: widget.inferredSeries);
     } else {
-      final chosen =
-          await _showFormatPicker(context, entry.acquisitionLinks);
+      final chosen = await _showFormatPicker(context, entry.acquisitionLinks);
       if (chosen == null || !mounted) return;
       setState(() => _downloadUrl = chosen.url);
       ref

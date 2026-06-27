@@ -12,52 +12,60 @@ import 'package:opds_browser/ui/providers.dart';
 
 class _EmptyFeedRepo implements FeedRepository {
   @override
-  Future<CachedFeed> getFeed(int catalogId, Uri url,
-          {bool forceRefresh = false}) async =>
-      CachedFeed(
-        feed: const ParsedFeed(title: 'Empty', entries: []),
-        fetchedAt: DateTime.now(),
-        fromCache: false,
-      );
+  Future<CachedFeed> getFeed(
+    int catalogId,
+    Uri url, {
+    bool forceRefresh = false,
+  }) async => CachedFeed(
+    feed: const ParsedFeed(title: 'Empty', entries: []),
+    fetchedAt: DateTime.now(),
+    fromCache: false,
+  );
 }
 
 class _OneFeedRepo implements FeedRepository {
   @override
-  Future<CachedFeed> getFeed(int catalogId, Uri url,
-          {bool forceRefresh = false}) async =>
-      CachedFeed(
-        feed: ParsedFeed(
-          title: 'Feed',
-          entries: [
-            BookEntry(
-              title: 'B',
-              authors: const ['A'],
-              acquisitionLinks: [
-                AcquisitionLink(
-                  url: Uri.parse('http://x.com/b.epub'),
-                  mimeType: 'application/epub+zip',
-                  formatLabel: 'EPUB',
-                ),
-              ],
+  Future<CachedFeed> getFeed(
+    int catalogId,
+    Uri url, {
+    bool forceRefresh = false,
+  }) async => CachedFeed(
+    feed: ParsedFeed(
+      title: 'Feed',
+      entries: [
+        BookEntry(
+          title: 'B',
+          authors: const ['A'],
+          acquisitionLinks: [
+            AcquisitionLink(
+              url: Uri.parse('http://x.com/b.epub'),
+              mimeType: 'application/epub+zip',
+              formatLabel: 'EPUB',
             ),
           ],
         ),
-        fetchedAt: DateTime.now(),
-        fromCache: false,
-      );
+      ],
+    ),
+    fetchedAt: DateTime.now(),
+    fromCache: false,
+  );
 }
 
 class _SlowFeedRepo implements FeedRepository {
   final _completer = Completer<CachedFeed>();
-  void complete() => _completer.complete(CachedFeed(
-        feed: const ParsedFeed(title: 'Done', entries: []),
-        fetchedAt: DateTime.now(),
-        fromCache: false,
-      ));
+  void complete() => _completer.complete(
+    CachedFeed(
+      feed: const ParsedFeed(title: 'Done', entries: []),
+      fetchedAt: DateTime.now(),
+      fromCache: false,
+    ),
+  );
   @override
-  Future<CachedFeed> getFeed(int catalogId, Uri url,
-          {bool forceRefresh = false}) =>
-      _completer.future;
+  Future<CachedFeed> getFeed(
+    int catalogId,
+    Uri url, {
+    bool forceRefresh = false,
+  }) => _completer.future;
 }
 
 class _FakeDownloadStorage implements DownloadStorage {
@@ -65,7 +73,11 @@ class _FakeDownloadStorage implements DownloadStorage {
   Future<bool> exists(List<String> s, String f) async => false;
   @override
   Future<String> write(
-      List<String> s, String f, Stream<List<int>> b, String mimeType) async {
+    List<String> s,
+    String f,
+    Stream<List<int>> b,
+    String mimeType,
+  ) async {
     await b.drain<void>();
     return 'content://fake';
   }
@@ -82,12 +94,14 @@ class _ConstSettingsRepo implements SettingsRepository {
 // ── Container builder ─────────────────────────────────────────────────────────
 
 ProviderContainer _container({FeedRepository? feedRepo}) {
-  final c = ProviderContainer(overrides: [
-    feedRepositoryProvider.overrideWithValue(feedRepo ?? _EmptyFeedRepo()),
-    downloadStorageProvider.overrideWith((ref) => _FakeDownloadStorage()),
-    settingsRepositoryProvider.overrideWithValue(_ConstSettingsRepo()),
-    safPermissionCheckerProvider.overrideWithValue((_) async => true),
-  ]);
+  final c = ProviderContainer(
+    overrides: [
+      feedRepositoryProvider.overrideWithValue(feedRepo ?? _EmptyFeedRepo()),
+      downloadStorageProvider.overrideWith((ref) => _FakeDownloadStorage()),
+      settingsRepositoryProvider.overrideWithValue(_ConstSettingsRepo()),
+      safPermissionCheckerProvider.overrideWithValue((_) async => true),
+    ],
+  );
   addTearDown(c.dispose);
   return c;
 }
@@ -103,14 +117,18 @@ void main() {
   test('start() with empty feed ends as FolderJobDone', () async {
     final c = _container();
     await c.read(settingsProvider.future);
-    await c.read(folderDownloadProvider.notifier).start(1, Uri.parse('http://x.com'));
+    await c
+        .read(folderDownloadProvider.notifier)
+        .start(1, Uri.parse('http://x.com'));
     expect(c.read(folderDownloadProvider), isA<FolderJobDone>());
   });
 
   test('start() with one book ends as FolderJobTreeReady', () async {
     final c = _container(feedRepo: _OneFeedRepo());
     await c.read(settingsProvider.future);
-    await c.read(folderDownloadProvider.notifier).start(1, Uri.parse('http://x.com'));
+    await c
+        .read(folderDownloadProvider.notifier)
+        .start(1, Uri.parse('http://x.com'));
     expect(c.read(folderDownloadProvider), isA<FolderJobTreeReady>());
   });
 
@@ -164,20 +182,23 @@ void main() {
     expect(c.read(folderDownloadProvider), isA<FolderJobIdle>());
   });
 
-  test('cancel() during scan: FolderJobDone with wasCancelled = true', () async {
-    final slowRepo = _SlowFeedRepo();
-    final c = _container(feedRepo: slowRepo);
-    await c.read(settingsProvider.future);
-    final notifier = c.read(folderDownloadProvider.notifier);
+  test(
+    'cancel() during scan: FolderJobDone with wasCancelled = true',
+    () async {
+      final slowRepo = _SlowFeedRepo();
+      final c = _container(feedRepo: slowRepo);
+      await c.read(settingsProvider.future);
+      final notifier = c.read(folderDownloadProvider.notifier);
 
-    final startFuture = notifier.start(1, Uri.parse('http://x.com'));
-    notifier.cancel();
-    slowRepo.complete();
-    await startFuture;
+      final startFuture = notifier.start(1, Uri.parse('http://x.com'));
+      notifier.cancel();
+      slowRepo.complete();
+      await startFuture;
 
-    final done = c.read(folderDownloadProvider) as FolderJobDone;
-    expect(done.wasCancelled, isTrue);
-  });
+      final done = c.read(folderDownloadProvider) as FolderJobDone;
+      expect(done.wasCancelled, isTrue);
+    },
+  );
 
   test('reset() during FolderJobTreeReady returns to FolderJobIdle', () async {
     final c = _container(feedRepo: _OneFeedRepo());
