@@ -41,6 +41,11 @@ class _StartScreenContent extends ConsumerWidget {
         title: const Text('OPDS Browser'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.local_library_outlined),
+            tooltip: 'Manage local library',
+            onPressed: () => context.push('/library'),
+          ),
+          IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () => context.push('/settings'),
           ),
