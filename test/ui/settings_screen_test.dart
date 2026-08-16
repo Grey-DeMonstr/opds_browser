@@ -95,6 +95,25 @@ void main() {
   });
 
   group('SettingsScreen', () {
+    testWidgets('settings list is inset above the system navigation bar', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(
+            size: Size(800, 600),
+            padding: EdgeInsets.only(bottom: 48),
+            viewPadding: EdgeInsets.only(bottom: 48),
+          ),
+          child: buildApp(FakeSettingsNotifier(initial: const AppSettings())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final bottom = tester.getRect(find.byType(ListView)).bottom;
+      expect(bottom, lessThanOrEqualTo(600 - 48));
+    });
+
     testWidgets('shows no-folder subtitle when target is null', (tester) async {
       await tester.pumpWidget(
         buildApp(FakeSettingsNotifier(initial: const AppSettings())),

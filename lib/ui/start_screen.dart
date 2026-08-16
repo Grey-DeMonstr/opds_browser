@@ -59,53 +59,56 @@ class _StartScreenContent extends ConsumerWidget {
         icon: const Icon(Icons.add),
         label: const Text('Add catalogue'),
       ),
-      body: CustomScrollView(
-        slivers: [
-          if (favorites.isNotEmpty) ...[
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
-                child: Text(
-                  'Favourites',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+      body: SafeArea(
+        top: false,
+        child: CustomScrollView(
+          slivers: [
+            if (favorites.isNotEmpty) ...[
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
+                  child: Text(
+                    'Favourites',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
-            ),
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => _FavoriteTile(
-                  favorite: favorites[index],
-                  catalogs: catalogs,
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _FavoriteTile(
+                    favorite: favorites[index],
+                    catalogs: catalogs,
+                  ),
+                  childCount: favorites.length,
                 ),
-                childCount: favorites.length,
               ),
-            ),
+            ],
+            if (catalogs.isNotEmpty)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
+                  child: Text(
+                    'Catalogues',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            if (catalogs.isEmpty)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: Text('No catalogues yet. Tap + to add one.'),
+                ),
+              )
+            else
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _CatalogTile(catalog: catalogs[index]),
+                  childCount: catalogs.length,
+                ),
+              ),
           ],
-          if (catalogs.isNotEmpty)
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
-                child: Text(
-                  'Catalogues',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-          if (catalogs.isEmpty)
-            const SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(
-                child: Text('No catalogues yet. Tap + to add one.'),
-              ),
-            )
-          else
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => _CatalogTile(catalog: catalogs[index]),
-                childCount: catalogs.length,
-              ),
-            ),
-        ],
+        ),
       ),
     );
   }

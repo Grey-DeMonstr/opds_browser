@@ -74,6 +74,56 @@ Widget _buildApp({
 
 void main() {
   group('BookDetailsSheet rendering', () {
+    testWidgets('sheet content is inset above the system navigation bar', (
+      tester,
+    ) async {
+      final entry = BookEntry(
+        title: 'Book Title',
+        authors: ['Jane Doe'],
+        acquisitionLinks: [_link('FB2')],
+      );
+
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(
+            size: Size(800, 600),
+            padding: EdgeInsets.only(bottom: 48),
+            viewPadding: EdgeInsets.only(bottom: 48),
+          ),
+          child: ProviderScope(
+            overrides: [
+              settingsProvider.overrideWith(() => FakeSettingsNotifier()),
+              httpClientProvider.overrideWith(
+                (ref) => MockClient((_) async => http.Response.bytes([1], 200)),
+              ),
+              downloadStorageProvider.overrideWith(
+                (ref) => FakeDownloadStorage(existsResult: false),
+              ),
+            ],
+            child: MaterialApp(
+              home: Scaffold(
+                body: Builder(
+                  builder: (context) => TextButton(
+                    onPressed: () => showModalBottomSheet<void>(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) => BookDetailsSheet(entry: entry),
+                    ),
+                    child: const Text('open'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      final bottom = tester.getRect(find.byType(SingleChildScrollView)).bottom;
+      expect(bottom, lessThanOrEqualTo(600 - 48));
+    });
+
     testWidgets('renders title, authors, series, and summary', (tester) async {
       final entry = BookEntry(
         title: 'Book Title',

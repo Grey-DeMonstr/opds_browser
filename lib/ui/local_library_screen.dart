@@ -321,23 +321,28 @@ class _LocalLibraryScreenState extends ConsumerState<LocalLibraryScreen> {
           ),
         ],
       ),
-      body: switch (libState) {
-        LibraryScanning(:final scanned) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text('Scanning… $scanned files found'),
-            ],
+      body: SafeArea(
+        top: false,
+        child: switch (libState) {
+          LibraryScanning(:final scanned) => Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text('Scanning… $scanned files found'),
+              ],
+            ),
           ),
-        ),
-        LibraryError(:final message) => Center(child: Text('Error: $message')),
-        LibraryReady(:final root, :final validationRun) => _buildTree(
-          root,
-          validationRun,
-        ),
-      },
+          LibraryError(:final message) => Center(
+            child: Text('Error: $message'),
+          ),
+          LibraryReady(:final root, :final validationRun) => _buildTree(
+            root,
+            validationRun,
+          ),
+        },
+      ),
     );
   }
 

@@ -58,10 +58,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final settingsAsync = ref.watch(settingsProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: settingsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (settings) => _SettingsBody(settings: settings),
+      body: SafeArea(
+        top: false,
+        child: settingsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('Error: $e')),
+          data: (settings) => _SettingsBody(settings: settings),
+        ),
       ),
     );
   }

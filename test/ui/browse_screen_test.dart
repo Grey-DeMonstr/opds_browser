@@ -215,6 +215,25 @@ void main() {
     expect(find.textContaining('ago'), findsOneWidget);
   });
 
+  testWidgets('entry list is inset above the system navigation bar', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(
+          size: Size(800, 600),
+          padding: EdgeInsets.only(bottom: 48),
+          viewPadding: EdgeInsets.only(bottom: 48),
+        ),
+        child: buildApp(feed: makeFeed()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final scrollBottom = tester.getRect(find.byType(CustomScrollView)).bottom;
+    expect(scrollBottom, lessThanOrEqualTo(600 - 48));
+  });
+
   testWidgets('empty feed shows hint text', (tester) async {
     await tester.pumpWidget(buildApp(feed: makeFeed(entries: [])));
     await tester.pumpAndSettle();

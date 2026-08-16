@@ -49,77 +49,80 @@ class _BookDetailsSheetState extends ConsumerState<BookDetailsSheet> {
     final entry = widget.entry;
     final preferred = preferredLink(entry.acquisitionLinks);
 
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Center(
-              child: SizedBox(
-                width: 120,
-                height: 170,
-                child: entry.coverUrl != null
-                    ? CachedNetworkImage(
-                        imageUrl: entry.coverUrl!.toString(),
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) =>
-                            const Icon(Icons.book, size: 48),
-                        errorWidget: (context, url, error) =>
-                            const Icon(Icons.book, size: 48),
-                      )
-                    : const Icon(Icons.book, size: 48),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              entry.title,
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            if (entry.authors.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(entry.authors.join(', ')),
-            ],
-            if (entry.series != null) ...[
-              const SizedBox(height: 4),
-              Text(_seriesText(entry)),
-            ],
-            if (entry.summary != null) ...[
-              const SizedBox(height: 8),
-              Text(entry.summary!),
-            ],
-            const Divider(height: 24),
-            Center(
-              child: isDownloading
-                  ? const CircularProgressIndicator()
-                  : ElevatedButton(
-                      onPressed: () =>
-                          _onDownloadTap(context, entry, preferred, settings),
-                      child: const Text('Download'),
-                    ),
-            ),
-            const SizedBox(height: 8),
-            ...entry.acquisitionLinks
-                .where((link) => link != preferred)
-                .map(
-                  (link) => ListTile(
-                    title: Text(link.formatLabel),
-                    onTap: isDownloading
-                        ? null
-                        : () {
-                            setState(() => _activeDownloadUrl = link.url);
-                            ref
-                                .read(
-                                  downloadNotifierProvider(link.url).notifier,
-                                )
-                                .start(entry, settings);
-                          },
-                  ),
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: SizedBox(
+                  width: 120,
+                  height: 170,
+                  child: entry.coverUrl != null
+                      ? CachedNetworkImage(
+                          imageUrl: entry.coverUrl!.toString(),
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) =>
+                              const Icon(Icons.book, size: 48),
+                          errorWidget: (context, url, error) =>
+                              const Icon(Icons.book, size: 48),
+                        )
+                      : const Icon(Icons.book, size: 48),
                 ),
-          ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                entry.title,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              if (entry.authors.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(entry.authors.join(', ')),
+              ],
+              if (entry.series != null) ...[
+                const SizedBox(height: 4),
+                Text(_seriesText(entry)),
+              ],
+              if (entry.summary != null) ...[
+                const SizedBox(height: 8),
+                Text(entry.summary!),
+              ],
+              const Divider(height: 24),
+              Center(
+                child: isDownloading
+                    ? const CircularProgressIndicator()
+                    : ElevatedButton(
+                        onPressed: () =>
+                            _onDownloadTap(context, entry, preferred, settings),
+                        child: const Text('Download'),
+                      ),
+              ),
+              const SizedBox(height: 8),
+              ...entry.acquisitionLinks
+                  .where((link) => link != preferred)
+                  .map(
+                    (link) => ListTile(
+                      title: Text(link.formatLabel),
+                      onTap: isDownloading
+                          ? null
+                          : () {
+                              setState(() => _activeDownloadUrl = link.url);
+                              ref
+                                  .read(
+                                    downloadNotifierProvider(link.url).notifier,
+                                  )
+                                  .start(entry, settings);
+                            },
+                    ),
+                  ),
+            ],
+          ),
         ),
       ),
     );

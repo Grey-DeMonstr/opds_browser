@@ -78,7 +78,10 @@ class _EditBookMetadataSheetState extends ConsumerState<EditBookMetadataSheet> {
         left: 16,
         right: 16,
         top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        bottom:
+            MediaQuery.viewInsetsOf(context).bottom +
+            MediaQuery.paddingOf(context).bottom +
+            24,
       ),
       child: Form(
         key: _formKey,

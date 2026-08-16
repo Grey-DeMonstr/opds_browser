@@ -7,6 +7,7 @@ import 'package:opds_browser/data/android_file_opener.dart';
 import 'package:opds_browser/data/folder_download_job.dart';
 import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/domain/time_formatter.dart';
+import 'package:opds_browser/domain/url_debug_formatter.dart';
 import 'package:opds_browser/domain/download_utils.dart';
 import 'package:opds_browser/domain/entities.dart';
 import 'package:opds_browser/ui/book_details_sheet.dart';
@@ -156,55 +157,58 @@ class _BrowseContent extends ConsumerWidget {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          if (kDebugMode)
-            Container(
-              width: double.infinity,
-              color: Colors.black,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: SelectableText(
-                '$url\nseries: $inferredSeries',
-                style: Theme.of(
-                  context,
-                ).textTheme.labelSmall?.copyWith(fontFamily: 'monospace'),
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            if (kDebugMode)
+              Container(
+                width: double.infinity,
+                color: Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: SelectableText(
+                  '${formatUrlForDebug(url)}\nseries: $inferredSeries',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelSmall?.copyWith(fontFamily: 'monospace'),
+                ),
+              ),
+            if (state.isRefreshing) const LinearProgressIndicator(),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: onRefresh,
+                child: CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    if (entries.isEmpty)
+                      const SliverFillRemaining(
+                        child: Center(child: Text('This folder is empty.')),
+                      )
+                    else
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          final entry = entries[index];
+                          return switch (entry) {
+                            NavigationEntry e => _NavigationEntryTile(
+                              entry: e,
+                              catalogId: catalogId,
+                              inferredSeries: inferredSeries,
+                              key: ValueKey(e.url),
+                            ),
+                            BookEntry e => _BookEntryTile(
+                              entry: e,
+                              inferredSeries: inferredSeries,
+                              key: ValueKey(e.title),
+                            ),
+                          };
+                        }, childCount: entries.length),
+                      ),
+                  ],
+                ),
               ),
             ),
-          if (state.isRefreshing) const LinearProgressIndicator(),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: onRefresh,
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  if (entries.isEmpty)
-                    const SliverFillRemaining(
-                      child: Center(child: Text('This folder is empty.')),
-                    )
-                  else
-                    SliverList(
-                      delegate: SliverChildBuilderDelegate((context, index) {
-                        final entry = entries[index];
-                        return switch (entry) {
-                          NavigationEntry e => _NavigationEntryTile(
-                            entry: e,
-                            catalogId: catalogId,
-                            inferredSeries: inferredSeries,
-                            key: ValueKey(e.url),
-                          ),
-                          BookEntry e => _BookEntryTile(
-                            entry: e,
-                            inferredSeries: inferredSeries,
-                            key: ValueKey(e.title),
-                          ),
-                        };
-                      }, childCount: entries.length),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
