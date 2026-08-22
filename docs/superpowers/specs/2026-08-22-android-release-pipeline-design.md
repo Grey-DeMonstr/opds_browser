@@ -91,7 +91,9 @@ if (keystorePropertiesFile.exists()) {
 CI decodes `ANDROID_KEYSTORE_BASE64` into a file and writes `key.properties`
 from secrets before building.
 
-`.gitignore` gains `android/key.properties` and `**/*.jks`.
+`.gitignore` gains `android/key.properties` and the keystore extensions
+(`**/*.jks`, `**/*.p12`, `**/*.pfx`, `**/*.keystore`). The upload keystore itself
+is PKCS12 — the industry-standard format modern `keytool` produces by default.
 
 ## Workflows
 

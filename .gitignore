@@ -56,3 +56,5 @@ docs/superpowers/plans/
 android/key.properties
 **/*.jks
 **/*.p12
+**/*.pfx
+**/*.keystore
