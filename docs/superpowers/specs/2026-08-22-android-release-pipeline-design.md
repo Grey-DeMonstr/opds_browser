@@ -138,7 +138,9 @@ Step 9 is added but left disabled until the first manual Play upload completes
 
 `r0adkll/upload-google-play`, **pinned to a commit SHA rather than a tag** — it
 receives the service account JSON, and an unpinned third-party action is a
-supply-chain hole.
+supply-chain hole. The rule is broader than this one action: any third-party
+action running in a job that handles secrets is pinned to a commit SHA, which
+is also why `subosito/flutter-action` is pinned in both workflows.
 
 Service account setup (manual, one time):
 
@@ -165,9 +167,12 @@ The policy is short because the app genuinely collects nothing. Verified against
 the codebase:
 
 - No authentication or credential handling anywhere in `lib/`.
-- `shared_preferences` stores only the catalogue URI, its display name, and two
-  folder-layout booleans (`lib/data/shared_prefs_settings_repository.dart`).
-- Book metadata lives in a local `sqflite` database; downloads go to a
+- `shared_preferences` stores the chosen download-target folder (its SAF URI
+  and display name) and two folder-layout booleans
+  (`lib/data/shared_prefs_settings_repository.dart`); the catalogue's title
+  and root URL are stored separately, in the local `sqflite` database
+  (`lib/data/sqflite_catalog_repository.dart`).
+- Book metadata also lives in that local `sqflite` database; downloads go to a
   user-chosen SAF folder.
 - No analytics and no crash reporting.
 - The only network traffic is to OPDS catalogue servers the user configures, and
