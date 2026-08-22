@@ -5,6 +5,9 @@ on:
     branches: [master]
   pull_request:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -25,8 +28,11 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      # Pinned to a commit SHA to match release.yml, where this same action
+      # runs in a job that decodes signing secrets - kept consistent across
+      # both workflows rather than pinning only the one that needs it.
       - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           flutter-version: 3.44.1
           channel: stable

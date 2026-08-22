@@ -8,10 +8,19 @@ on:
 permissions:
   contents: write
 
+# Only one release build runs at a time: this job decodes signing secrets and
+# creates an irreversible GitHub Release, so two tags pushed close together
+# must queue rather than race.
+concurrency:
+  group: release-pipeline
+  cancel-in-progress: false
+
 jobs:
   release:
     name: Build and publish
     runs-on: ubuntu-latest
+    # Builds run ~15 minutes; this leaves headroom without masking a hang.
+    timeout-minutes: 45
     steps:
       # fetch-depth: 0 is mandatory. The default shallow clone makes
       # `git rev-list --count HEAD` return 1, which would wreck versionCode
@@ -28,8 +37,11 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      # Pinned to a commit SHA: this job decodes the upload keystore and,
+      # once enabled, holds PLAY_SERVICE_ACCOUNT_JSON — any third-party
+      # action in a job that handles secrets gets the same treatment.
       - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           flutter-version: 3.44.1
           channel: stable
@@ -39,6 +51,16 @@ jobs:
         id: version
         run: |
           TAG="${GITHUB_REF_NAME}"
+
+          if ! git rev-parse --verify origin/master >/dev/null 2>&1; then
+            echo "::error::origin/master ref not found in this checkout; cannot verify that ${TAG} is on master"
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor HEAD origin/master; then
+            echo "::error::Tag ${TAG} (commit $(git rev-parse HEAD)) is not an ancestor of origin/master; its build number would not match master's commit count"
+            exit 1
+          fi
+
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
           echo "build_number=$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
@@ -47,7 +69,9 @@ jobs:
         run: flutter pub get
 
       - name: Check tag against pubspec.yaml
-        run: dart run tool/check_version.dart "${{ steps.version.outputs.tag }}"
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: dart run tool/check_version.dart "$TAG"
 
       - name: Analyze and test
         run: dart run tool/check.dart
@@ -59,28 +83,81 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload-keystore.jks"
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is empty or unset; create the repository secret before releasing"
+            exit 1
+          fi
+
+          KEYSTORE_PATH="$RUNNER_TEMP/upload-keystore.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '\r\n' | base64 -d > "$KEYSTORE_PATH"
+
           cat > android/key.properties <<PROPS
-          storeFile=$RUNNER_TEMP/upload-keystore.jks
+          storeFile=$KEYSTORE_PATH
           storePassword=$ANDROID_KEYSTORE_PASSWORD
           keyAlias=$ANDROID_KEY_ALIAS
           keyPassword=$ANDROID_KEY_PASSWORD
           PROPS
 
+          if ! keytool -list -keystore "$KEYSTORE_PATH" -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null 2>&1; then
+            echo "::error::Keystore validation failed for alias $ANDROID_KEY_ALIAS; check ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD and ANDROID_KEY_ALIAS (a stray CR from how the secret was set can also cause this)"
+            exit 1
+          fi
+
       - name: Build app bundle
-        run: flutter build appbundle --release --build-number=${{ steps.version.outputs.build_number }}
+        env:
+          BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
+        run: flutter build appbundle --release --build-number="$BUILD_NUMBER"
+
+      # Preserved even though the Play step is disabled today: recovering a
+      # Play-side failure later should not require a full rebuild. The exact
+      # file path is used deliberately - never the workspace or a wildcard,
+      # since android/key.properties (cleartext keystore passwords) and the
+      # decoded keystore also live in the workspace at this point.
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-aab-${{ steps.version.outputs.tag }}
+          path: build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
 
       - name: Build universal APK
-        run: flutter build apk --release --build-number=${{ steps.version.outputs.build_number }}
+        env:
+          BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
+        run: flutter build apk --release --build-number="$BUILD_NUMBER"
 
       - name: Name the APK after the release
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           mv build/app/outputs/flutter-apk/app-release.apk \
-             "build/app/outputs/flutter-apk/opds-browser-${{ steps.version.outputs.version }}.apk"
+             "build/app/outputs/flutter-apk/opds-browser-$VERSION.apk"
+
+      - name: Verify APK is signed with the upload key
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          APK="build/app/outputs/flutter-apk/opds-browser-$VERSION.apk"
+
+          APKSIGNER="$(ls -d "$ANDROID_HOME"/build-tools/*/ 2>/dev/null | sort -V | tail -n1)apksigner"
+          if [ ! -x "$APKSIGNER" ]; then
+            echo "::error::apksigner not found under $ANDROID_HOME/build-tools/*; cannot verify APK signing, refusing to publish unchecked"
+            exit 1
+          fi
+
+          CERT_INFO="$("$APKSIGNER" verify --print-certs "$APK" 2>&1)" || {
+            echo "::error::apksigner failed to verify $APK"
+            echo "$CERT_INFO"
+            exit 1
+          }
+          if echo "$CERT_INFO" | grep -qi 'CN=Android Debug'; then
+            echo "::error::$APK is signed with the Android debug certificate, not the upload key. A debug-signed public release can never be upgraded over - refusing to publish it."
+            exit 1
+          fi
 
       - name: Generate release notes
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
-          TAG="${{ steps.version.outputs.tag }}"
           PREV_TAG="$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)"
           if [ -n "$PREV_TAG" ]; then
             RANGE="${PREV_TAG}..${TAG}"
@@ -94,14 +171,23 @@ jobs:
             git log --no-merges --pretty=format:'- %s' "$RANGE"
           } > "$RUNNER_TEMP/release-notes.md"
 
-      - name: Create GitHub release
+      # Idempotent: a re-run after a later step fails (e.g. the Play upload,
+      # once enabled) must not die on `gh release create`'s 422 for a release
+      # that already exists.
+      - name: Create or update GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          gh release create "${{ steps.version.outputs.tag }}" \
-            --title "${{ steps.version.outputs.tag }}" \
-            --notes-file "$RUNNER_TEMP/release-notes.md" \
-            "build/app/outputs/flutter-apk/opds-browser-${{ steps.version.outputs.version }}.apk"
+          APK="build/app/outputs/flutter-apk/opds-browser-$VERSION.apk"
+          NOTES="$RUNNER_TEMP/release-notes.md"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" --clobber "$APK"
+          else
+            gh release create "$TAG" --title "$TAG" --notes-file "$NOTES" "$APK"
+          fi
 
       # Enabled in Task 9, once the Play Console prerequisites are done and the
       # first AAB has been uploaded by hand. Pinned to a commit SHA rather than
@@ -115,3 +201,7 @@ jobs:
       #     releaseFiles: build/app/outputs/bundle/release/app-release.aab
       #     track: internal
       #     status: completed
+
+      - name: Remove signing material
+        if: always()
+        run: rm -f android/key.properties "$RUNNER_TEMP/upload-keystore.jks"

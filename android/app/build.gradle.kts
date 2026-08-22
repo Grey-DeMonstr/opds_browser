@@ -40,6 +40,8 @@ android {
     signingConfigs {
         if (keystorePropertiesFile.exists()) {
             create("release") {
+                // file() resolves a relative path against android/app/, not the
+                // repo root or CWD - storeFile must be an absolute path.
                 storeFile = file(keystoreProperties.getProperty("storeFile"))
                 storePassword = keystoreProperties.getProperty("storePassword")
                 keyAlias = keystoreProperties.getProperty("keyAlias")
