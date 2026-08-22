@@ -1,0 +1,42 @@
+OPDS Browser is a small, focused client for OPDS catalogues — the open standard that public-domain libraries, personal Calibre servers and community archives use to publish their collections.
+
+Point it at a catalogue URL, browse the shelves, and download what you want straight into a folder you choose. Books are saved as ordinary files, so they open in whichever reader app you already use.
+
+
+You bring the catalogue
+
+The app ships with no catalogues and no books of its own. You add the OPDS servers you want by URL — a public library, your own Calibre-Web instance, or anything else that speaks OPDS 1.x.
+
+
+What it does
+
+• Add as many OPDS 1.x catalogues as you like
+• Browse folder hierarchies with instant back-navigation, thanks to a persistent cache
+• Download a single book — FB2 is preferred, with EPUB, PDF and MOBI as fallbacks
+• Download an entire folder recursively, with cycle protection and safety limits
+• Bookmark favourite folders for one-tap access from the home screen
+• Choose exactly where downloads land, using the Android folder picker
+• Optionally sort files into per-author and per-series subfolders
+• Review what you have already downloaded in a local library view, grouped by folder and showing title, author and series
+
+
+Private by design
+
+No accounts. No sign-in. No DRM. No ads, no analytics and no crash reporting.
+
+The app collects nothing and sends nothing anywhere. The only network traffic is to the catalogue servers you configure yourself, and to whatever hosts those catalogues name for their cover images.
+
+Your books stay yours: they are written to a folder you picked, as ordinary files, and they remain there even if you uninstall the app.
+
+
+Open source
+
+OPDS Browser is free software, licensed under the GPL v3. The full source is at:
+https://github.com/Grey-DeMonstr/opds_browser
+
+
+Before you install
+
+• Requires Android 10 or newer.
+• You need at least one OPDS catalogue URL — the app does not come with one.
+• You need a separate ebook reader app to read what you download. OPDS Browser finds, downloads and organises books; it does not open them.
