@@ -51,3 +51,7 @@ CLAUDE.local.md
 
 # Superpowers plans are local-only
 docs/superpowers/plans/
+
+# Release signing — never commit the upload keystore or its passwords
+android/key.properties
+**/*.jks
