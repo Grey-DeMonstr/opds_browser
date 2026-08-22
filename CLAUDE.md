@@ -41,6 +41,7 @@ test/
   domain/    # unit tests for domain layer
   data/      # unit tests for data layer (sqflite via sqflite_common_ffi on host)
   ui/        # widget tests (Riverpod overrides with fakes — no real network/DB)
+  tool/      # unit tests for scripts in tool/ (imported by relative path)
 ```
 
 ## Tech Stack (decided — do not substitute)
