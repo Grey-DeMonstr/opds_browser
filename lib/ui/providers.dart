@@ -26,6 +26,7 @@ import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/domain/local_library.dart';
 import 'package:opds_browser/domain/opds_client.dart';
 import 'package:opds_browser/domain/repositories.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:saf_util/saf_util.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
@@ -531,3 +532,17 @@ final localBookReadWriterProvider = Provider<LocalBookReadWriter>(
 final fb2MetadataWriterProvider = Provider<Fb2MetadataWriter>(
   (ref) => Fb2MetadataWriter(),
 );
+
+// ── App version ───────────────────────────────────────────────────────────────
+
+/// The running app's version name and build number, as shown in Settings.
+typedef AppVersionInfo = ({String version, String buildNumber});
+
+/// Reads the version out of the platform package metadata.
+///
+/// Kept behind a provider so widget tests can override it and never touch the
+/// `package_info_plus` platform channel.
+final appVersionProvider = FutureProvider<AppVersionInfo>((ref) async {
+  final info = await PackageInfo.fromPlatform();
+  return (version: info.version, buildNumber: info.buildNumber);
+});

@@ -52,7 +52,12 @@ class FakeSettingsNotifier extends SettingsNotifier {
 
 Widget buildApp(FakeSettingsNotifier notifier) {
   return ProviderScope(
-    overrides: [settingsProvider.overrideWith(() => notifier)],
+    overrides: [
+      settingsProvider.overrideWith(() => notifier),
+      appVersionProvider.overrideWith(
+        (ref) async => (version: '0.1.0', buildNumber: '206'),
+      ),
+    ],
     child: const MaterialApp(home: SettingsScreen()),
   );
 }
@@ -206,6 +211,27 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+  });
+
+  group('formatAppVersion', () {
+    test('renders version and build number', () {
+      expect(
+        formatAppVersion((version: '0.1.0', buildNumber: '206')),
+        '0.1.0 (206)',
+      );
+    });
+  });
+
+  group('SettingsScreen version row', () {
+    testWidgets('shows the version from the provider', (tester) async {
+      await tester.pumpWidget(
+        buildApp(FakeSettingsNotifier(initial: const AppSettings())),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Version'), findsOneWidget);
+      expect(find.text('0.1.0 (206)'), findsOneWidget);
     });
   });
 }

@@ -16,6 +16,9 @@ String buildPathExample(AppSettings settings) {
   return '${folders.join('/')}/${fileParts.join(' - ')}.fb2';
 }
 
+String formatAppVersion(AppVersionInfo info) =>
+    '${info.version} (${info.buildNumber})';
+
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -107,6 +110,17 @@ class _SettingsBody extends ConsumerWidget {
             buildPathExample(settings),
             style: Theme.of(context).textTheme.bodySmall,
           ),
+        ),
+        const Divider(),
+        ListTile(
+          title: const Text('Version'),
+          subtitle: ref
+              .watch(appVersionProvider)
+              .when(
+                loading: () => const Text('…'),
+                error: (_, _) => const Text('unknown'),
+                data: (info) => Text(formatAppVersion(info)),
+              ),
         ),
       ],
     );
