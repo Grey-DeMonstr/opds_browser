@@ -48,3 +48,6 @@ app.*.map.json
 .claude/settings.local.json
 .claude/worktrees/**
 CLAUDE.local.md
+
+# Superpowers plans are local-only
+docs/superpowers/plans/
