@@ -55,3 +55,4 @@ docs/superpowers/plans/
 # Release signing — never commit the upload keystore or its passwords
 android/key.properties
 **/*.jks
+**/*.p12
