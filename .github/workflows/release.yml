@@ -1,0 +1,117 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+# Needed by `gh release create`.
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    steps:
+      # fetch-depth: 0 is mandatory. The default shallow clone makes
+      # `git rev-list --count HEAD` return 1, which would wreck versionCode
+      # monotonicity - and every versionCode uploaded to Play is burned
+      # permanently and can never be reused.
+      - name: Check out
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.1
+          channel: stable
+          cache: true
+
+      - name: Resolve version
+        id: version
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "build_number=$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Check tag against pubspec.yaml
+        run: dart run tool/check_version.dart "${{ steps.version.outputs.tag }}"
+
+      - name: Analyze and test
+        run: dart run tool/check.dart
+
+      - name: Write signing configuration
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload-keystore.jks"
+          cat > android/key.properties <<PROPS
+          storeFile=$RUNNER_TEMP/upload-keystore.jks
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEY_PASSWORD
+          PROPS
+
+      - name: Build app bundle
+        run: flutter build appbundle --release --build-number=${{ steps.version.outputs.build_number }}
+
+      - name: Build universal APK
+        run: flutter build apk --release --build-number=${{ steps.version.outputs.build_number }}
+
+      - name: Name the APK after the release
+        run: |
+          mv build/app/outputs/flutter-apk/app-release.apk \
+             "build/app/outputs/flutter-apk/opds-browser-${{ steps.version.outputs.version }}.apk"
+
+      - name: Generate release notes
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          PREV_TAG="$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)"
+          if [ -n "$PREV_TAG" ]; then
+            RANGE="${PREV_TAG}..${TAG}"
+          else
+            # First release: no previous tag, so use the full history.
+            RANGE="${TAG}"
+          fi
+          {
+            echo "## Changes"
+            echo
+            git log --no-merges --pretty=format:'- %s' "$RANGE"
+          } > "$RUNNER_TEMP/release-notes.md"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.version.outputs.tag }}" \
+            --title "${{ steps.version.outputs.tag }}" \
+            --notes-file "$RUNNER_TEMP/release-notes.md" \
+            "build/app/outputs/flutter-apk/opds-browser-${{ steps.version.outputs.version }}.apk"
+
+      # Enabled in Task 9, once the Play Console prerequisites are done and the
+      # first AAB has been uploaded by hand. Pinned to a commit SHA rather than
+      # a tag: this action receives the service account JSON, and an unpinned
+      # third-party action is a supply-chain hole.
+      # - name: Upload to Google Play (internal track)
+      #   uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
+      #   with:
+      #     serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+      #     packageName: monster.greyde.opds_browser
+      #     releaseFiles: build/app/outputs/bundle/release/app-release.aab
+      #     track: internal
+      #     status: completed
