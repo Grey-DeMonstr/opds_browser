@@ -14,6 +14,17 @@ No accounts, no login, no DRM. Downloaded books open in whichever reader app you
 - Save to the system Downloads folder (Windows only) or pick a custom folder via SAF
 - Optionally organise files into per-author and per-series subfolders
 
+## Where to get it
+
+- **Google Play** — signed by Google under Play App Signing.
+- **GitHub Releases** — a universal APK signed with the project's own upload key.
+
+**The two are not interchangeable.** Android refuses to install an app over a
+copy signed with a different key, so you cannot upgrade from the Play build to
+the APK build or back again. Switching channels means uninstalling first, which
+deletes the app's settings and catalogue cache. Downloaded books are unaffected
+— they live in the folder you chose, not in the app's private storage.
+
 ## Requirements
 
 - Android 10+ (API 29)

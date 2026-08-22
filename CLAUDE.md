@@ -13,7 +13,11 @@ from `Bash` fail silently or with confusing errors. Always use `PowerShell` inst
 
 # Repository
 
-Repository is local only, all development happens in the `master` branch. No merges / pushes needed.
+All development happens directly on `master` — no feature branches, no PRs.
+`origin` is `git@github.com:Grey-DeMonstr/opds_browser.git` and `master` is
+pushed to it: GitHub Actions verifies every push, and pushing a `vX.Y.Z` tag
+cuts a release. See
+`docs/superpowers/specs/2026-08-22-android-release-pipeline-design.md`.
 
 ## Commands
 
