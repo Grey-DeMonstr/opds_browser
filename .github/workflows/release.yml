@@ -98,8 +98,13 @@ jobs:
           keyPassword=$ANDROID_KEY_PASSWORD
           PROPS
 
-          if ! keytool -list -keystore "$KEYSTORE_PATH" -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null 2>&1; then
-            echo "::error::Keystore validation failed for alias $ANDROID_KEY_ALIAS; check ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD and ANDROID_KEY_ALIAS (a stray CR from how the secret was set can also cause this)"
+          # -certreq has to unlock the private key, so this single call checks
+          # all four signing secrets: the decoded file, the store password, the
+          # alias, and the key password. -list would validate everything except
+          # the key password, letting a wrong one surface 15 minutes later in
+          # Gradle instead of here. The CSR itself is discarded.
+          if ! keytool -certreq -keystore "$KEYSTORE_PATH" -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" -keypass "$ANDROID_KEY_PASSWORD" >/dev/null 2>&1; then
+            echo "::error::Keystore validation failed for alias $ANDROID_KEY_ALIAS; check ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD (a stray CR from how a secret was set can also cause this)"
             exit 1
           fi
 
