@@ -119,7 +119,7 @@ jobs:
       # since android/key.properties (cleartext keystore passwords) and the
       # decoded keystore also live in the workspace at this point.
       - name: Upload AAB artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: app-release-aab-${{ steps.version.outputs.tag }}
           path: build/app/outputs/bundle/release/app-release.aab
@@ -204,7 +204,10 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: monster.greyde.opds_browser
           releaseFiles: build/app/outputs/bundle/release/app-release.aab
-          track: internal
+          # `tracks` is comma-separated and replaces the deprecated `track`.
+          # Setting both is an error, and setting NEITHER silently defaults to
+          # production - so this line must never be dropped or misspelled.
+          tracks: internal
           status: completed
 
       - name: Remove signing material
