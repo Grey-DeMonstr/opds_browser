@@ -4,7 +4,7 @@ import '../../tool/check_version.dart';
 
 const _pubspecWithBuild = '''
 name: opds_browser
-description: "A new Flutter project."
+description: "Browse open OPDS catalogues and download ebooks"
 publish_to: 'none'
 version: 0.1.0+1
 
