@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:opds_browser/data/download_selection.dart';
 import 'package:opds_browser/data/folder_download_job.dart';
 import 'package:opds_browser/ui/providers.dart';
+import 'package:opds_browser/ui/theme.dart';
+import 'package:opds_browser/ui/widgets/filter_chip_bar.dart';
+import 'package:opds_browser/ui/widgets/nocturne_checkbox.dart';
 
 class FolderTreeScreen extends ConsumerWidget {
   const FolderTreeScreen({super.key});
@@ -19,7 +23,10 @@ class FolderTreeScreen extends ConsumerWidget {
   }
 }
 
-// ── Selection view ─────────────────────────────────────────────────────────────
+// ── Selection view ───────────────────────────────────────────
+
+/// Horizontal inset of the header and the bottom bar.
+const _gutter = 16.0;
 
 class _SelectionView extends ConsumerStatefulWidget {
   const _SelectionView({required this.state});
@@ -30,22 +37,23 @@ class _SelectionView extends ConsumerStatefulWidget {
 }
 
 class _SelectionViewState extends ConsumerState<_SelectionView> {
-  final Set<DownloadFolder> _collapsed = {};
+  /// Groups the reader has opened or closed by hand, by index. Anything not
+  /// named here follows the default: the first group open, the rest closed.
+  final Map<int, bool> _open = {};
 
-  void _toggleFolder(DownloadFolder folder) {
-    setState(() {
-      if (_collapsed.contains(folder)) {
-        _collapsed.remove(folder);
-      } else {
-        _collapsed.add(folder);
-      }
-    });
+  bool _isOpen(int index) => _open[index] ?? index == 0;
+
+  void _toggleGroup(int index) {
+    setState(() => _open[index] = !_isOpen(index));
   }
 
   @override
   Widget build(BuildContext context) {
     final state = widget.state;
     final notifier = ref.read(folderDownloadProvider.notifier);
+    final groups = buildSelectionGroups(state.root);
+    final checked = state.checkedBooks;
+    final allUrls = {for (final g in groups) ...g.urls};
 
     // Pop the screen only when state reaches FolderJobIdle (produced by
     // reset() or an idle guard). Transitioning to FolderJobDownloading must
@@ -56,8 +64,6 @@ class _SelectionViewState extends ConsumerState<_SelectionView> {
       }
     });
 
-    final rows = _flattenTree(state.root, 0, _collapsed);
-
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -67,40 +73,66 @@ class _SelectionViewState extends ConsumerState<_SelectionView> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(title: const Text('Select books')),
+        appBar: AppBar(
+          titleSpacing: 0,
+          title: _SelectionHeader(
+            rootTitle: switch (state.root) {
+              DownloadFolder(:final title) => title,
+              DownloadBook() => '',
+            },
+            groupCount: groups.length,
+            bookCount: allUrls.length,
+          ),
+        ),
         body: Column(
           children: [
             if (state.stoppedAtLimit)
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(_gutter, 0, _gutter, 8),
                 child: Text(
                   'Large catalogue — some content may not be shown'
                   ' (size limit reached).',
-                  style: TextStyle(color: Colors.orange),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
                 ),
               ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(_gutter, 0, _gutter, 12),
+              child: Row(
+                children: [
+                  NocturneChip(
+                    label: 'All',
+                    selected:
+                        checked.length == allUrls.length && allUrls.isNotEmpty,
+                    onTap: () => notifier.updateSelection(allUrls),
+                  ),
+                  const SizedBox(width: 7),
+                  NocturneChip(
+                    label: 'None',
+                    selected: checked.isEmpty,
+                    onTap: () => notifier.updateSelection(<Uri>{}),
+                  ),
+                ],
+              ),
+            ),
             Expanded(
               child: ListView.builder(
-                itemCount: rows.length,
-                itemBuilder: (context, i) {
-                  final (node, depth) = rows[i];
-                  return _TreeRow(
-                    node: node,
-                    depth: depth,
-                    checkedBooks: state.checkedBooks,
-                    onChanged: notifier.updateSelection,
-                    subtreeBooks: _collectBookUrls(node),
-                    isCollapsed:
-                        node is DownloadFolder && _collapsed.contains(node),
-                    onToggle: node is DownloadFolder
-                        ? () => _toggleFolder(node)
-                        : () {},
-                  );
-                },
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                itemCount: groups.length,
+                itemBuilder: (context, i) => _GroupCard(
+                  group: groups[i],
+                  checked: checked,
+                  isOpen: _isOpen(i),
+                  onToggleOpen: () => _toggleGroup(i),
+                  onChanged: notifier.updateSelection,
+                ),
               ),
             ),
             _SelectionBottomBar(
-              checkedBooks: state.checkedBooks,
+              checkedBooks: checked,
+              totalCount: allUrls.length,
               notifier: notifier,
             ),
           ],
@@ -110,116 +142,298 @@ class _SelectionViewState extends ConsumerState<_SelectionView> {
   }
 }
 
-// ── Tree row (selection mode) ──────────────────────────────────────────────────
-
-class _TreeRow extends StatelessWidget {
-  const _TreeRow({
-    required this.node,
-    required this.depth,
-    required this.checkedBooks,
-    required this.onChanged,
-    required this.subtreeBooks,
-    required this.isCollapsed,
-    required this.onToggle,
+/// The two-line header: what the screen is, and what was scanned.
+class _SelectionHeader extends StatelessWidget {
+  const _SelectionHeader({
+    required this.rootTitle,
+    required this.groupCount,
+    required this.bookCount,
   });
 
-  final DownloadTreeNode node;
-  final int depth;
-  final Set<Uri> checkedBooks;
-  final void Function(Set<Uri>) onChanged;
-  final Set<Uri> subtreeBooks;
-  final bool isCollapsed;
-  final VoidCallback onToggle;
+  final String rootTitle;
+  final int groupCount;
+  final int bookCount;
 
   @override
   Widget build(BuildContext context) {
-    final indent = depth * 16.0;
-    return switch (node) {
-      DownloadBook() => _buildBookRow(node as DownloadBook, indent),
-      DownloadFolder() => _buildFolderRow(node as DownloadFolder, indent),
-    };
-  }
+    final scheme = Theme.of(context).colorScheme;
+    final parts = [
+      if (rootTitle.isNotEmpty) rootTitle,
+      '$groupCount ${groupCount == 1 ? 'group' : 'groups'}',
+      '$bookCount ${bookCount == 1 ? 'book' : 'books'}',
+    ];
 
-  Widget _buildBookRow(DownloadBook book, double indent) {
-    final isChecked = checkedBooks.contains(book.link.url);
-    return Padding(
-      padding: EdgeInsets.only(left: indent),
-      child: CheckboxListTile(
-        value: isChecked,
-        title: Text(book.entry.title),
-        controlAffinity: ListTileControlAffinity.leading,
-        onChanged: (_) {
-          final updated = Set<Uri>.from(checkedBooks);
-          if (isChecked) {
-            updated.remove(book.link.url);
-          } else {
-            updated.add(book.link.url);
-          }
-          onChanged(updated);
-        },
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Select books',
+          style: TextStyle(fontSize: 20, height: 1.2, color: scheme.onSurface),
+        ),
+        Text(
+          parts.join(' · '),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 11.5,
+            height: 1.4,
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+      ],
     );
   }
+}
 
-  Widget _buildFolderRow(DownloadFolder folder, double indent) {
-    final bookCount = _countBooks(folder);
-    final checkedCount = subtreeBooks.intersection(checkedBooks).length;
-    final triState = checkedCount == 0
+/// One group of books, drawn as a card that opens and closes.
+class _GroupCard extends StatelessWidget {
+  const _GroupCard({
+    required this.group,
+    required this.checked,
+    required this.isOpen,
+    required this.onToggleOpen,
+    required this.onChanged,
+  });
+
+  final SelectionGroup group;
+  final Set<Uri> checked;
+  final bool isOpen;
+  final VoidCallback onToggleOpen;
+  final void Function(Set<Uri>) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final palette = appPaletteOf(context);
+    final urls = group.urls;
+    final selectedHere = urls.intersection(checked).length;
+    final groupValue = selectedHere == 0
         ? false
-        : checkedCount == subtreeBooks.length
+        : selectedHere == urls.length
         ? true
-        : null; // indeterminate
+        : null;
 
-    return Padding(
-      padding: EdgeInsets.only(left: indent),
-      child: ListTile(
-        leading: Icon(
-          isCollapsed ? Icons.keyboard_arrow_right : Icons.keyboard_arrow_down,
-        ),
-        title: Text(folder.title),
-        subtitle: Text('$bookCount book${bookCount == 1 ? '' : 's'}'),
-        trailing: Checkbox(
-          value: triState,
-          tristate: true,
-          onChanged: (_) {
-            final updated = Set<Uri>.from(checkedBooks);
-            if (triState == true || triState == null) {
-              updated.removeAll(subtreeBooks);
-            } else {
-              updated.addAll(subtreeBooks);
-            }
-            onChanged(updated);
-          },
-        ),
-        onTap: onToggle,
+    final meta = [
+      '${group.editionCount} '
+          '${group.editionCount == 1 ? 'book' : 'books'}',
+      if (selectedHere > 0 && selectedHere < urls.length)
+        '$selectedHere selected',
+    ].join(' · ');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        border: Border.all(color: palette.cardBorder),
+        borderRadius: const BorderRadius.all(Radius.circular(10)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: onToggleOpen,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 11, 4, 11),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isOpen
+                              ? Icons.keyboard_arrow_down
+                              : Icons.chevron_right,
+                          size: 16,
+                          color: palette.dim,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (group.title.isNotEmpty)
+                                Text(
+                                  group.title,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 14.5,
+                                    height: 1.3,
+                                    color: scheme.onSurface,
+                                  ),
+                                ),
+                              Text(
+                                meta,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  height: 1.4,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: NocturneCheckbox(
+                  value: groupValue,
+                  semanticLabel: group.title.isEmpty
+                      ? 'All books'
+                      : group.title,
+                  onTap: () {
+                    final updated = Set<Uri>.from(checked);
+                    if (groupValue == false) {
+                      updated.addAll(urls);
+                    } else {
+                      updated.removeAll(urls);
+                    }
+                    onChanged(updated);
+                  },
+                ),
+              ),
+            ],
+          ),
+          if (isOpen)
+            for (final book in group.books)
+              _BookRow(book: book, checked: checked, onChanged: onChanged),
+        ],
       ),
     );
   }
 }
 
-// ── Selection bottom bar ───────────────────────────────────────────────────────
+/// One book inside a card — one row however many editions it stands for.
+class _BookRow extends StatelessWidget {
+  const _BookRow({
+    required this.book,
+    required this.checked,
+    required this.onChanged,
+  });
+
+  final FoldedBook book;
+  final Set<Uri> checked;
+  final void Function(Set<Uri>) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final palette = appPaletteOf(context);
+    final isChecked = book.urls.every(checked.contains);
+
+    void toggle() {
+      final updated = Set<Uri>.from(checked);
+      if (isChecked) {
+        updated.removeAll(book.urls);
+      } else {
+        updated.addAll(book.urls);
+      }
+      onChanged(updated);
+    }
+
+    return InkWell(
+      onTap: toggle,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(28, 3, 12, 3),
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: palette.hairline)),
+        ),
+        child: Row(
+          children: [
+            NocturneCheckbox(
+              value: isChecked,
+              semanticLabel: book.title,
+              onTap: toggle,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    book.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      height: 1.3,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                  if (book.editionCount > 1)
+                    Text(
+                      '${book.editionCount} editions folded',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        height: 1.5,
+                        color: palette.dim,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Selection bottom bar ────────────────────────────────────────
 
 class _SelectionBottomBar extends StatelessWidget {
   const _SelectionBottomBar({
     required this.checkedBooks,
+    required this.totalCount,
     required this.notifier,
   });
 
   final Set<Uri> checkedBooks;
+  final int totalCount;
   final FolderDownloadNotifier notifier;
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: SizedBox(
-          width: double.infinity,
-          child: FilledButton(
-            onPressed: checkedBooks.isEmpty
-                ? null
-                : () => notifier.confirmDownload(checkedBooks),
-            child: Text('Download (${checkedBooks.length} books)'),
+    final scheme = Theme.of(context).colorScheme;
+    final palette = appPaletteOf(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        border: Border(top: BorderSide(color: palette.cardBorder)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(_gutter, 12, _gutter, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 9),
+                child: Text(
+                  'Selected ${checkedBooks.length} of $totalCount',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              OutlinedButton(
+                onPressed: checkedBooks.isEmpty
+                    ? null
+                    : () => notifier.confirmDownload(checkedBooks),
+                child: const Text('Download'),
+              ),
+            ],
           ),
         ),
       ),
@@ -243,17 +457,6 @@ List<(DownloadTreeNode, int)> _flattenTree(
       if (!collapsed.contains(node))
         ...node.children.expand((c) => _flattenTree(c, depth + 1, collapsed)),
     ],
-  };
-}
-
-/// Collects all descendant book URLs under [node].
-Set<Uri> _collectBookUrls(DownloadTreeNode node) {
-  return switch (node) {
-    DownloadBook() => {node.link.url},
-    DownloadFolder() => node.children.fold(
-      <Uri>{},
-      (acc, c) => acc..addAll(_collectBookUrls(c)),
-    ),
   };
 }
 

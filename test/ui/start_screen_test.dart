@@ -8,6 +8,7 @@ import 'package:opds_browser/domain/opds_client.dart';
 import 'package:opds_browser/domain/repositories.dart';
 import 'package:opds_browser/ui/providers.dart';
 import 'package:opds_browser/ui/start_screen.dart';
+import 'package:opds_browser/ui/theme.dart';
 
 // ── Fakes ──────────────────────────────────────────────────────────────────
 
@@ -128,9 +129,30 @@ Widget buildApp({
         FakeOpdsClient(probeResult: probeResult),
       ),
     ],
-    child: MaterialApp.router(routerConfig: router ?? _makeRouter()),
+    child: MaterialApp.router(
+      theme: buildLightTheme(),
+      darkTheme: buildDarkTheme(),
+      routerConfig: router ?? _makeRouter(),
+    ),
   );
 }
+
+// ── Fixtures ────────────────────────────────────────────────────────────────
+
+final _gutenberg = Catalog(
+  id: 1,
+  title: 'Project Gutenberg',
+  rootUrl: Uri.parse('https://gutenberg.org/opds'),
+  protocol: 'opds1',
+);
+
+final _science = Favorite(
+  id: 1,
+  catalogId: 1,
+  url: Uri.parse('https://gutenberg.org/opds/science'),
+  title: 'Science',
+  sortOrder: 0,
+);
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
@@ -198,7 +220,7 @@ void main() {
     await tester.pumpWidget(buildApp(catalogs: catalogs, favorites: []));
     await tester.pumpAndSettle();
 
-    expect(find.text('Favourites'), findsNothing);
+    expect(find.text('FAVOURITES'), findsNothing);
   });
 
   testWidgets('favorites section: shows when non-empty', (tester) async {
@@ -222,7 +244,7 @@ void main() {
     await tester.pumpWidget(buildApp(catalogs: catalogs, favorites: favorites));
     await tester.pumpAndSettle();
 
-    expect(find.text('Favourites'), findsOneWidget);
+    expect(find.text('FAVOURITES'), findsOneWidget);
     expect(find.text('Science'), findsOneWidget);
   });
 
@@ -516,5 +538,109 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(capturedUri, equals('/library'));
+  });
+
+  testWidgets('section labels are set in caps', (tester) async {
+    await tester.pumpWidget(
+      buildApp(catalogs: [_gutenberg], favorites: [_science]),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('FAVOURITES'), findsOneWidget);
+    expect(find.text('CATALOGUES'), findsOneWidget);
+  });
+
+  testWidgets('favourite row is marked with the first letter of its title', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildApp(catalogs: [_gutenberg], favorites: [_science]),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('favorite-1')),
+        matching: find.text('S'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('favourite mark uppercases a non-ASCII initial', (tester) async {
+    final favorite = Favorite(
+      id: 1,
+      catalogId: 1,
+      url: Uri.parse('https://gutenberg.org/opds/gromyko'),
+      title: 'émile zola',
+      sortOrder: 0,
+    );
+    await tester.pumpWidget(
+      buildApp(catalogs: [_gutenberg], favorites: [favorite]),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('favorite-1')),
+        matching: find.text('É'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('favourite row names its parent catalogue', (tester) async {
+    await tester.pumpWidget(
+      buildApp(catalogs: [_gutenberg], favorites: [_science]),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('favorite-1')),
+        matching: find.text('Project Gutenberg'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('catalogue row shows its URL without the scheme', (tester) async {
+    await tester.pumpWidget(buildApp(catalogs: [_gutenberg]));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('catalog-1')),
+        matching: find.text('gutenberg.org/opds'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('https://gutenberg.org/opds'), findsNothing);
+  });
+
+  testWidgets('catalogue row is marked with a feed icon', (tester) async {
+    await tester.pumpWidget(buildApp(catalogs: [_gutenberg]));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('catalog-1')),
+        matching: find.byIcon(Icons.rss_feed),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('add catalogue is an outlined action, not a Material FAB', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    expect(
+      find.widgetWithText(OutlinedButton, 'Add catalogue'),
+      findsOneWidget,
+    );
+    expect(find.byType(FloatingActionButton), findsNothing);
   });
 }

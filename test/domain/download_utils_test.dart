@@ -374,31 +374,32 @@ void main() {
     });
 
     test('decodes percent-encoded characters', () {
-      // series=%D0%92%D0%BE%D0%B9%D0%BD%D0%B0 → "Война"
-      final url = Uri.parse(
-        'http://example.com/feed?series=%D0%92%D0%BE%D0%B9%D0%BD%D0%B0',
-      );
-      expect(inferSeriesFromUrl(url), 'Война');
+      // series=Com%C3%A9die → "Comédie"
+      final url = Uri.parse('http://example.com/feed?series=Com%C3%A9die');
+      expect(inferSeriesFromUrl(url), 'Comédie');
     });
 
-    test('survives go-router encode/decode round-trip with Russian series', () {
-      // Reproduces the in-app navigation chain:
-      //   entry.url.toString()
-      //   → Uri.encodeComponent()      (NavigationEntryTile.onTap)
-      //   → embedded in '/browse?url=…' string
-      //   → Uri.parse(route).queryParameters['url']   (go_router / app.dart)
-      //   → Uri.parse(decodedString)
-      //   → inferSeriesFromUrl()
-      const rawUrlString =
-          'https://example.com/opds/author?author=%3DTest&series=%D0%9A%D0%BE%D1%81%D0%BC%D0%BE%D0%BE%D0%BB%D1%83%D1%85%D0%B8&genre=';
-      final originalUrl = Uri.parse(rawUrlString);
+    test(
+      'survives go-router encode/decode round-trip with a non-ASCII series',
+      () {
+        // Reproduces the in-app navigation chain:
+        //   entry.url.toString()
+        //   → Uri.encodeComponent()      (NavigationEntryTile.onTap)
+        //   → embedded in '/browse?url=…' string
+        //   → Uri.parse(route).queryParameters['url']   (go_router / app.dart)
+        //   → Uri.parse(decodedString)
+        //   → inferSeriesFromUrl()
+        const rawUrlString =
+            'https://example.com/opds/author?author=%3DTest&series=La%20Com%C3%A9die%20humaine&genre=';
+        final originalUrl = Uri.parse(rawUrlString);
 
-      final encodedParam = Uri.encodeComponent(originalUrl.toString());
-      final routeUrl = '/browse?catalogId=1&url=$encodedParam&title=test';
-      final decodedUrlString = Uri.parse(routeUrl).queryParameters['url']!;
-      final reconstructedUrl = Uri.parse(decodedUrlString);
+        final encodedParam = Uri.encodeComponent(originalUrl.toString());
+        final routeUrl = '/browse?catalogId=1&url=$encodedParam&title=test';
+        final decodedUrlString = Uri.parse(routeUrl).queryParameters['url']!;
+        final reconstructedUrl = Uri.parse(decodedUrlString);
 
-      expect(inferSeriesFromUrl(reconstructedUrl), 'Космоолухи');
-    });
+        expect(inferSeriesFromUrl(reconstructedUrl), 'La Comédie humaine');
+      },
+    );
   });
 }

@@ -1,9 +1,11 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opds_browser/app.dart';
 import 'package:opds_browser/domain/entities.dart';
 import 'package:opds_browser/domain/repositories.dart';
 import 'package:opds_browser/ui/providers.dart';
+import 'package:opds_browser/ui/theme.dart';
 
 // ── Fakes ──────────────────────────────────────────────────────────────────
 
@@ -104,4 +106,33 @@ void main() {
       expect(find.text('OPDS Browser'), findsOneWidget);
     },
   );
+
+  testWidgets('app themes: dark is Nocturne, light stays Material', (
+    tester,
+  ) async {
+    final notifier = _FakeSettingsNotifier(
+      settings: const AppSettings(
+        target: CustomSafFolder('content://example', 'Folder'),
+      ),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogRepositoryProvider.overrideWithValue(_FakeCatalogRepository()),
+          favoritesRepositoryProvider.overrideWithValue(
+            _FakeFavoritesRepository(),
+          ),
+          settingsProvider.overrideWith(() => notifier),
+        ],
+        child: const OpdsBrowserApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(app.darkTheme?.colorScheme.surface, const Color(0xFF161826));
+    expect(app.theme?.brightness, Brightness.light);
+    expect(app.darkTheme?.extension<AppPalette>(), isNotNull);
+    expect(app.theme?.extension<AppPalette>(), isNotNull);
+  });
 }

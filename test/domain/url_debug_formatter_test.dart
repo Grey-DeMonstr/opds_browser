@@ -20,10 +20,13 @@ void main() {
 
     test('decodes percent-encoded non-ASCII values', () {
       final url = Uri.parse(
-        'https://example.com/opds/series/%D0%9A%D0%BE%D1%81%D0%BC%D0%BE'
-        '%D0%BE%D0%BB%D1%83%D1%85%D0%B8?q=%D0%92%D0%BE%D0%B9%D0%BD%D0%B0%20%D0%B8',
+        'https://example.com/opds/series/La%20Com%C3%A9die%20humaine'
+        '?q=P%C3%A8re%20Goriot',
       );
-      expect(formatUrlForDebug(url), '/opds/series/Космоолухи\nq=Война и');
+      expect(
+        formatUrlForDebug(url),
+        '/opds/series/La Comédie humaine\nq=Père Goriot',
+      );
     });
 
     test('decodes + as space in query values', () {

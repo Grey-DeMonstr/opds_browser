@@ -6,6 +6,8 @@ import 'package:opds_browser/data/folder_download_job.dart';
 import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/ui/folder_tree_screen.dart';
 import 'package:opds_browser/ui/providers.dart';
+import 'package:opds_browser/ui/theme.dart';
+import 'package:opds_browser/ui/widgets/nocturne_checkbox.dart';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -26,6 +28,16 @@ DownloadBook _book(String id) => DownloadBook(
 
 DownloadFolder _folder(String title, List<DownloadTreeNode> children) =>
     DownloadFolder(title: title, children: children);
+
+/// A book with a chosen title, so several can share one title and fold.
+DownloadBook _edition(String title, String id) => DownloadBook(
+  entry: BookEntry(
+    title: title,
+    authors: const ['A'],
+    acquisitionLinks: [_link(id)],
+  ),
+  link: _link(id),
+);
 
 // Fake notifier that accepts initial state via constructor and records calls.
 class _FakeTreeNotifier extends FolderDownloadNotifier {
@@ -109,13 +121,21 @@ GoRouter _routerWithHome() => GoRouter(
 
 Widget _wrap(ProviderContainer container) => UncontrolledProviderScope(
   container: container,
-  child: MaterialApp.router(routerConfig: _router()),
+  child: MaterialApp.router(
+    theme: buildLightTheme(),
+    darkTheme: buildDarkTheme(),
+    routerConfig: _router(),
+  ),
 );
 
 /// Wraps with a two-level router so FolderTreeScreen can pop back to home.
 Widget _wrapPoppable(ProviderContainer container) => UncontrolledProviderScope(
   container: container,
-  child: MaterialApp.router(routerConfig: _routerWithHome()),
+  child: MaterialApp.router(
+    theme: buildLightTheme(),
+    darkTheme: buildDarkTheme(),
+    routerConfig: _routerWithHome(),
+  ),
 );
 
 Widget _wrapWithState(FolderJobState initial) => _wrap(_container(initial));
@@ -131,7 +151,7 @@ void main() {
       );
       await tester.pumpWidget(_wrap(c));
       expect(find.text('Book 1'), findsOneWidget);
-      expect(find.byType(Checkbox), findsOneWidget);
+      expect(find.byType(NocturneCheckbox), findsWidgets);
     });
 
     testWidgets('shows folder title with tri-state checkbox', (tester) async {
@@ -146,8 +166,8 @@ void main() {
       );
       await tester.pumpWidget(_wrap(c));
       expect(find.text('MyFolder'), findsOneWidget);
-      // 3 checkboxes: folder + 2 books
-      expect(find.byType(Checkbox), findsNWidgets(3));
+      // 3 boxes: the group plus its two books
+      expect(find.byType(NocturneCheckbox), findsNWidgets(3));
     });
 
     testWidgets('Download button shows book count', (tester) async {
@@ -160,8 +180,8 @@ void main() {
         ),
       );
       await tester.pumpWidget(_wrap(c));
-      expect(find.textContaining('2'), findsWidgets);
-      expect(find.textContaining('Download'), findsOneWidget);
+      expect(find.text('Selected 2 of 2'), findsOneWidget);
+      expect(find.widgetWithText(OutlinedButton, 'Download'), findsOneWidget);
     });
 
     testWidgets('Download button disabled when no books checked', (
@@ -172,7 +192,7 @@ void main() {
         FolderJobTreeReady(root: b1, checkedBooks: const {}),
       );
       await tester.pumpWidget(_wrap(c));
-      final button = tester.widget<FilledButton>(find.byType(FilledButton));
+      final button = tester.widget<OutlinedButton>(find.byType(OutlinedButton));
       expect(button.onPressed, isNull);
     });
 
@@ -182,7 +202,7 @@ void main() {
         FolderJobTreeReady(root: b1, checkedBooks: {b1.link.url}),
       );
       await tester.pumpWidget(_wrap(c));
-      await tester.tap(find.byType(Checkbox));
+      await tester.tap(find.byType(NocturneCheckbox).last);
       await tester.pump();
       final notifier =
           c.read(folderDownloadProvider.notifier) as _FakeTreeNotifier;
@@ -202,8 +222,8 @@ void main() {
         ),
       );
       await tester.pumpWidget(_wrap(c));
-      // First checkbox is the folder
-      await tester.tap(find.byType(Checkbox).first);
+      // The first box is the group's
+      await tester.tap(find.byType(NocturneCheckbox).first);
       await tester.pump();
       final notifier =
           c.read(folderDownloadProvider.notifier) as _FakeTreeNotifier;
@@ -218,8 +238,8 @@ void main() {
         FolderJobTreeReady(root: folder, checkedBooks: const {}),
       );
       await tester.pumpWidget(_wrap(c));
-      // First checkbox is the folder
-      await tester.tap(find.byType(Checkbox).first);
+      // The first box is the group's
+      await tester.tap(find.byType(NocturneCheckbox).first);
       await tester.pump();
       final notifier =
           c.read(folderDownloadProvider.notifier) as _FakeTreeNotifier;
@@ -234,7 +254,7 @@ void main() {
         FolderJobTreeReady(root: b1, checkedBooks: {b1.link.url}),
       );
       await tester.pumpWidget(_wrap(c));
-      await tester.tap(find.byType(FilledButton));
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Download'));
       await tester.pump();
       final notifier =
           c.read(folderDownloadProvider.notifier) as _FakeTreeNotifier;
@@ -250,11 +270,11 @@ void main() {
       );
       await tester.pumpWidget(_wrap(c));
 
-      // Verify we start in selection mode (FilledButton with Download label).
-      expect(find.textContaining('Download'), findsOneWidget);
+      // Verify we start in selection mode (outlined Download action).
+      expect(find.widgetWithText(OutlinedButton, 'Download'), findsOneWidget);
 
-      // Tap the Download button — fake notifier transitions to FolderJobDownloading.
-      await tester.tap(find.byType(FilledButton));
+      // Tap Download — the fake notifier moves to FolderJobDownloading.
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Download'));
       await tester.pump();
 
       // _DownloadView must be visible: it contains a LinearProgressIndicator
@@ -262,8 +282,8 @@ void main() {
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
       expect(find.text('Cancel'), findsOneWidget);
 
-      // Selection UI is gone — no checkbox, no Download button.
-      expect(find.byType(Checkbox), findsNothing);
+      // Selection UI is gone — no boxes, no Download button.
+      expect(find.byType(NocturneCheckbox), findsNothing);
     });
 
     test('notifier.reset() sets resetCalled flag', () {
@@ -300,13 +320,147 @@ void main() {
       expect(find.textContaining('limit'), findsOneWidget);
     });
 
+    testWidgets('repeated editions collapse into one row that says so', (
+      tester,
+    ) async {
+      final e1 = _edition('Great Expectations', '1');
+      final e2 = _edition('Great Expectations', '2');
+      final e3 = _edition('Great Expectations', '3');
+      final c = _container(
+        FolderJobTreeReady(
+          root: _folder('Barsetshire Chronicles', [e1, e2, e3]),
+          checkedBooks: const {},
+        ),
+      );
+      await tester.pumpWidget(_wrap(c));
+
+      expect(find.text('Great Expectations'), findsOneWidget);
+      expect(find.text('3 editions folded'), findsOneWidget);
+    });
+
+    testWidgets('a single edition says nothing about folding', (tester) async {
+      final c = _container(
+        FolderJobTreeReady(
+          root: _folder('F', [_edition('Oliver Twist', '1')]),
+          checkedBooks: const {},
+        ),
+      );
+      await tester.pumpWidget(_wrap(c));
+
+      expect(find.textContaining('folded'), findsNothing);
+    });
+
+    testWidgets('choosing a folded row chooses every edition under it', (
+      tester,
+    ) async {
+      final e1 = _edition('Great Expectations', '1');
+      final e2 = _edition('Great Expectations', '2');
+      final c = _container(
+        FolderJobTreeReady(
+          root: _folder('F', [e1, e2]),
+          checkedBooks: const {},
+        ),
+      );
+      await tester.pumpWidget(_wrap(c));
+
+      await tester.tap(find.byType(NocturneCheckbox).last);
+      await tester.pump();
+
+      final notifier =
+          c.read(folderDownloadProvider.notifier) as _FakeTreeNotifier;
+      expect(notifier.lastSelection, {e1.link.url, e2.link.url});
+    });
+
+    testWidgets('the header counts the groups and the books', (tester) async {
+      final c = _container(
+        FolderJobTreeReady(
+          root: _folder('Dickens, Charles', [
+            _folder('Series 1', [_book('1'), _book('2')]),
+            _folder('Series 2', [_book('3')]),
+          ]),
+          checkedBooks: const {},
+        ),
+      );
+      await tester.pumpWidget(_wrap(c));
+
+      expect(
+        find.text('Dickens, Charles · 2 groups · 3 books'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('"All" chooses every book, "None" clears them', (tester) async {
+      final b1 = _book('1');
+      final b2 = _book('2');
+      final c = _container(
+        FolderJobTreeReady(
+          root: _folder('F', [b1, b2]),
+          checkedBooks: const {},
+        ),
+      );
+      await tester.pumpWidget(_wrap(c));
+      final notifier =
+          c.read(folderDownloadProvider.notifier) as _FakeTreeNotifier;
+
+      await tester.tap(find.text('All'));
+      await tester.pump();
+      expect(notifier.lastSelection, {b1.link.url, b2.link.url});
+
+      await tester.tap(find.text('None'));
+      await tester.pump();
+      expect(notifier.lastSelection, isEmpty);
+    });
+
+    testWidgets('collapsing a group hides the books inside it', (tester) async {
+      final c = _container(
+        FolderJobTreeReady(
+          root: _folder('Series 1', [_book('1')]),
+          checkedBooks: const {},
+        ),
+      );
+      await tester.pumpWidget(_wrap(c));
+      expect(find.text('Book 1'), findsOneWidget);
+
+      await tester.tap(find.text('Series 1'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Book 1'), findsNothing);
+    });
+
+    testWidgets('only the first group starts open', (tester) async {
+      final c = _container(
+        FolderJobTreeReady(
+          root: _folder('root', [
+            _folder('Series 1', [_book('1')]),
+            _folder('Series 2', [_book('2')]),
+          ]),
+          checkedBooks: const {},
+        ),
+      );
+      await tester.pumpWidget(_wrap(c));
+
+      expect(find.text('Book 1'), findsOneWidget);
+      expect(find.text('Book 2'), findsNothing);
+    });
+
+    testWidgets('no size estimate is shown', (tester) async {
+      final b1 = _book('1');
+      final c = _container(
+        FolderJobTreeReady(root: b1, checkedBooks: {b1.link.url}),
+      );
+      await tester.pumpWidget(_wrap(c));
+
+      expect(find.textContaining('MB'), findsNothing);
+      expect(find.textContaining('≈'), findsNothing);
+    });
+
     testWidgets('non-TreeReady state shows fallback (not selection UI)', (
       tester,
     ) async {
       final c = _container(const FolderJobIdle());
       await tester.pumpWidget(_wrap(c));
       // No Download button shown in non-selection mode
-      expect(find.byType(FilledButton), findsNothing);
+      expect(find.byType(OutlinedButton), findsNothing);
     });
   });
 
@@ -412,10 +566,10 @@ void main() {
       expect(notifier.cancelCalled, isTrue);
     });
 
-    testWidgets('checkboxes are hidden in download mode', (tester) async {
+    testWidgets('boxes are hidden in download mode', (tester) async {
       final b = _book('1');
       await tester.pumpWidget(_wrapWithState(downloadState(root: b, total: 1)));
-      expect(find.byType(Checkbox), findsNothing);
+      expect(find.byType(NocturneCheckbox), findsNothing);
     });
   });
 

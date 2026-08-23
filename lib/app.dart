@@ -9,6 +9,7 @@ import 'package:opds_browser/ui/setup_screen.dart';
 import 'package:opds_browser/ui/settings_screen.dart';
 import 'package:opds_browser/ui/start_screen.dart';
 import 'package:opds_browser/ui/providers.dart';
+import 'package:opds_browser/ui/theme.dart';
 
 class OpdsBrowserApp extends ConsumerStatefulWidget {
   const OpdsBrowserApp({super.key});
@@ -52,6 +53,7 @@ class _OpdsBrowserAppState extends ConsumerState<OpdsBrowserApp> {
               catalogId: int.parse(params['catalogId']!),
               url: Uri.parse(params['url']!),
               navTitle: params['title'],
+              navSubtitle: params['subtitle'],
               inferredSeries: params['series'],
             );
           },
@@ -87,16 +89,8 @@ class _OpdsBrowserAppState extends ConsumerState<OpdsBrowserApp> {
     return MaterialApp.router(
       title: 'OPDS Browser',
       routerConfig: _router,
-      theme: ThemeData(
-        colorSchemeSeed: Colors.indigo,
-        brightness: Brightness.light,
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        colorSchemeSeed: Colors.indigo,
-        brightness: Brightness.dark,
-        useMaterial3: true,
-      ),
+      theme: buildLightTheme(),
+      darkTheme: buildDarkTheme(),
     );
   }
 }

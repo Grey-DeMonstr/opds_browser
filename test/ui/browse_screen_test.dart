@@ -13,6 +13,7 @@ import 'package:opds_browser/domain/repositories.dart';
 import 'package:opds_browser/ui/book_details_sheet.dart';
 import 'package:opds_browser/ui/browse_screen.dart';
 import 'package:opds_browser/ui/providers.dart';
+import 'package:opds_browser/ui/theme.dart';
 
 // ── Fakes ────────────────────────────────────────────────────────────────────
 
@@ -129,6 +130,8 @@ Widget buildApp({
   CachedFeed? refreshFeed,
   int catalogId = 1,
   Uri? url,
+  String? navTitle,
+  String? navSubtitle,
   void Function(GoRouterState)? onBrowse,
   FolderJobState folderJobState = const FolderJobIdle(),
 }) {
@@ -142,8 +145,12 @@ Widget buildApp({
     routes: [
       GoRoute(
         path: '/',
-        builder: (_, _) =>
-            BrowseScreen(catalogId: catalogId, url: url ?? _feedUrl),
+        builder: (_, _) => BrowseScreen(
+          catalogId: catalogId,
+          url: url ?? _feedUrl,
+          navTitle: navTitle,
+          navSubtitle: navSubtitle,
+        ),
       ),
       GoRoute(
         path: '/browse',
@@ -160,7 +167,11 @@ Widget buildApp({
       favoritesRepositoryProvider.overrideWithValue(favRepo),
       folderDownloadProvider.overrideWith(() => _FolderJobStub(folderJobState)),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      theme: buildLightTheme(),
+      darkTheme: buildDarkTheme(),
+      routerConfig: router,
+    ),
   );
 }
 
@@ -190,7 +201,11 @@ Widget buildAppWithDownload({
       ),
       downloadStorageProvider.overrideWith((ref) => null),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      theme: buildLightTheme(),
+      darkTheme: buildDarkTheme(),
+      routerConfig: router,
+    ),
   );
 }
 
@@ -205,14 +220,34 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 
-  testWidgets('shows "Updated: X ago" subtitle', (tester) async {
-    // fetchedAt = 2026-06-13 10:00:00; formatRelativeTime is pure so
-    // we verify the subtitle widget exists (exact string may vary by clock).
+  testWidgets('header names the folder that led here', (tester) async {
+    await tester.pumpWidget(
+      buildApp(
+        feed: makeFeed(title: 'Authors'),
+        navTitle: 'DI~',
+        navSubtitle: '2515 authors',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('DI~ · 2515 authors'), findsOneWidget);
+  });
+
+  testWidgets('header carries no context line at the root of a catalogue', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp(feed: makeFeed(title: 'Authors')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Authors'), findsOneWidget);
+    expect(find.textContaining(' · '), findsNothing);
+  });
+
+  testWidgets('the fetch time is gone from the header', (tester) async {
     await tester.pumpWidget(buildApp(feed: makeFeed()));
     await tester.pumpAndSettle();
 
-    // The subtitle is a Text inside the AppBar Column — check for "ago"
-    expect(find.textContaining('ago'), findsOneWidget);
+    expect(find.textContaining('ago'), findsNothing);
   });
 
   testWidgets('entry list is inset above the system navigation bar', (
@@ -263,7 +298,11 @@ void main() {
             FakeFavoritesRepository(),
           ),
         ],
-        child: MaterialApp.router(routerConfig: router),
+        child: MaterialApp.router(
+          theme: buildLightTheme(),
+          darkTheme: buildDarkTheme(),
+          routerConfig: router,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -272,13 +311,173 @@ void main() {
     expect(find.widgetWithText(TextButton, 'Retry'), findsOneWidget);
   });
 
-  testWidgets('navigation entry renders folder icon and title', (tester) async {
+  testWidgets('navigation entry renders its title with no folder icon', (
+    tester,
+  ) async {
     final feed = makeFeed(entries: [navEntry(title: 'Sub Folder')]);
     await tester.pumpWidget(buildApp(feed: feed));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.folder), findsOneWidget);
     expect(find.text('Sub Folder'), findsOneWidget);
+    expect(find.byIcon(Icons.folder), findsNothing);
+  });
+
+  testWidgets('a navigation subtitle reads as one phrase', (tester) async {
+    final feed = makeFeed(
+      entries: [navEntry(title: 'DIC~', subtitle: '930 authors')],
+    );
+    await tester.pumpWidget(buildApp(feed: feed));
+    await tester.pumpAndSettle();
+
+    expect(find.text('930 authors'), findsOneWidget);
+  });
+
+  testWidgets('a navigation subtitle sits on its own line under the title', (
+    tester,
+  ) async {
+    final feed = makeFeed(
+      entries: [
+        navEntry(
+          title: 'Series: The Warden',
+          subtitle: '1 book by this author',
+        ),
+      ],
+    );
+    await tester.pumpWidget(buildApp(feed: feed));
+    await tester.pumpAndSettle();
+
+    final title = tester.getRect(find.text('Series: The Warden'));
+    final meta = tester.getRect(find.text('1 book by this author'));
+
+    expect(meta.top, greaterThanOrEqualTo(title.bottom));
+    expect(meta.left, closeTo(title.left, 0.5));
+  });
+
+  testWidgets('a long subtitle is laid out full width, not in a column', (
+    tester,
+  ) async {
+    // Regression: the unit used to live in a fixed 52px column, so anything
+    // longer than "books" was ellipsised down to "книга п…".
+    final feed = makeFeed(
+      entries: [navEntry(title: 'DIC~', subtitle: '25 books by this author')],
+    );
+    await tester.pumpWidget(buildApp(feed: feed));
+    await tester.pumpAndSettle();
+
+    final row = tester.getRect(find.byType(CustomScrollView));
+    final meta = tester.getRect(find.text('25 books by this author'));
+
+    expect(meta.width, greaterThan(52));
+    expect(meta.right, lessThanOrEqualTo(row.right));
+  });
+
+  testWidgets('a subtitle with no count is shown whole', (tester) async {
+    // Book rows carry the author as their subtitle — no leading number, so
+    // the whole name used to be squeezed into the count column.
+    final feed = makeFeed(
+      entries: [navEntry(title: 'Vera (fb2)', subtitle: 'Dickens, Charles')],
+    );
+    await tester.pumpWidget(buildApp(feed: feed));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Dickens, Charles'), findsOneWidget);
+    expect(
+      tester.getSize(find.text('Dickens, Charles')).width,
+      greaterThan(52),
+    );
+  });
+
+  testWidgets('a prefix bucket is set apart from a real entry', (tester) async {
+    final feed = makeFeed(
+      entries: [
+        navEntry(title: 'DIC~', url: 'http://example.com/a'),
+        navEntry(title: 'Dickens, Charles', url: 'http://example.com/b'),
+      ],
+    );
+    await tester.pumpWidget(buildApp(feed: feed));
+    await tester.pumpAndSettle();
+
+    final palette = buildLightTheme().extension<AppPalette>()!;
+    expect(
+      tester.widget<Text>(find.text('DIC~')).style?.color,
+      palette.bucketLabel,
+    );
+    expect(
+      tester.widget<Text>(find.text('Dickens, Charles')).style?.color,
+      isNot(palette.bucketLabel),
+    );
+  });
+
+  testWidgets('"Entries only" hides the prefix buckets', (tester) async {
+    final feed = makeFeed(
+      entries: [
+        navEntry(title: 'DIC~', url: 'http://example.com/a'),
+        navEntry(title: 'Dickens, Charles', url: 'http://example.com/b'),
+      ],
+    );
+    await tester.pumpWidget(buildApp(feed: feed));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Entries only'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('DIC~'), findsNothing);
+    expect(find.text('Dickens, Charles'), findsOneWidget);
+  });
+
+  testWidgets('"All" brings the hidden buckets back', (tester) async {
+    final feed = makeFeed(entries: [navEntry(title: 'DIC~')]);
+    await tester.pumpWidget(buildApp(feed: feed));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Entries only'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('All'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('DIC~'), findsOneWidget);
+  });
+
+  testWidgets('Search opens a field that narrows the list', (tester) async {
+    final feed = makeFeed(
+      entries: [
+        navEntry(title: 'Dickens, Charles', url: 'http://example.com/a'),
+        navEntry(title: 'Trollope, Anthony', url: 'http://example.com/b'),
+      ],
+    );
+    await tester.pumpWidget(buildApp(feed: feed));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Search'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'dickens');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Dickens, Charles'), findsOneWidget);
+    expect(find.text('Trollope, Anthony'), findsNothing);
+  });
+
+  testWidgets('closing Search clears the query and restores the list', (
+    tester,
+  ) async {
+    final feed = makeFeed(
+      entries: [
+        navEntry(title: 'Dickens, Charles', url: 'http://example.com/a'),
+        navEntry(title: 'Trollope, Anthony', url: 'http://example.com/b'),
+      ],
+    );
+    await tester.pumpWidget(buildApp(feed: feed));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Search'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'dickens');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Search'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('Trollope, Anthony'), findsOneWidget);
   });
 
   testWidgets('navigation entry renders subtitle when present', (tester) async {
@@ -366,8 +565,6 @@ void main() {
     await tester.pumpWidget(buildApp(feed: feed));
     await tester.pumpAndSettle();
 
-    final tiles = tester.widgetList(find.byType(ListTile)).toList();
-    expect(tiles.length, 3);
     // Folder A first, Book B second, Folder C third — verify by text position.
     final folderA = tester.getTopLeft(find.text('Folder A'));
     final bookB = tester.getTopLeft(find.text('Book B'));
@@ -398,7 +595,11 @@ void main() {
             FakeFavoritesRepository(),
           ),
         ],
-        child: MaterialApp.router(routerConfig: router),
+        child: MaterialApp.router(
+          theme: buildLightTheme(),
+          darkTheme: buildDarkTheme(),
+          routerConfig: router,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -484,7 +685,11 @@ void main() {
           feedRepositoryProvider.overrideWithValue(feedRepo),
           favoritesRepositoryProvider.overrideWithValue(favRepo),
         ],
-        child: MaterialApp.router(routerConfig: router),
+        child: MaterialApp.router(
+          theme: buildLightTheme(),
+          darkTheme: buildDarkTheme(),
+          routerConfig: router,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -566,7 +771,11 @@ void main() {
             () => _FolderJobStub(const FolderJobIdle()),
           ),
         ],
-        child: MaterialApp.router(routerConfig: router),
+        child: MaterialApp.router(
+          theme: buildLightTheme(),
+          darkTheme: buildDarkTheme(),
+          routerConfig: router,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -603,7 +812,11 @@ void main() {
             () => _FolderJobStub(const FolderJobIdle()),
           ),
         ],
-        child: MaterialApp.router(routerConfig: router),
+        child: MaterialApp.router(
+          theme: buildLightTheme(),
+          darkTheme: buildDarkTheme(),
+          routerConfig: router,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -648,7 +861,11 @@ void main() {
               () => _FolderJobStub(const FolderJobIdle()),
             ),
           ],
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            theme: buildLightTheme(),
+            darkTheme: buildDarkTheme(),
+            routerConfig: router,
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -813,7 +1030,11 @@ void main() {
               () => _FolderJobStub(const FolderJobIdle()),
             ),
           ],
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            theme: buildLightTheme(),
+            darkTheme: buildDarkTheme(),
+            routerConfig: router,
+          ),
         ),
       );
       await tester.pumpAndSettle();
