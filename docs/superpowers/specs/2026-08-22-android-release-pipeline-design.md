@@ -7,7 +7,7 @@ Date: 2026-08-22
 Ship signed OPDS Browser releases from GitHub Actions to two channels:
 
 - **GitHub Releases** — a universal APK for sideloading.
-- **Google Play** — an AAB on the internal testing track.
+- **Google Play** — an AAB on the closed testing track.
 
 A release is cut by pushing a `vX.Y.Z` tag. Everything after that is automated,
 except the manual steps Play does not expose through its API.
@@ -19,7 +19,7 @@ except the manual steps Play does not expose through its API.
 | Version source of truth | `pubspec.yaml` `version:` field — no separate VERSION file |
 | Build number | `git rev-list --count HEAD` (commit count on `master`) |
 | Release trigger | Push of a `vX.Y.Z` tag |
-| Play track | `internal`; promotion to closed/production is manual |
+| Play track | `alpha` (Closed testing); promotion to production is manual |
 | App signing key | Google-generated (standard Play App Signing) |
 | Cross-channel upgrades | **Deliberately unsupported** — see Consequences |
 | Privacy policy hosting | `PRIVACY.md` in this repo, served from github.com |
@@ -127,7 +127,7 @@ Triggers on `push: tags: ['v*']`. Needs `permissions: contents: write`.
    the commit range since the previous tag (the repo uses conventional commits).
    For the first release there is no previous tag, so the range falls back to the
    full history.
-9. Upload the AAB to Play, internal track
+9. Upload the AAB to Play, closed testing track
 
 Two `flutter build` invocations roughly 1.5–2x the build time versus one. The
 alternative — extracting a universal APK from the AAB with `bundletool` — needs
@@ -255,10 +255,10 @@ Play will not publish until these are done by hand in the Console:
    `feature-graphic-1024x500.png`, and at least two phone screenshots.
 The developer account predates Nov 2023, so the 12-testers-for-14-days closed
 testing requirement does not apply and production access is available
-immediately. The internal track is still the CI target by choice, not by
-constraint: it publishes instantly with no review wait, and it keeps the
-decision to expose a build to real users a deliberate, human one made in the
-Console.
+immediately. Closed testing (API track name `alpha`) is the CI target. Unlike
+the internal track it is subject to Google review, so a tag reaches testers
+after a review wait rather than instantly. Promotion to production stays a
+manual, human decision in the Console.
 
 ## Consequences
 
