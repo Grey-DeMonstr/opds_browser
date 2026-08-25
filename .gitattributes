@@ -1,0 +1,32 @@
+# Line endings
+#
+# Text files are stored and checked out as LF whatever a contributor's
+# core.autocrlf is set to. Development is Windows-native, and tools that follow
+# a file's existing endings — dart format defaults to --line-ending auto —
+# keep spreading CRLF once anything introduces it.
+* text=auto eol=lf
+
+# cmd.exe can misparse an LF-only batch file. android/gradlew.bat is ignored,
+# so this only covers anything added later.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets: launcher icons, Play listing artwork, the bundled Inter faces.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.ico  binary
+*.ttf  binary
+*.otf  binary
+
+# GitHub language statistics
+#
+# The Windows desktop runner is flutter create scaffolding, kept so the app can
+# be run on the development machine. The app itself is Android-only, and
+# without this GitHub reports it as part C++.
+windows/flutter/**     linguist-generated=true
+windows/runner/**      linguist-vendored=true
+windows/CMakeLists.txt linguist-vendored=true
+
+# Written by flutter pub get.
+pubspec.lock linguist-generated=true
