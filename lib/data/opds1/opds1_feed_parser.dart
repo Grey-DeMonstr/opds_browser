@@ -242,6 +242,20 @@ class Opds1FeedParser implements OpdsFeedParser {
         : null;
     final summary = (summaryText?.isEmpty ?? true) ? null : summaryText;
 
+    final contentEl = entry.childElements
+        .where((e) => e.localName == 'content')
+        .firstOrNull;
+    final contentHtml = contentEl != null ? _contentMarkup(contentEl) : null;
+
+    final categories = entry.childElements
+        .where((e) => e.localName == 'category')
+        .map(
+          (e) =>
+              (e.getAttribute('label') ?? e.getAttribute('term') ?? '').trim(),
+        )
+        .where((c) => c.isNotEmpty)
+        .toList();
+
     // Cover: prefer thumbnail, fall back to full image.
     Uri? coverUrl;
     final thumbLink = links
@@ -287,9 +301,29 @@ class Opds1FeedParser implements OpdsFeedParser {
       series: series,
       seriesIndex: seriesIndex,
       summary: summary?.isEmpty == true ? null : summary,
+      contentHtml: contentHtml,
+      categories: categories,
       coverUrl: coverUrl,
       acquisitionLinks: acquisitionLinks,
     );
+  }
+
+  /// The description's markup, or null when the feed sent plain text.
+  ///
+  /// Atom carries it two ways and the `type` attribute is the only thing that
+  /// says which: `xhtml` nests real child elements, so the markup is the
+  /// element's inner XML; `html`/`text/html` escapes the markup into a text
+  /// node, so unescaping it *is* the markup. Anything else is prose, and
+  /// belongs to `summary` alone.
+  String? _contentMarkup(XmlElement content) {
+    final type = (content.getAttribute('type') ?? 'text').toLowerCase();
+    final markup = switch (type) {
+      'xhtml' || 'application/xhtml+xml' => content.innerXml,
+      'html' || 'text/html' => content.innerText,
+      _ => null,
+    };
+    final trimmed = markup?.trim();
+    return (trimmed?.isEmpty ?? true) ? null : trimmed;
   }
 
   NavigationEntry _parseNavEntry(

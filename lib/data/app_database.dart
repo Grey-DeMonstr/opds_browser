@@ -27,7 +27,7 @@ class AppDatabase {
     return _factory.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 2,
+        version: 3,
         onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
         onCreate: (db, _) async {
           await _createV1Schema(db);
@@ -36,6 +36,11 @@ class AppDatabase {
         },
         onUpgrade: (db, oldVersion, newVersion) async {
           if (oldVersion < 2) await _createV2Schema(db);
+          // v3 widened what a cached entry holds — categories and the
+          // description's own markup. Rows written by v2 carry neither, and
+          // nothing in them says so, so a book page built from one would be
+          // quietly bare. They cost a single re-fetch to replace.
+          if (oldVersion < 3) await db.delete('feed_cache');
         },
       ),
     );

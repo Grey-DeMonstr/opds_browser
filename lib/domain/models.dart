@@ -69,7 +69,17 @@ class BookEntry extends FeedEntry {
   final List<String> authors;
   final String? series;
   final double? seriesIndex;
+
+  /// The description as plain text — what list rows show.
   final String? summary;
+
+  /// The description as the feed's own markup, when it sent markup at all.
+  /// Kept unparsed: the book page splits it, nothing else needs it, and
+  /// splitting every entry of a 200-book feed up front would be wasted work.
+  final String? contentHtml;
+
+  /// `category/@label`, falling back to `@term`.
+  final List<String> categories;
   final Uri? coverUrl;
   final List<AcquisitionLink> acquisitionLinks;
 
@@ -79,6 +89,8 @@ class BookEntry extends FeedEntry {
     this.series,
     this.seriesIndex,
     this.summary,
+    this.contentHtml,
+    this.categories = const [],
     this.coverUrl,
     required this.acquisitionLinks,
   });
@@ -91,6 +103,8 @@ class BookEntry extends FeedEntry {
     if (series != null) 'series': series,
     if (seriesIndex != null) 'seriesIndex': seriesIndex,
     if (summary != null) 'summary': summary,
+    if (contentHtml != null) 'contentHtml': contentHtml,
+    if (categories.isNotEmpty) 'categories': categories,
     if (coverUrl != null) 'coverUrl': coverUrl.toString(),
     'acquisitionLinks': acquisitionLinks.map((l) => l.toJson()).toList(),
   };
@@ -103,6 +117,12 @@ class BookEntry extends FeedEntry {
     series: json['series'] as String?,
     seriesIndex: (json['seriesIndex'] as num?)?.toDouble(),
     summary: json['summary'] as String?,
+    contentHtml: json['contentHtml'] as String?,
+    categories:
+        (json['categories'] as List<dynamic>?)
+            ?.map((e) => e as String)
+            .toList() ??
+        const [],
     coverUrl: json['coverUrl'] != null
         ? Uri.parse(json['coverUrl'] as String)
         : null,

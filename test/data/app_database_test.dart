@@ -122,4 +122,84 @@ void main() {
       expect(rows, hasLength(seeded));
     });
   });
+
+  group('AppDatabase upgrade from v2', () {
+    /// Builds a database as version 2 left it: the schema without the feed
+    /// entry fields the book page needs, holding one cached feed.
+    Future<String> makeV2Database() async {
+      final dir = Directory.systemTemp.createTempSync('opds_v2_test');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final path = join(dir.path, 'v2.db');
+
+      final db = await databaseFactoryFfi.openDatabase(
+        path,
+        options: OpenDatabaseOptions(
+          version: 2,
+          onCreate: (d, _) async {
+            await d.execute('''
+              CREATE TABLE catalogs (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                title      TEXT    NOT NULL,
+                root_url   TEXT    NOT NULL,
+                protocol   TEXT    NOT NULL DEFAULT 'opds1',
+                created_at INTEGER NOT NULL
+              )
+            ''');
+            await d.execute('''
+              CREATE TABLE feed_cache (
+                catalog_id INTEGER NOT NULL REFERENCES catalogs(id) ON DELETE CASCADE,
+                url        TEXT    NOT NULL,
+                feed_json  TEXT    NOT NULL,
+                fetched_at INTEGER NOT NULL,
+                PRIMARY KEY (catalog_id, url)
+              )
+            ''');
+          },
+        ),
+      );
+      final catalogId = await db.insert('catalogs', {
+        'title': 'Existing',
+        'root_url': 'https://example.com/opds',
+        'protocol': 'opds1',
+        'created_at': 0,
+      });
+      await db.insert('feed_cache', {
+        'catalog_id': catalogId,
+        'url': 'https://example.com/opds',
+        'feed_json': '{"title":"stale","entries":[]}',
+        'fetched_at': 0,
+      });
+      await db.close();
+      return path;
+    }
+
+    test('feeds cached before the upgrade are dropped', () async {
+      final path = await makeV2Database();
+      final db = AppDatabase(factory: databaseFactoryFfi, path: path);
+      addTearDown(db.close);
+
+      // Entries cached by v2 carry no categories and no content markup, so a
+      // book page built from them would be silently bare. Dropping them costs
+      // one re-fetch and is invisible.
+      expect(await (await db.database).query('feed_cache'), isEmpty);
+    });
+
+    test('the upgrade keeps the catalogues the user added', () async {
+      final path = await makeV2Database();
+      final db = AppDatabase(factory: databaseFactoryFfi, path: path);
+      addTearDown(db.close);
+
+      final rows = await (await db.database).query('catalogs');
+      expect(rows.map((r) => r['title']), ['Existing']);
+    });
+
+    test('the upgrade does not seed the default catalogues', () async {
+      final path = await makeV2Database();
+      final db = AppDatabase(factory: databaseFactoryFfi, path: path);
+      addTearDown(db.close);
+
+      final rows = await (await db.database).query('catalogs');
+      expect(rows.map((r) => r['title']), isNot(contains('Project Gutenberg')));
+    });
+  });
 }

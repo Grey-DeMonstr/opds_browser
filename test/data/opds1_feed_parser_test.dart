@@ -295,6 +295,70 @@ void main() {
       });
     });
 
+    group('categories and raw content', () {
+      test('category labels become tags, falling back to term', () {
+        final feed = parser.parse(
+          File('test/fixtures/content_summary.xml').readAsBytesSync(),
+          base,
+        );
+        final book = feed.entries[1] as BookEntry;
+        expect(book.categories, ['Whaling', 'Sea stories']);
+      });
+
+      test('an entry with no categories carries an empty list', () {
+        final feed = parser.parse(
+          File('test/fixtures/content_summary.xml').readAsBytesSync(),
+          base,
+        );
+        expect((feed.entries[3] as BookEntry).categories, isEmpty);
+      });
+
+      test('xhtml content is kept as markup, not flattened to text', () {
+        final feed = parser.parse(
+          File('test/fixtures/content_summary.xml').readAsBytesSync(),
+          base,
+        );
+        final book = feed.entries[1] as BookEntry;
+        expect(book.contentHtml, contains('<p>This edition has images.</p>'));
+      });
+
+      test('escaped text/html content is unescaped into markup', () {
+        final feed = parser.parse(
+          File('test/fixtures/single_book_entry.xml').readAsBytesSync(),
+          base,
+        );
+        final book = feed.entries.single as BookEntry;
+        expect(book.contentHtml, contains('<h2>Fb2 инфо</h2>'));
+        expect(book.contentHtml, contains('<image l:href="#juf.png"/>'));
+      });
+
+      test('plain-text content is left to summary, with no markup', () {
+        final feed = parser.parse(
+          File('test/fixtures/book_multi_format_fb2.xml').readAsBytesSync(),
+          base,
+        );
+        final book = feed.entries.single as BookEntry;
+        expect(book.contentHtml, isNull);
+        expect(book.summary, 'A book available in multiple formats.');
+      });
+
+      test('the real example.org entry parses end to end', () {
+        final feed = parser.parse(
+          File('test/fixtures/single_book_entry.xml').readAsBytesSync(),
+          base,
+        );
+        final book = feed.entries.single as BookEntry;
+        expect(book.title, 'Профессия: ведьма');
+        expect(book.authors, ['Громыко Ольга']);
+        expect(book.categories, ['Юмористическая фантастика', 'Фэнтези']);
+        expect(book.acquisitionLinks.map((l) => l.formatLabel), [
+          'FB2.ZIP',
+          'FB2',
+        ]);
+        expect(book.coverUrl, isNotNull);
+      });
+    });
+
     test('mixed feed — entries in feed order, nav and book interleaved', () {
       final bytes = File('test/fixtures/mixed_feed.xml').readAsBytesSync();
       final feed = parser.parse(bytes, base);

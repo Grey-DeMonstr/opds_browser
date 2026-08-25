@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,7 @@ import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/domain/repositories.dart';
 import 'package:opds_browser/ui/book_details_sheet.dart';
 import 'package:opds_browser/ui/providers.dart';
+import 'package:opds_browser/ui/theme.dart';
 
 // ── Fake storage ──────────────────────────────────────────────────────────────
 
@@ -65,6 +67,8 @@ Widget _buildApp({
       ),
     ],
     child: MaterialApp(
+      theme: buildLightTheme(),
+      darkTheme: buildDarkTheme(),
       home: Scaffold(body: BookDetailsSheet(entry: entry)),
     ),
   );
@@ -86,6 +90,8 @@ Widget _openInModalSheet({required BookEntry entry, required Size screenSize}) {
         ),
       ],
       child: MaterialApp(
+        theme: buildLightTheme(),
+        darkTheme: buildDarkTheme(),
         home: Scaffold(
           body: Builder(
             builder: (context) => TextButton(
@@ -130,6 +136,8 @@ void main() {
               ),
             ],
             child: MaterialApp(
+              theme: buildLightTheme(),
+              darkTheme: buildDarkTheme(),
               home: Scaffold(
                 body: Builder(
                   builder: (context) => TextButton(
@@ -177,7 +185,9 @@ void main() {
       expect(find.text('A great summary.'), findsOneWidget);
     });
 
-    testWidgets('a long summary is shown whole, never clipped', (tester) async {
+    testWidgets('a long summary is reachable in full behind Show more', (
+      tester,
+    ) async {
       final longSummary = List.generate(
         60,
         (i) => 'Sentence number $i about the whale.',
@@ -197,9 +207,17 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final text = tester.widget<Text>(find.text(longSummary));
+      // Turn 4 clamps it; Show more is what makes the whole text available.
+      expect(
+        tester.widget<Text>(find.byKey(const Key('book-blurb'))).maxLines,
+        6,
+      );
+      await tester.tap(find.text('Show more'));
+      await tester.pumpAndSettle();
+
+      final text = tester.widget<Text>(find.byKey(const Key('book-blurb')));
       expect(text.maxLines, isNull);
-      expect(text.overflow, anyOf(isNull, TextOverflow.clip));
+      expect(text.data, longSummary);
     });
 
     testWidgets('a long summary does not push the actions out of reach', (
@@ -226,7 +244,7 @@ void main() {
       // summary — the Download button and the format list — stays reachable.
       await tester.scrollUntilVisible(find.text('MOBI'), 200);
       expect(find.text('MOBI'), findsOneWidget);
-      expect(find.widgetWithText(ElevatedButton, 'Download'), findsOneWidget);
+      expect(find.text('Download EPUB'), findsOneWidget);
     });
 
     testWidgets('the panel is swipable, with a drag handle', (tester) async {
@@ -263,12 +281,134 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.book), findsWidgets);
+      expect(find.byIcon(Icons.book_outlined), findsWidgets);
     });
   });
 
-  group('Download button — direct download (FB2.ZIP present)', () {
-    testWidgets('tapping Download starts download without showing picker', (
+  group('Header — from Atom fields', () {
+    testWidgets('categories render as tags', (tester) async {
+      final entry = BookEntry(
+        title: 'Профессия: ведьма',
+        authors: ['Громыко Ольга'],
+        categories: const ['Фэнтези', 'Юмористическая фантастика'],
+        acquisitionLinks: [_link('FB2')],
+      );
+
+      await tester.pumpWidget(
+        _buildApp(
+          entry: entry,
+          mockClient: MockClient((_) async => http.Response.bytes([1], 200)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Фэнтези'), findsOneWidget);
+      expect(find.text('Юмористическая фантастика'), findsOneWidget);
+    });
+
+    testWidgets('an entry with no categories shows no tag row', (tester) async {
+      final entry = BookEntry(
+        title: 'Book Title',
+        authors: ['Jane Doe'],
+        acquisitionLinks: [_link('FB2')],
+      );
+
+      await tester.pumpWidget(
+        _buildApp(
+          entry: entry,
+          mockClient: MockClient((_) async => http.Response.bytes([1], 200)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('book-tags')), findsNothing);
+    });
+  });
+
+  group('Formats — one button, the rest as chips', () {
+    testWidgets('the button names the format it will fetch', (tester) async {
+      final entry = BookEntry(
+        title: 'Book Title',
+        authors: ['Jane Doe'],
+        acquisitionLinks: [_link('FB2.ZIP'), _link('FB2')],
+      );
+
+      await tester.pumpWidget(
+        _buildApp(
+          entry: entry,
+          mockClient: MockClient((_) async => http.Response.bytes([1], 200)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Download FB2.ZIP'), findsOneWidget);
+    });
+
+    testWidgets('the remaining formats are chips, the chosen one is not', (
+      tester,
+    ) async {
+      final entry = BookEntry(
+        title: 'Book Title',
+        authors: ['Jane Doe'],
+        acquisitionLinks: [_link('FB2'), _link('EPUB'), _link('PDF')],
+      );
+
+      await tester.pumpWidget(
+        _buildApp(
+          entry: entry,
+          mockClient: MockClient((_) async => http.Response.bytes([1], 200)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Download FB2'), findsOneWidget);
+      expect(find.text('FB2'), findsNothing);
+      expect(find.text('EPUB'), findsOneWidget);
+      expect(find.text('PDF'), findsOneWidget);
+    });
+
+    testWidgets('a lone format leaves no chip row behind', (tester) async {
+      final entry = BookEntry(
+        title: 'Book Title',
+        authors: ['Jane Doe'],
+        acquisitionLinks: [_link('FB2')],
+      );
+
+      await tester.pumpWidget(
+        _buildApp(
+          entry: entry,
+          mockClient: MockClient((_) async => http.Response.bytes([1], 200)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('or'), findsNothing);
+    });
+
+    testWidgets('with no FB2 variant the button still names a format', (
+      tester,
+    ) async {
+      // The old build had no preferred link here and opened a picker dialog.
+      // Now the first by preference is simply the button.
+      final entry = BookEntry(
+        title: 'Book Title',
+        authors: ['Jane Doe'],
+        acquisitionLinks: [_link('PDF'), _link('EPUB')],
+      );
+
+      await tester.pumpWidget(
+        _buildApp(
+          entry: entry,
+          mockClient: MockClient((_) async => http.Response.bytes([1], 200)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Download EPUB'), findsOneWidget);
+      expect(find.text('PDF'), findsOneWidget);
+    });
+
+    testWidgets('tapping the button downloads without a picker', (
       tester,
     ) async {
       var httpCalled = false;
@@ -289,146 +429,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Download'));
+      await tester.tap(find.text('Download FB2.ZIP'));
       await tester.pumpAndSettle();
 
       expect(httpCalled, isTrue);
       expect(find.byType(AlertDialog), findsNothing);
     });
-  });
 
-  group('Download button — format picker (no FB2)', () {
-    testWidgets('tapping Download shows "Choose format" dialog', (
-      tester,
-    ) async {
-      final entry = BookEntry(
-        title: 'Book Title',
-        authors: ['Jane Doe'],
-        acquisitionLinks: [_link('EPUB'), _link('PDF')],
-      );
-
-      await tester.pumpWidget(
-        _buildApp(
-          entry: entry,
-          mockClient: MockClient((_) async => http.Response.bytes([1], 200)),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Download'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Choose format'), findsOneWidget);
-      expect(find.text('EPUB'), findsWidgets);
-      expect(find.text('PDF'), findsWidgets);
-    });
-
-    testWidgets('choosing a format from picker starts download', (
-      tester,
-    ) async {
-      var httpCalled = false;
-      final entry = BookEntry(
-        title: 'Book Title',
-        authors: ['Jane Doe'],
-        acquisitionLinks: [_link('EPUB'), _link('PDF')],
-      );
-
-      await tester.pumpWidget(
-        _buildApp(
-          entry: entry,
-          mockClient: MockClient((_) async {
-            httpCalled = true;
-            return http.Response.bytes([1, 2, 3], 200);
-          }),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Download'));
-      await tester.pumpAndSettle();
-
-      // Tap EPUB in the dialog
-      await tester.tap(find.text('EPUB').last);
-      await tester.pumpAndSettle();
-
-      expect(httpCalled, isTrue);
-    });
-  });
-
-  group('Secondary format rows', () {
-    testWidgets('preferred format absent; other formats shown', (tester) async {
-      // FB2 is preferred → must NOT appear as a secondary row.
-      // EPUB and PDF are "the other formats" per spec §9.1 and must be shown.
-      final entry = BookEntry(
-        title: 'Book Title',
-        authors: ['Jane Doe'],
-        acquisitionLinks: [_link('FB2'), _link('EPUB'), _link('PDF')],
-      );
-
-      await tester.pumpWidget(
-        _buildApp(
-          entry: entry,
-          mockClient: MockClient((_) async => http.Response.bytes([1], 200)),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('FB2'), findsNothing);
-      expect(find.text('EPUB'), findsOneWidget);
-      expect(find.text('PDF'), findsOneWidget);
-    });
-
-    testWidgets('FB2.ZIP preferred — FB2 still listed as secondary row', (
-      tester,
-    ) async {
-      // When both FB2.ZIP and FB2 are present, FB2.ZIP is preferred (auto-selected).
-      // FB2 is "the other format" and must remain as a secondary row.
-      // FB2.ZIP itself must NOT appear in secondary rows.
-      final entry = BookEntry(
-        title: 'Book Title',
-        authors: ['Jane Doe'],
-        acquisitionLinks: [_link('FB2.ZIP'), _link('FB2')],
-      );
-
-      await tester.pumpWidget(
-        _buildApp(
-          entry: entry,
-          mockClient: MockClient((_) async => http.Response.bytes([1], 200)),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('FB2.ZIP'), findsNothing);
-      expect(find.text('FB2'), findsOneWidget);
-    });
-
-    testWidgets(
-      'no preferred (EPUB+PDF): all formats shown as secondary rows',
-      (tester) async {
-        // No FB2 variant → preferred is null → picker dialog on Download tap.
-        // All formats must still be visible as secondary tap-to-download rows.
-        final entry = BookEntry(
-          title: 'Book Title',
-          authors: ['Jane Doe'],
-          acquisitionLinks: [_link('EPUB'), _link('PDF')],
-        );
-
-        await tester.pumpWidget(
-          _buildApp(
-            entry: entry,
-            mockClient: MockClient((_) async => http.Response.bytes([1], 200)),
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        expect(find.text('EPUB'), findsOneWidget);
-        expect(find.text('PDF'), findsOneWidget);
-      },
-    );
-
-    testWidgets('tapping a secondary row starts download for that format', (
-      tester,
-    ) async {
+    testWidgets('tapping a chip downloads that format', (tester) async {
       Uri? requestedUrl;
       final entry = BookEntry(
         title: 'Book Title',
@@ -454,8 +462,147 @@ void main() {
     });
   });
 
+  group('Content — rule 1, headings split blurb from Details', () {
+    BookEntry entryWithHeadings() => BookEntry(
+      title: 'Профессия: ведьма',
+      authors: ['Громыко Ольга'],
+      contentHtml: File(
+        'test/fixtures/content_with_headings.html',
+      ).readAsStringSync(),
+      acquisitionLinks: [_link('FB2')],
+    );
+
+    testWidgets('the blurb shows, the facts do not', (tester) async {
+      await tester.pumpWidget(
+        _buildApp(
+          entry: entryWithHeadings(),
+          mockClient: MockClient((_) async => http.Response.bytes([1], 200)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('Каждый здравомыслящий человек'),
+        findsOneWidget,
+      );
+      expect(find.text('Details'), findsOneWidget);
+      expect(find.text('ISBN'), findsNothing);
+    });
+
+    testWidgets('expanding Details reveals sections and rows', (tester) async {
+      await tester.pumpWidget(
+        _buildApp(
+          entry: entryWithHeadings(),
+          mockClient: MockClient((_) async => http.Response.bytes([1], 200)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The blurb is long enough to push the disclosure past the viewport.
+      await tester.scrollUntilVisible(find.text('Details'), 200);
+      await tester.tap(find.text('Details'));
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(find.text('ISBN'), 200);
+      expect(find.text('ISBN'), findsOneWidget);
+      expect(find.text('5-93556-247-2 , 978-5-9922-0105-5'), findsOneWidget);
+    });
+
+    testWidgets('there is no Show more affordance in this mode', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildApp(
+          entry: entryWithHeadings(),
+          mockClient: MockClient((_) async => http.Response.bytes([1], 200)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Show more'), findsNothing);
+    });
+  });
+
+  group('Content — rule 2, no headings', () {
+    BookEntry entryWithoutHeadings() => BookEntry(
+      title: 'Moby Dick; Or, The Whale',
+      authors: ['Melville, Herman'],
+      contentHtml: File(
+        'test/fixtures/content_no_headings.html',
+      ).readAsStringSync(),
+      acquisitionLinks: [_link('EPUB')],
+    );
+
+    testWidgets('Details never appears', (tester) async {
+      await tester.pumpWidget(
+        _buildApp(
+          entry: entryWithoutHeadings(),
+          mockClient: MockClient((_) async => http.Response.bytes([1], 200)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Details'), findsNothing);
+    });
+
+    testWidgets('the text is clamped to six lines behind Show more', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildApp(
+          entry: entryWithoutHeadings(),
+          mockClient: MockClient((_) async => http.Response.bytes([1], 200)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final clamped = tester.widget<Text>(find.byKey(const Key('book-blurb')));
+      expect(clamped.maxLines, 6);
+      expect(find.text('Show more'), findsOneWidget);
+    });
+
+    testWidgets('Show more unclamps it and offers Show less', (tester) async {
+      await tester.pumpWidget(
+        _buildApp(
+          entry: entryWithoutHeadings(),
+          mockClient: MockClient((_) async => http.Response.bytes([1], 200)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Show more'));
+      await tester.pumpAndSettle();
+
+      final expanded = tester.widget<Text>(find.byKey(const Key('book-blurb')));
+      expect(expanded.maxLines, isNull);
+      expect(find.text('Show less'), findsOneWidget);
+    });
+
+    testWidgets('a plain-text summary with no markup still shows', (
+      tester,
+    ) async {
+      final entry = BookEntry(
+        title: 'Book Title',
+        authors: ['Jane Doe'],
+        summary: 'A plain summary.',
+        acquisitionLinks: [_link('FB2')],
+      );
+
+      await tester.pumpWidget(
+        _buildApp(
+          entry: entry,
+          mockClient: MockClient((_) async => http.Response.bytes([1], 200)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('A plain summary.'), findsOneWidget);
+      expect(find.text('Details'), findsNothing);
+    });
+  });
+
   group('DownloadInProgress state', () {
-    testWidgets('spinner replaces Download button while downloading', (
+    testWidgets('spinner replaces the button while downloading', (
       tester,
     ) async {
       final completer = Completer<http.Response>();
@@ -473,13 +620,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Tap and pump once (not settle) so we catch the in-progress state
-      // before the completer resolves.
-      await tester.tap(find.text('Download'));
+      await tester.tap(find.text('Download FB2'));
       await tester.pump();
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      expect(find.text('Download'), findsNothing);
+      expect(find.text('Download FB2'), findsNothing);
 
       completer.complete(http.Response.bytes([1], 200));
       await tester.pumpAndSettle();
@@ -504,7 +649,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Download'));
+      await tester.tap(find.text('Download FB2'));
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Download failed'), findsOneWidget);

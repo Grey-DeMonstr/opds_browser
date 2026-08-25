@@ -56,6 +56,7 @@ test/
 | Navigation | `go_router` |
 | HTTP | `http` (not dio) |
 | XML | `xml` |
+| Entry descriptions | `html` — feeds ship markup `xml` cannot parse (bare `<br>`, stray FB2 tags) |
 | Local DB | `sqflite` (raw SQL, thin DAOs) |
 | Settings | `shared_preferences` |
 | Cover images | `cached_network_image` |

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/terms/" xmlns:opds="http://opds-spec.org/2010/catalog">
+  <updated>2026-08-25T21:33:24Z</updated>
+  <id>book</id>
+  <title>Книга</title>
+  <link href="/opds/opensearch" rel="search" type="application/opensearchdescription+xml"/>
+  <link href="/opds/search?term={searchTerms}" rel="search" type="application/atom+xml"/>
+  <link href="/opds" rel="start" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+  <link href="/opds/book?uid=TPDSf8%2BCtUsjQRl3cCB4e6jgBaOPc1UE0nqxZdzLeEY%3D" rel="self" type="application/atom+xml;profile=opds-catalog;kind=acquisition"/>
+  <entry>
+    <updated>2026-08-25T21:33:24Z</updated>
+    <id>TPDSf8+CtUsjQRl3cCB4e6jgBaOPc1UE0nqxZdzLeEY=</id>
+    <title>Профессия: ведьма</title>
+    <author>
+      <name>Громыко Ольга</name>
+    </author>
+    <dc:language>ru</dc:language>
+    <dc:format>fb2</dc:format>
+    <category term="Юмористическая фантастика" label="Юмористическая фантастика"/>
+    <category term="Фэнтези" label="Фэнтези"/>
+    <content type="text/html">&lt;p&gt;&lt;b&gt;&lt;image l:href=&quot;#juf.png&quot;/&gt;&lt;/b&gt;&lt;/p&gt;&lt;p&gt;Каждый здравомыслящий человек твердо знает: вампиров не бывает, вампиры очень любят человеческую кровь, вампиры боятся чеснока, осины и солнечного света. Интересно, а что думают на этот счет сами вампиры? Ох они бы и порассказали, найдись достаточно беспристрастный и храбрый слушатель! Перед вами – подробный отчет на основе личных наблюдений, составленный неунывающей адепткой Старминской Школы Магов, Пифий и Травниц. Но не удалось ли вампирам ввести в заблуждение и ее?..&lt;/p&gt;&lt;br&gt;&lt;p&gt;Добавлены «Классификации нежити» и «Истории Противостояния» по материалам с сайта &lt;a l:href=&quot;http://www.belorya-rpg.ru/&quot;&gt;&lt;i&gt;www.belorya-rpg.ru&lt;/i&gt;&lt;/a&gt;. Оттуда же - переводы с тролльего. Алекс&lt;/p&gt;&lt;p&gt;Оформление,  примечания и комментарии.&lt;/p&gt;&lt;p&gt;Для иллюстраций использованы  рисунки из Интернета различных художников, всех не перечислить, но всем спасибо.&lt;/p&gt;&lt;p&gt;Использованы элементы серийного оформления издательства «Альфа-книга».&lt;/p&gt;&lt;h2&gt;Fb2 инфо&lt;/h2&gt;&lt;h3&gt;Общая информация&lt;/h3&gt;&lt;p&gt;Автор(ы): Громыко Ольга&lt;/p&gt;&lt;p&gt;Название: Профессия: ведьма&lt;/p&gt;&lt;p&gt;Серия: Мир Белории. Профессия: ведьма #1&lt;/p&gt;&lt;p&gt;Жанр: Фэнтези, Юмористическая фантастика&lt;/p&gt;&lt;p&gt;Дата: 2003&lt;/p&gt;&lt;p&gt;Язык книги: ru&lt;/p&gt;&lt;h3&gt;Издательская информация&lt;/h3&gt;&lt;p&gt;Название: Профессия: ведьма&lt;/p&gt;&lt;p&gt;Издательство: Армада, Альфа-книга&lt;/p&gt;&lt;p&gt;Город: Москва&lt;/p&gt;&lt;p&gt;Год: 2003&lt;/p&gt;&lt;p&gt;ISBN: 5-93556-247-2 , 978-5-9922-0105-5&lt;/p&gt;&lt;p&gt;Серия: Юмористическая серия #28&lt;/p&gt;&lt;h3&gt;Информация о документе (OCR)&lt;/h3&gt;&lt;p&gt;Автор(ы): MCat78, Алекс&lt;/p&gt;&lt;p&gt;Программа: FB Editor v2.0, AlReader2, FictionBook Editor Release 2.6.6&lt;/p&gt;&lt;p&gt;Дата: 14 Октября 2014&lt;/p&gt;&lt;p&gt;ID: ca2d87b7-03b5-4baa-a56d-29c9c2fa223b&lt;/p&gt;&lt;p&gt;Версия: 2.3&lt;/p&gt;&lt;p&gt;История: &lt;p&gt;v 2.0 – MCat78 – создание fb2-документа&lt;/p&gt;&lt;p&gt;в 2.1 – титул, иллюстрации. Алекс&lt;/p&gt;&lt;p&gt;в 2.2 – добавление Классификации нежити и Истории Противостояния по материалам с сайта &lt;a l:href=&quot;http://www.belorya-rpg.ru/&quot;&gt;&lt;i&gt;www.belorya-rpg.ru&lt;/i&gt;&lt;/a&gt;&lt;i&gt;. &lt;/i&gt;Оттуда же - переводы с тролльего. Алекс&lt;/p&gt;&lt;p&gt;в 2.3 – добавление примечаний и комментарии. Алекс&lt;/p&gt;&lt;/p&gt;&lt;h2&gt;Inpx инфо&lt;/h2&gt;&lt;h3&gt;Информация о файле&lt;/h3&gt;&lt;p&gt;Папка: f.fb2-379005-382982.zip&lt;/p&gt;&lt;p&gt;Файл: 381142.fb2&lt;/p&gt;&lt;p&gt;Размер: 4.2 MB (4 413 163 Bytes)&lt;/p&gt;&lt;p&gt;Добавлен: 15.10.2014&lt;/p&gt;&lt;p&gt;LibId: 381142&lt;/p&gt;&lt;h3&gt;Общая информация&lt;/h3&gt;&lt;p&gt;Автор(ы): Громыко Ольга&lt;/p&gt;&lt;p&gt;Название: Профессия: ведьма&lt;/p&gt;&lt;p&gt;Серия: Белорские хроники 1: Профессия: Ведьма #1&lt;/p&gt;&lt;p&gt;Жанр: Юмористическая фантастика, Фэнтези&lt;/p&gt;&lt;p&gt;Оценка: 4&lt;/p&gt;&lt;p&gt;Язык книги: ru&lt;/p&gt;</content>
+    <link href="/book/550aaa8fd893e6936d6049dee7a0f96c72724da338f100b74f75c433ed6cc1c1/zip" rel="http://opds-spec.org/acquisition" type="application/fb2+zip"/>
+    <link href="/book/550aaa8fd893e6936d6049dee7a0f96c72724da338f100b74f75c433ed6cc1c1" rel="http://opds-spec.org/acquisition" type="application/fb2"/>
+    <link href="/book/550aaa8fd893e6936d6049dee7a0f96c72724da338f100b74f75c433ed6cc1c1.jpg" rel="http://opds-spec.org/image" type="image/jpeg"/>
+    <link href="/book/550aaa8fd893e6936d6049dee7a0f96c72724da338f100b74f75c433ed6cc1c1.jpg" rel="http://opds-spec.org/image/thumbnail" type="image/jpeg"/>
+  </entry>
+</feed>

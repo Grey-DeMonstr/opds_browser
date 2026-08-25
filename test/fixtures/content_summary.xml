@@ -32,6 +32,10 @@
     </content>
     <id>urn:gutenberg:2701:3</id>
     <author><name>Melville, Herman</name></author>
+    <!-- label wins; a category with only @term falls back to it. -->
+    <category scheme="http://purl.org/dc/terms/LCSH" term="Whaling -- Fiction"
+              label="Whaling"/>
+    <category scheme="http://purl.org/dc/terms/LCSH" term="Sea stories"/>
     <link type="application/epub+zip" rel="http://opds-spec.org/acquisition"
           title="EPUB3 (E-readers incl. Send-to-Kindle)"
           href="https://example.com/ebooks/2701.epub3.images"/>
