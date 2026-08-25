@@ -9,7 +9,13 @@ void main() {
   late SqfliteCatalogRepository repo;
 
   setUp(() {
-    db = AppDatabase(factory: databaseFactoryFfi, path: inMemoryDatabasePath);
+    db = AppDatabase(
+      factory: databaseFactoryFfi,
+      path: inMemoryDatabasePath,
+      // These cases assert on an empty table; the default catalogues are
+      // covered in app_database_test.dart.
+      seedDefaultCatalogs: false,
+    );
     repo = SqfliteCatalogRepository(db);
   });
   tearDown(() => db.close());
@@ -91,6 +97,22 @@ void main() {
       await repo.add('Keep', Uri.parse('https://keep.com'));
       await repo.delete(9999);
       expect(await repo.getAll(), hasLength(1));
+    });
+
+    test('a fresh install lists the default catalogues', () async {
+      final seededDb = AppDatabase(
+        factory: databaseFactoryFfi,
+        path: inMemoryDatabasePath,
+      );
+      addTearDown(seededDb.close);
+      final all = await SqfliteCatalogRepository(seededDb).getAll();
+      expect(all.map((c) => c.title), contains('Project Gutenberg'));
+      final gutenberg = all.firstWhere((c) => c.title == 'Project Gutenberg');
+      expect(
+        gutenberg.rootUrl,
+        Uri.parse('https://www.gutenberg.org/ebooks.opds/'),
+      );
+      expect(gutenberg.id, isPositive);
     });
   });
 }

@@ -1,17 +1,24 @@
+import 'package:opds_browser/domain/default_catalogs.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 class AppDatabase {
   final DatabaseFactory _factory;
   final String? _path;
+  final bool _seedDefaultCatalogs;
   Database? _db;
 
-  /// The parameter is named 'path' (public) not '_path' (private) to match the API contract.
-  // ignore: prefer_initializing_formals
-  AppDatabase({DatabaseFactory? factory, String? path})
-    : _factory = factory ?? databaseFactory,
-      // ignore: prefer_initializing_formals
-      _path = path;
+  /// The parameters are named publicly ('path', not '_path') to match the API
+  /// contract, so they cannot be initializing formals for the private fields.
+  AppDatabase({
+    DatabaseFactory? factory,
+    String? path,
+    bool seedDefaultCatalogs = true,
+  }) : _factory = factory ?? databaseFactory,
+       // ignore: prefer_initializing_formals
+       _path = path,
+       // ignore: prefer_initializing_formals
+       _seedDefaultCatalogs = seedDefaultCatalogs;
 
   Future<Database> get database async => _db ??= await _open();
 
@@ -25,6 +32,7 @@ class AppDatabase {
         onCreate: (db, _) async {
           await _createV1Schema(db);
           await _createV2Schema(db);
+          if (_seedDefaultCatalogs) await _seedCatalogs(db);
         },
         onUpgrade: (db, oldVersion, newVersion) async {
           if (oldVersion < 2) await _createV2Schema(db);
@@ -74,6 +82,23 @@ class AppDatabase {
         series_index INTEGER
       )
     ''');
+  }
+
+  /// Fills a brand-new catalogues table with the built-in examples. Only ever
+  /// called from `onCreate`, so an install that already has a database keeps
+  /// whatever the user curated there.
+  Future<void> _seedCatalogs(Database db) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final batch = db.batch();
+    for (final catalog in defaultCatalogs) {
+      batch.insert('catalogs', {
+        'title': catalog.title,
+        'root_url': catalog.rootUrl,
+        'protocol': 'opds1',
+        'created_at': now,
+      });
+    }
+    await batch.commit(noResult: true);
   }
 
   Future<void> close() async {
