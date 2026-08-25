@@ -60,6 +60,24 @@ void main() {
       expect(loaded.createAuthorFolder, isFalse);
     });
 
+    test('debugMode defaults to false when never saved', () async {
+      final repo = SharedPrefsSettingsRepository();
+      expect((await repo.load()).debugMode, isFalse);
+    });
+
+    test('debugMode survives a save/load roundtrip', () async {
+      final repo = SharedPrefsSettingsRepository();
+      await repo.save(const AppSettings(debugMode: true));
+      expect((await repo.load()).debugMode, isTrue);
+    });
+
+    test('debugMode can be turned back off', () async {
+      final repo = SharedPrefsSettingsRepository();
+      await repo.save(const AppSettings(debugMode: true));
+      await repo.save(const AppSettings());
+      expect((await repo.load()).debugMode, isFalse);
+    });
+
     test('both folder flags persist when both are true', () async {
       final repo = SharedPrefsSettingsRepository();
       await repo.save(

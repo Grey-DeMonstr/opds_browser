@@ -39,10 +39,15 @@ class AppSettings {
   final bool createAuthorFolder;
   final bool createSeriesFolder;
 
+  /// Reveals the in-app debug affordances. Toggled by a hidden gesture on the
+  /// version row in settings; never tied to the build flavour.
+  final bool debugMode;
+
   const AppSettings({
     this.target,
     this.createAuthorFolder = false,
     this.createSeriesFolder = false,
+    this.debugMode = false,
   });
 
   AppSettings copyWith({
@@ -50,9 +55,11 @@ class AppSettings {
     bool clearTarget = false,
     bool? createAuthorFolder,
     bool? createSeriesFolder,
+    bool? debugMode,
   }) => AppSettings(
     target: clearTarget ? null : (target ?? this.target),
     createAuthorFolder: createAuthorFolder ?? this.createAuthorFolder,
     createSeriesFolder: createSeriesFolder ?? this.createSeriesFolder,
+    debugMode: debugMode ?? this.debugMode,
   );
 }

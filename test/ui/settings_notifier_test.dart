@@ -112,4 +112,39 @@ void main() {
     expect(c.read(settingsProvider).value?.target, isNull);
     expect((await repo.load()).target, isNull);
   });
+
+  test(
+    'toggleDebugMode() turns debug mode on, persists and reports it',
+    () async {
+      final repo = FakeSettingsRepository(const AppSettings());
+      final c = ProviderContainer(
+        overrides: [
+          settingsRepositoryProvider.overrideWithValue(repo),
+          safPermissionCheckerProvider.overrideWithValue((_) async => true),
+        ],
+      );
+      addTearDown(c.dispose);
+      await c.read(settingsProvider.future);
+      final enabled = await c.read(settingsProvider.notifier).toggleDebugMode();
+      expect(enabled, isTrue);
+      expect(c.read(settingsProvider).value?.debugMode, isTrue);
+      expect((await repo.load()).debugMode, isTrue);
+    },
+  );
+
+  test('toggleDebugMode() turns debug mode back off', () async {
+    final repo = FakeSettingsRepository(const AppSettings(debugMode: true));
+    final c = ProviderContainer(
+      overrides: [
+        settingsRepositoryProvider.overrideWithValue(repo),
+        safPermissionCheckerProvider.overrideWithValue((_) async => true),
+      ],
+    );
+    addTearDown(c.dispose);
+    await c.read(settingsProvider.future);
+    final enabled = await c.read(settingsProvider.notifier).toggleDebugMode();
+    expect(enabled, isFalse);
+    expect(c.read(settingsProvider).value?.debugMode, isFalse);
+    expect((await repo.load()).debugMode, isFalse);
+  });
 }

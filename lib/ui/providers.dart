@@ -277,6 +277,17 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
     await ref.read(settingsRepositoryProvider).save(newSettings);
     state = AsyncData(newSettings);
   }
+
+  /// Flips debug mode and returns the value it now holds.
+  Future<bool> toggleDebugMode() async {
+    final current = state.value;
+    if (current == null) return false;
+    final enabled = !current.debugMode;
+    final newSettings = current.copyWith(debugMode: enabled);
+    await ref.read(settingsRepositoryProvider).save(newSettings);
+    state = AsyncData(newSettings);
+    return enabled;
+  }
 }
 
 final settingsProvider = AsyncNotifierProvider<SettingsNotifier, AppSettings>(

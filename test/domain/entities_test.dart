@@ -81,5 +81,25 @@ void main() {
       final s2 = s.copyWith(clearTarget: true);
       expect(s2.target, isNull);
     });
+
+    test('defaults debugMode to false', () {
+      expect(const AppSettings().debugMode, isFalse);
+    });
+
+    test('copyWith can flip debugMode without touching other fields', () {
+      const s = AppSettings(
+        target: CustomSafFolder('u', 'F'),
+        createAuthorFolder: true,
+      );
+      final s2 = s.copyWith(debugMode: true);
+      expect(s2.debugMode, isTrue);
+      expect(s2.createAuthorFolder, isTrue);
+      expect(s2.target?.uriString, 'u');
+    });
+
+    test('copyWith preserves debugMode when not passed', () {
+      const s = AppSettings(debugMode: true);
+      expect(s.copyWith(createSeriesFolder: true).debugMode, isTrue);
+    });
   });
 }

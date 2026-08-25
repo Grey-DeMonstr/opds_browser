@@ -1,6 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:opds_browser/data/android_file_opener.dart';
@@ -148,6 +148,9 @@ class _BrowseContentState extends ConsumerState<_BrowseContent> {
     final state = widget.state;
     final entries = state.feed.feed.entries;
     final jobState = ref.watch(folderDownloadProvider);
+    final debugMode = ref.watch(
+      settingsProvider.select((s) => s.value?.debugMode ?? false),
+    );
     final inferredSeries = inferSeriesFromUrl(url) ?? widget.inheritedSeries;
     final visible = filterBrowseEntries(
       entries,
@@ -244,18 +247,7 @@ class _BrowseContentState extends ConsumerState<_BrowseContent> {
         top: false,
         child: Column(
           children: [
-            if (kDebugMode)
-              Container(
-                width: double.infinity,
-                color: Colors.black,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: SelectableText(
-                  '${formatUrlForDebug(url)}\nseries: $inferredSeries',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelSmall?.copyWith(fontFamily: 'monospace'),
-                ),
-              ),
+            if (debugMode) _DebugUrlPanel(url: url),
             if (state.isRefreshing) const LinearProgressIndicator(),
             _FilterBar(
               bucketsHidden: _bucketsHidden,
@@ -320,6 +312,40 @@ class _BrowseContentState extends ConsumerState<_BrowseContent> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The debug panel: the current URL, decoded and one query parameter per line.
+/// Tapping it puts the full URL on the clipboard.
+class _DebugUrlPanel extends StatelessWidget {
+  final Uri url;
+
+  const _DebugUrlPanel({required this.url});
+
+  Future<void> _copy(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    await Clipboard.setData(ClipboardData(text: url.toString()));
+    messenger.showSnackBar(const SnackBar(content: Text('URL copied')));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _copy(context),
+      child: Container(
+        width: double.infinity,
+        color: Colors.black,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Text(
+          formatUrlForDebug(url),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            fontFamily: 'monospace',
+            color: Colors.white,
+          ),
         ),
       ),
     );

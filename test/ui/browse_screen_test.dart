@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemChannels;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -210,6 +211,55 @@ Widget buildAppWithDownload({
 }
 
 // ── Tests ────────────────────────────────────────────────────────────────────
+
+class _FakeSettingsRepository implements SettingsRepository {
+  AppSettings _settings;
+  _FakeSettingsRepository(this._settings);
+  @override
+  Future<AppSettings> load() async => _settings;
+  @override
+  Future<void> save(AppSettings settings) async => _settings = settings;
+}
+
+/// A browse screen whose debug panel is driven by a persisted [debugMode].
+Widget buildAppWithDebugMode({
+  required bool debugMode,
+  required Uri url,
+  String? inferredSeries,
+}) {
+  final feedRepo = FakeFeedRepository(initialFeed: makeFeed());
+  final router = GoRouter(
+    initialLocation: '/',
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (_, _) => BrowseScreen(
+          catalogId: 1,
+          url: url,
+          inferredSeries: inferredSeries,
+        ),
+      ),
+    ],
+  );
+  return ProviderScope(
+    overrides: [
+      feedRepositoryProvider.overrideWithValue(feedRepo),
+      favoritesRepositoryProvider.overrideWithValue(FakeFavoritesRepository()),
+      folderDownloadProvider.overrideWith(
+        () => _FolderJobStub(const FolderJobIdle()),
+      ),
+      settingsRepositoryProvider.overrideWithValue(
+        _FakeSettingsRepository(AppSettings(debugMode: debugMode)),
+      ),
+      safPermissionCheckerProvider.overrideWithValue((_) async => true),
+    ],
+    child: MaterialApp.router(
+      theme: buildLightTheme(),
+      darkTheme: buildDarkTheme(),
+      routerConfig: router,
+    ),
+  );
+}
 
 void main() {
   testWidgets('renders feed title when cache exists', (tester) async {
@@ -1066,6 +1116,77 @@ void main() {
         find.widgetWithIcon(IconButton, Icons.download_for_offline_outlined),
       );
       expect(btn.onPressed, isNull);
+    });
+  });
+
+  group('debug panel', () {
+    final debugUrl = Uri.parse('http://example.com/feed?q=abc');
+
+    testWidgets('is hidden while debug mode is off', (tester) async {
+      await tester.pumpWidget(
+        buildAppWithDebugMode(debugMode: false, url: debugUrl),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('/feed\nq=abc'), findsNothing);
+    });
+
+    testWidgets('shows the formatted URL while debug mode is on', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildAppWithDebugMode(debugMode: true, url: debugUrl),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('/feed\nq=abc'), findsOneWidget);
+    });
+
+    testWidgets('does not show an inferred series row', (tester) async {
+      await tester.pumpWidget(
+        buildAppWithDebugMode(
+          debugMode: true,
+          url: debugUrl,
+          inferredSeries: 'Great Series',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('series:'), findsNothing);
+    });
+
+    testWidgets('tapping it copies the full URL to the clipboard', (
+      tester,
+    ) async {
+      final copied = <String>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            copied.add(
+              (call.arguments as Map<Object?, Object?>)['text']! as String,
+            );
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+
+      await tester.pumpWidget(
+        buildAppWithDebugMode(debugMode: true, url: debugUrl),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('/feed\nq=abc'));
+      await tester.pumpAndSettle();
+
+      expect(copied, ['http://example.com/feed?q=abc']);
+      expect(find.text('URL copied'), findsOneWidget);
     });
   });
 }

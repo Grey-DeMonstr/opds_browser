@@ -8,6 +8,7 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
   static const _keyDisplayName = 'download_target_display_name';
   static const _keyAuthor = 'folder_per_author';
   static const _keySeries = 'folder_per_series';
+  static const _keyDebugMode = 'debug_mode';
 
   @override
   Future<AppSettings> load() async {
@@ -22,6 +23,7 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
       target: target,
       createAuthorFolder: prefs.getBool(_keyAuthor) ?? false,
       createSeriesFolder: prefs.getBool(_keySeries) ?? false,
+      debugMode: prefs.getBool(_keyDebugMode) ?? false,
     );
   }
 
@@ -40,5 +42,6 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
     }
     await prefs.setBool(_keyAuthor, settings.createAuthorFolder);
     await prefs.setBool(_keySeries, settings.createSeriesFolder);
+    await prefs.setBool(_keyDebugMode, settings.debugMode);
   }
 }

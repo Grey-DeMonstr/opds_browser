@@ -77,6 +77,25 @@ class _SettingsBody extends ConsumerWidget {
   final AppSettings settings;
   const _SettingsBody({required this.settings});
 
+  /// Flips debug mode and reports the new state, since the gesture that got
+  /// here is hidden and gives no other feedback.
+  Future<void> _toggleDebugMode(
+    BuildContext context,
+    SettingsNotifier notifier,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final enabled = await notifier.toggleDebugMode();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          enabled
+              ? 'Debug mode enabled — the browse screen shows a debug panel.'
+              : 'Debug mode disabled — the debug panel is hidden.',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(settingsProvider.notifier);
@@ -112,15 +131,19 @@ class _SettingsBody extends ConsumerWidget {
           ),
         ),
         const Divider(),
-        ListTile(
-          title: const Text('Version'),
-          subtitle: ref
-              .watch(appVersionProvider)
-              .when(
-                loading: () => const Text('…'),
-                error: (_, _) => const Text('unknown'),
-                data: (info) => Text(formatAppVersion(info)),
-              ),
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onDoubleTap: () => _toggleDebugMode(context, notifier),
+          child: ListTile(
+            title: const Text('Version'),
+            subtitle: ref
+                .watch(appVersionProvider)
+                .when(
+                  loading: () => const Text('…'),
+                  error: (_, _) => const Text('unknown'),
+                  data: (info) => Text(formatAppVersion(info)),
+                ),
+          ),
         ),
       ],
     );

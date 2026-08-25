@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart' show kDoubleTapMinTime;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -45,6 +46,15 @@ class FakeSettingsNotifier extends SettingsNotifier {
     state = AsyncData(
       (state.value ?? const AppSettings()).copyWith(createSeriesFolder: value),
     );
+  }
+
+  @override
+  Future<bool> toggleDebugMode() async {
+    final next = !(state.value ?? const AppSettings()).debugMode;
+    state = AsyncData(
+      (state.value ?? const AppSettings()).copyWith(debugMode: next),
+    );
+    return next;
   }
 }
 
@@ -232,6 +242,60 @@ void main() {
 
       expect(find.text('Version'), findsOneWidget);
       expect(find.text('0.1.0 (206)'), findsOneWidget);
+    });
+
+    testWidgets('double-tapping the version row enables debug mode', (
+      tester,
+    ) async {
+      final notifier = FakeSettingsNotifier(initial: const AppSettings());
+      await tester.pumpWidget(buildApp(notifier));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Version'));
+      await tester.pump(kDoubleTapMinTime);
+      await tester.tap(find.text('Version'));
+      await tester.pumpAndSettle();
+
+      expect(notifier.state.value?.debugMode, isTrue);
+      expect(
+        find.text(
+          'Debug mode enabled — the browse screen shows a debug panel.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('double-tapping again disables debug mode', (tester) async {
+      final notifier = FakeSettingsNotifier(
+        initial: const AppSettings(debugMode: true),
+      );
+      await tester.pumpWidget(buildApp(notifier));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Version'));
+      await tester.pump(kDoubleTapMinTime);
+      await tester.tap(find.text('Version'));
+      await tester.pumpAndSettle();
+
+      expect(notifier.state.value?.debugMode, isFalse);
+      expect(
+        find.text('Debug mode disabled — the debug panel is hidden.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a single tap on the version row changes nothing', (
+      tester,
+    ) async {
+      final notifier = FakeSettingsNotifier(initial: const AppSettings());
+      await tester.pumpWidget(buildApp(notifier));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Version'));
+      await tester.pumpAndSettle();
+
+      expect(notifier.state.value?.debugMode, isFalse);
+      expect(find.textContaining('Debug mode'), findsNothing);
     });
   });
 }
