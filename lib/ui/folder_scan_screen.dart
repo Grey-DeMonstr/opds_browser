@@ -46,7 +46,11 @@ class _FolderScanScreenState extends ConsumerState<FolderScanScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
-          ref.read(folderDownloadProvider.notifier).cancel();
+          // reset(), not cancel(): leaving the scan abandons the job outright.
+          // cancel() alone would let the scan finish into FolderJobDone with
+          // no screen left to clear it, wedging the browse screen's
+          // "Download folder" button off for good.
+          ref.read(folderDownloadProvider.notifier).reset();
           context.pop();
         }
       },
@@ -62,7 +66,7 @@ class _FolderScanScreenState extends ConsumerState<FolderScanScreen> {
               const SizedBox(height: 24),
               TextButton(
                 onPressed: () {
-                  ref.read(folderDownloadProvider.notifier).cancel();
+                  ref.read(folderDownloadProvider.notifier).reset();
                   if (context.mounted) context.pop();
                 },
                 child: const Text('Cancel'),

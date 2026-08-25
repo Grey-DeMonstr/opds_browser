@@ -160,4 +160,41 @@ void main() {
     // After pop, back at HomeScreen
     expect(find.text('HomeScreen'), findsOneWidget);
   });
+
+  testWidgets('Cancel button returns the job to FolderJobIdle', (tester) async {
+    final container = _container(const FolderJobScanning(foldersFound: 3));
+    await tester.pumpWidget(_wrap(container, initialLocation: '/'));
+    await tester.pump();
+
+    final context = tester.element(find.text('HomeScreen'));
+    GoRouter.of(context).push('/folder-scan');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('HomeScreen'), findsOneWidget);
+    expect(container.read(folderDownloadProvider), isA<FolderJobIdle>());
+  });
+
+  testWidgets('system back during scan returns the job to FolderJobIdle', (
+    tester,
+  ) async {
+    final container = _container(const FolderJobScanning(foldersFound: 3));
+    await tester.pumpWidget(_wrap(container, initialLocation: '/'));
+    await tester.pump();
+
+    final context = tester.element(find.text('HomeScreen'));
+    GoRouter.of(context).push('/folder-scan');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(container.read(folderDownloadProvider), isA<FolderJobIdle>());
+  });
 }

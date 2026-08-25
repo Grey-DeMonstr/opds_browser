@@ -222,4 +222,26 @@ void main() {
     await notifier.start(1, Uri.parse('http://x.com'));
     expect(c.read(folderDownloadProvider), isA<FolderJobTreeReady>());
   });
+
+  test(
+    'reset() during scan returns to idle and ignores the late Done',
+    () async {
+      final slowRepo = _SlowFeedRepo();
+      final c = _container(feedRepo: slowRepo);
+      await c.read(settingsProvider.future);
+      final notifier = c.read(folderDownloadProvider.notifier);
+
+      final startFuture = notifier.start(1, Uri.parse('http://x.com'));
+      expect(c.read(folderDownloadProvider), isA<FolderJobScanning>());
+
+      notifier.reset();
+      expect(c.read(folderDownloadProvider), isA<FolderJobIdle>());
+
+      slowRepo.complete();
+      await startFuture;
+
+      // The abandoned job must not resurrect a terminal state over idle.
+      expect(c.read(folderDownloadProvider), isA<FolderJobIdle>());
+    },
+  );
 }
