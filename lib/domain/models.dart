@@ -42,10 +42,19 @@ class NavigationEntry extends FeedEntry {
   final String? subtitle;
   final Uri url;
 
+  /// The `type` its link declared, verbatim.
+  ///
+  /// Catalogues distinguish a real folder (`kind=navigation`) from a page that
+  /// only wraps books (`kind=acquisition`) here and nowhere else, and the two
+  /// are indistinguishable by title or subtitle. Null for feeds cached before
+  /// this was kept, and for links that declared no type.
+  final String? linkType;
+
   const NavigationEntry({
     required this.title,
     this.subtitle,
     required this.url,
+    this.linkType,
   });
 
   @override
@@ -54,6 +63,7 @@ class NavigationEntry extends FeedEntry {
     'title': title,
     if (subtitle != null) 'subtitle': subtitle,
     'url': url.toString(),
+    if (linkType != null) 'linkType': linkType,
   };
 
   factory NavigationEntry.fromJson(Map<String, dynamic> json) =>
@@ -61,6 +71,7 @@ class NavigationEntry extends FeedEntry {
         title: json['title'] as String,
         subtitle: json['subtitle'] as String?,
         url: Uri.parse(json['url'] as String),
+        linkType: json['linkType'] as String?,
       );
 }
 

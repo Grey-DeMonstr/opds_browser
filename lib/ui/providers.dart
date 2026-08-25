@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
@@ -20,6 +21,7 @@ import 'package:opds_browser/data/fb2_metadata_writer.dart';
 import 'package:opds_browser/data/saf_book_read_writer.dart';
 import 'package:opds_browser/data/saf_local_library_scanner.dart';
 import 'package:opds_browser/data/sqflite_local_library_cache.dart';
+import 'package:opds_browser/domain/browse_list.dart';
 import 'package:opds_browser/domain/download_utils.dart';
 import 'package:opds_browser/domain/entities.dart';
 import 'package:opds_browser/domain/models.dart';
@@ -137,8 +139,23 @@ class BrowseState {
 
 typedef BrowseArgs = (int, Uri);
 
+/// How long the browse screen waits between the network probes that resolve
+/// single-book folders.
+///
+/// Most catalogues serve one request per IP at a time and take a dim view of
+/// bursts, so the walk is deliberately unhurried; it is only ever tidying up
+/// rows the reader can already use.
+final browseProbeDelayProvider = Provider<Duration>(
+  (ref) => const Duration(seconds: 1),
+);
+
 class BrowseNotifier extends AsyncNotifier<BrowseState> {
   late BrowseArgs _args;
+
+  /// Bumped whenever the feed underneath changes, so a walk still in flight
+  /// over the old entry list stops writing into the new one.
+  int _walk = 0;
+  bool _disposed = false;
 
   void _setArgs(BrowseArgs args) {
     _args = args;
@@ -146,8 +163,10 @@ class BrowseNotifier extends AsyncNotifier<BrowseState> {
 
   @override
   Future<BrowseState> build() async {
+    ref.onDispose(() => _disposed = true);
     final (catalogId, url) = _args;
     final feed = await ref.read(feedRepositoryProvider).getFeed(catalogId, url);
+    _startResolvingSingleBookFolders(feed.feed.entries);
     return BrowseState(feed: feed);
   }
 
@@ -162,10 +181,87 @@ class BrowseNotifier extends AsyncNotifier<BrowseState> {
           .read(feedRepositoryProvider)
           .getFeed(catalogId, url, forceRefresh: true);
       state = AsyncData(BrowseState(feed: feed));
+      _startResolvingSingleBookFolders(feed.feed.entries);
     } catch (_) {
       state = AsyncData(old.copyWith(isRefreshing: false));
       rethrow;
     }
+  }
+
+  /// Walks the folders that only wrap a book and swaps each one for the book
+  /// itself, one request at a time, leaving the rest of the list alone.
+  ///
+  /// Deliberately not awaited: the reader sees the folder listing straight
+  /// away and the rows settle behind them.
+  void _startResolvingSingleBookFolders(List<FeedEntry> entries) {
+    final walk = ++_walk;
+    final candidates = <int>[
+      for (var i = 0; i < entries.length; i++)
+        if (entries[i] case final NavigationEntry e
+            when isSingleBookCandidate(e))
+          i,
+    ];
+    if (candidates.isEmpty) return;
+    unawaited(_resolveSingleBookFolders(walk, entries, candidates));
+  }
+
+  Future<void> _resolveSingleBookFolders(
+    int walk,
+    List<FeedEntry> entries,
+    List<int> candidates,
+  ) async {
+    final (catalogId, _) = _args;
+    final repository = ref.read(feedRepositoryProvider);
+    final delay = ref.read(browseProbeDelayProvider);
+    var throttle = false;
+
+    for (final index in candidates) {
+      if (_disposed || walk != _walk) return;
+      if (throttle) {
+        await Future<void>.delayed(delay);
+        if (_disposed || walk != _walk) return;
+      }
+
+      final folder = entries[index] as NavigationEntry;
+      CachedFeed probe;
+      try {
+        probe = await repository.getFeed(catalogId, folder.url);
+      } catch (_) {
+        // The folder keeps its row; a catalogue that would not answer for one
+        // entry is no reason to abandon the others.
+        throttle = true;
+        continue;
+      }
+      if (_disposed || walk != _walk) return;
+
+      // A cache hit cost the catalogue nothing, so nothing is owed in return.
+      throttle = !probe.fromCache;
+
+      final book = soleBookOf(probe.feed);
+      if (book != null) _replaceEntry(walk, index, book);
+    }
+  }
+
+  void _replaceEntry(int walk, int index, BookEntry book) {
+    final current = state;
+    if (current is! AsyncData<BrowseState> || walk != _walk) return;
+    final old = current.value;
+    final entries = [...old.feed.feed.entries];
+    if (index >= entries.length) return;
+    entries[index] = book;
+    state = AsyncData(
+      old.copyWith(
+        feed: CachedFeed(
+          feed: ParsedFeed(
+            title: old.feed.feed.title,
+            entries: entries,
+            nextPageUrl: old.feed.feed.nextPageUrl,
+          ),
+          fetchedAt: old.feed.fetchedAt,
+          fromCache: old.feed.fromCache,
+        ),
+      ),
+    );
   }
 }
 

@@ -356,6 +356,7 @@ class Opds1FeedParser implements OpdsFeedParser {
       title: title,
       subtitle: subtitle,
       url: resolveHref(href, base),
+      linkType: navLink.getAttribute('type'),
     );
   }
 }

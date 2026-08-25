@@ -49,6 +49,29 @@ void main() {
       final restored = NavigationEntry.fromJson(json);
       expect(restored.subtitle, isNull);
     });
+
+    test('toJson / fromJson roundtrip — link type', () {
+      final entry = NavigationEntry(
+        title: 'One Book',
+        url: Uri.parse('https://example.com/book?uid=one'),
+        linkType: 'application/atom+xml;profile=opds-catalog;kind=acquisition',
+      );
+      final json = entry.toJson();
+      expect(
+        json['linkType'],
+        'application/atom+xml;profile=opds-catalog;kind=acquisition',
+      );
+      expect(NavigationEntry.fromJson(json).linkType, entry.linkType);
+    });
+
+    test('a cache row written before link types reads back as null', () {
+      final restored = NavigationEntry.fromJson({
+        'type': 'nav',
+        'title': 'Fantasy',
+        'url': 'https://example.com/fantasy',
+      });
+      expect(restored.linkType, isNull);
+    });
   });
 
   group('BookEntry', () {

@@ -114,4 +114,93 @@ void main() {
       expect(filtered.map(browseEntryTitle), ['Dickens, Charles']);
     });
   });
+
+  group('isSingleBookCandidate', () {
+    test('an acquisition-kind folder is worth resolving', () {
+      final entry = NavigationEntry(
+        title: 'The Terrible Stranger (fb2)',
+        url: Uri.parse('https://example.com/opds/book?uid=one'),
+        linkType: 'application/atom+xml;profile=opds-catalog;kind=acquisition',
+      );
+
+      expect(isSingleBookCandidate(entry), isTrue);
+    });
+
+    test('a navigation-kind folder is left alone, whatever it claims', () {
+      final entry = NavigationEntry(
+        title: 'Series: Anthology',
+        subtitle: '1 book by this author',
+        url: Uri.parse('https://example.com/opds/author?series=Anthology'),
+        linkType: 'application/atom+xml;profile=opds-catalog;kind=navigation',
+      );
+
+      expect(isSingleBookCandidate(entry), isFalse);
+    });
+
+    test('spacing and case in the declared type do not matter', () {
+      final entry = NavigationEntry(
+        title: 'One Book',
+        url: Uri.parse('https://example.com/opds/book?uid=one'),
+        linkType:
+            'Application/Atom+XML; profile=opds-catalog; kind=acquisition',
+      );
+
+      expect(isSingleBookCandidate(entry), isTrue);
+    });
+
+    test('a folder from a cache written before link types is left alone', () {
+      final entry = NavigationEntry(
+        title: 'Science Fiction',
+        url: Uri.parse('https://example.com/opds/sci-fi'),
+      );
+
+      expect(isSingleBookCandidate(entry), isFalse);
+    });
+  });
+
+  group('soleBookOf', () {
+    BookEntry downloadable(String title) => BookEntry(
+      title: title,
+      authors: const ['Olga Gromyko'],
+      acquisitionLinks: [
+        AcquisitionLink(
+          url: Uri.parse('https://example.com/book/$title'),
+          mimeType: 'application/fb2',
+          formatLabel: 'FB2',
+        ),
+      ],
+    );
+
+    test('returns the one book a wrapper feed holds', () {
+      final book = downloadable('Stringy');
+      final feed = ParsedFeed(title: 'Book', entries: [book]);
+
+      expect(soleBookOf(feed), same(book));
+    });
+
+    test('returns null when the feed holds two books', () {
+      final feed = ParsedFeed(
+        title: 'Series',
+        entries: [downloadable('One'), downloadable('Two')],
+      );
+
+      expect(soleBookOf(feed), isNull);
+    });
+
+    test('returns null when the feed is empty', () {
+      expect(soleBookOf(const ParsedFeed(title: 'Empty', entries: [])), isNull);
+    });
+
+    test('returns null when the one entry is another folder', () {
+      final feed = ParsedFeed(title: 'Nested', entries: [_nav('Deeper')]);
+
+      expect(soleBookOf(feed), isNull);
+    });
+
+    test('returns null when the one book has nothing to download', () {
+      final feed = ParsedFeed(title: 'Book', entries: [_book('Unavailable')]);
+
+      expect(soleBookOf(feed), isNull);
+    });
+  });
 }

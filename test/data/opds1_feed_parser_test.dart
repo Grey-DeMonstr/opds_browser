@@ -206,6 +206,34 @@ void main() {
       expect(third.url, Uri.parse('https://example.com/opds/mystery'));
     });
 
+    test('navigation entries keep the type their link declared', () {
+      final bytes = File(
+        'test/fixtures/minimal_navigation_feed.xml',
+      ).readAsBytesSync();
+      final feed = parser.parse(bytes, base);
+
+      final first = feed.entries[0] as NavigationEntry;
+      expect(
+        first.linkType,
+        'application/atom+xml;profile=opds-catalog;kind=navigation',
+      );
+    });
+
+    test('a folder wrapping one book keeps its acquisition kind', () {
+      final bytes = File(
+        'test/fixtures/single_book_folders.xml',
+      ).readAsBytesSync();
+      final feed = parser.parse(bytes, base);
+
+      expect(feed.entries.length, 2);
+      final first = feed.entries[0] as NavigationEntry;
+      expect(first.title, 'The Terrible Stranger (fb2)');
+      expect(
+        first.linkType,
+        'application/atom+xml;profile=opds-catalog;kind=acquisition',
+      );
+    });
+
     test('parses empty feed — zero entries', () {
       final bytes = File('test/fixtures/empty_feed.xml').readAsBytesSync();
       final feed = parser.parse(bytes, base);

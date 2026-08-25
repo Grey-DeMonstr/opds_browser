@@ -40,6 +40,26 @@ class FakeFeedRepository implements FeedRepository {
   }
 }
 
+/// Answers the folder listing, then the one-book page each wrapper row points
+/// at.
+class WrapperFeedRepository implements FeedRepository {
+  final CachedFeed listing;
+  final Map<String, CachedFeed> wrapped;
+
+  WrapperFeedRepository({required this.listing, required this.wrapped});
+
+  @override
+  Future<CachedFeed> getFeed(
+    int catalogId,
+    Uri url, {
+    bool forceRefresh = false,
+  }) async {
+    final wrapper = wrapped[url.toString()];
+    if (wrapper != null) return wrapper;
+    return listing;
+  }
+}
+
 class FakeFavoritesRepository implements FavoritesRepository {
   final List<Favorite> _data;
   var _nextId = 1;
@@ -1272,6 +1292,56 @@ void main() {
 
       expect(copied, ['http://example.com/feed?q=abc']);
       expect(find.text('URL copied'), findsOneWidget);
+    });
+  });
+
+  group('folders that only wrap a book', () {
+    testWidgets('are replaced on screen by the book itself', (tester) async {
+      final wrapperUrl = 'http://example.com/opds/book?uid=one';
+      final repo = WrapperFeedRepository(
+        listing: makeFeed(
+          entries: [
+            NavigationEntry(
+              title: 'The Terrible Stranger (fb2)',
+              subtitle: 'Olga Gromyko',
+              url: Uri.parse(wrapperUrl),
+              linkType:
+                  'application/atom+xml;profile=opds-catalog;kind=acquisition',
+            ),
+            navEntry(title: 'Series: Chronicles', url: 'http://example.com/s'),
+          ],
+        ),
+        wrapped: {
+          wrapperUrl: makeFeed(
+            entries: [bookEntry(title: 'The Terrible Stranger')],
+          ),
+        },
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            feedRepositoryProvider.overrideWithValue(repo),
+            favoritesRepositoryProvider.overrideWithValue(
+              FakeFavoritesRepository(),
+            ),
+            folderDownloadProvider.overrideWith(
+              () => _FolderJobStub(const FolderJobIdle()),
+            ),
+            browseProbeDelayProvider.overrideWithValue(Duration.zero),
+          ],
+          child: MaterialApp(
+            theme: buildLightTheme(),
+            home: BrowseScreen(catalogId: 1, url: _feedUrl),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('The Terrible Stranger (fb2)'), findsNothing);
+      expect(find.text('The Terrible Stranger'), findsOneWidget);
+      expect(find.byIcon(Icons.download_outlined), findsOneWidget);
+      expect(find.text('Series: Chronicles'), findsOneWidget);
     });
   });
 }

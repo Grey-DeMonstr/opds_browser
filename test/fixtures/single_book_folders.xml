@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:opds="http://opds-spec.org/2010/catalog">
+  <id>urn:example:single-book-folders</id>
+  <title>Series: Fanfics</title>
+  <updated>2024-01-01T00:00:00Z</updated>
+  <link rel="self"
+        type="application/atom+xml;profile=opds-catalog;kind=navigation"
+        href="https://example.com/opds/author?series=Fanfics"/>
+  <entry>
+    <id>urn:example:wrapper-1</id>
+    <title>The Terrible Stranger (fb2)</title>
+    <updated>2024-01-01T00:00:00Z</updated>
+    <link rel="subsection"
+          type="application/atom+xml;profile=opds-catalog;kind=acquisition"
+          href="https://example.com/opds/book?uid=one"/>
+    <content type="text">Olga Gromyko</content>
+  </entry>
+  <entry>
+    <id>urn:example:wrapper-2</id>
+    <title>The Great Power of Art (fb2)</title>
+    <updated>2024-01-01T00:00:00Z</updated>
+    <link rel="subsection"
+          type="application/atom+xml;profile=opds-catalog;kind=acquisition"
+          href="https://example.com/opds/book?uid=two"/>
+    <content type="text">Olga Gromyko</content>
+  </entry>
+</feed>

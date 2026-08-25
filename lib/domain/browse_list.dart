@@ -53,3 +53,34 @@ List<FeedEntry> filterBrowseEntries(
     return needle.isEmpty || title.toLowerCase().contains(needle);
   }).toList();
 }
+
+/// The link type a catalogue gives a page that wraps a single book rather than
+/// a folder of them.
+const _acquisitionKind =
+    'application/atom+xml;profile=opds-catalog;kind=acquisition';
+
+final _typeSpacing = RegExp(r'\s+');
+
+/// True when [entry] points at a page the catalogue itself marked as holding
+/// books, not folders — worth fetching to see whether it holds exactly one.
+///
+/// This reads the declared link type and nothing else. A folder's subtitle is
+/// no guide: `opds.example.org` publishes series folders subtitled `1 книга по
+/// автору` that are still folders, and single-book pages with no count at all.
+bool isSingleBookCandidate(NavigationEntry entry) {
+  final type = entry.linkType;
+  if (type == null) return false;
+  return type.replaceAll(_typeSpacing, '').toLowerCase() == _acquisitionKind;
+}
+
+/// The one downloadable book [feed] holds, or null if it holds anything else.
+///
+/// Null covers every case where the folder still earns its row: no books, more
+/// than one entry, a nested folder, or a book with no acquisition link to
+/// download.
+BookEntry? soleBookOf(ParsedFeed feed) {
+  if (feed.entries.length != 1) return null;
+  final only = feed.entries.first;
+  if (only is! BookEntry || only.acquisitionLinks.isEmpty) return null;
+  return only;
+}
