@@ -11,8 +11,21 @@ void main() {
       final repo = SharedPrefsSettingsRepository();
       final settings = await repo.load();
       expect(settings.target, isNull);
-      expect(settings.createAuthorFolder, isFalse);
-      expect(settings.createSeriesFolder, isFalse);
+    });
+
+    test('folder flags default to true on a fresh install', () async {
+      final repo = SharedPrefsSettingsRepository();
+      final settings = await repo.load();
+      expect(settings.createAuthorFolder, isTrue);
+      expect(settings.createSeriesFolder, isTrue);
+    });
+
+    test('folder flags stay off once they are turned off', () async {
+      final repo = SharedPrefsSettingsRepository();
+      await repo.save(const AppSettings());
+      final loaded = await repo.load();
+      expect(loaded.createAuthorFolder, isFalse);
+      expect(loaded.createSeriesFolder, isFalse);
     });
 
     test('save and load roundtrip null target', () async {

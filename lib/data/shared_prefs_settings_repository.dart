@@ -21,8 +21,9 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
         : null;
     return AppSettings(
       target: target,
-      createAuthorFolder: prefs.getBool(_keyAuthor) ?? false,
-      createSeriesFolder: prefs.getBool(_keySeries) ?? false,
+      // Fresh installs sort downloads into author/series folders by default.
+      createAuthorFolder: prefs.getBool(_keyAuthor) ?? true,
+      createSeriesFolder: prefs.getBool(_keySeries) ?? true,
       debugMode: prefs.getBool(_keyDebugMode) ?? false,
     );
   }
