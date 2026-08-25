@@ -228,10 +228,19 @@ class Opds1FeedParser implements OpdsFeedParser {
         .where((n) => n.isNotEmpty)
         .toList();
 
-    final summaryEl = entry.childElements
-        .where((e) => e.localName == 'summary')
-        .firstOrNull;
-    final summary = summaryEl != null ? stripHtml(summaryEl.innerText) : null;
+    // Atom allows either element to carry the description, and catalogues
+    // differ: Project Gutenberg, for one, only ever emits <content>. Without
+    // the fallback its per-edition entries — same title, same author, differing
+    // only in "this edition has images" — render as indistinguishable rows.
+    final summaryEl =
+        entry.childElements
+            .where((e) => e.localName == 'summary')
+            .firstOrNull ??
+        entry.childElements.where((e) => e.localName == 'content').firstOrNull;
+    final summaryText = summaryEl != null
+        ? stripHtml(summaryEl.innerText)
+        : null;
+    final summary = (summaryText?.isEmpty ?? true) ? null : summaryText;
 
     // Cover: prefer thumbnail, fall back to full image.
     Uri? coverUrl;

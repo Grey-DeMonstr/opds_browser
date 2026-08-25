@@ -6,6 +6,19 @@ import 'package:opds_browser/domain/entities.dart';
 import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/ui/providers.dart';
 
+/// Presents [BookDetailsSheet] as a draggable panel that can grow to the full
+/// screen. Descriptions vary wildly in length between catalogues — Project
+/// Gutenberg packs a whole bibliographic record into one — so the panel scrolls
+/// rather than truncating, and the actions below stay reachable.
+Future<void> showBookDetailsSheet(BuildContext context, BookEntry entry) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (_) => BookDetailsSheet(entry: entry),
+  );
+}
+
 class BookDetailsSheet extends ConsumerStatefulWidget {
   const BookDetailsSheet({required this.entry, super.key});
 

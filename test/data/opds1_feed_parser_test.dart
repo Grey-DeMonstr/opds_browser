@@ -266,6 +266,35 @@ void main() {
       expect(labels, ['EPUB', 'PDF']);
     });
 
+    group('summary falls back to <content>', () {
+      ParsedFeed feedFixture() => parser.parse(
+        File('test/fixtures/content_summary.xml').readAsBytesSync(),
+        base,
+      );
+
+      test('per-edition entries are told apart by their content', () {
+        final entries = feedFixture().entries.cast<BookEntry>();
+        expect(entries[0].title, entries[1].title);
+        expect(
+          entries[0].summary,
+          'This edition had all images removed. EBook No.: 2701',
+        );
+        expect(entries[1].summary, 'This edition has images. EBook No.: 2701');
+      });
+
+      test('<summary> wins when a feed supplies both', () {
+        final book = feedFixture().entries[2] as BookEntry;
+        expect(book.title, 'Book With Both');
+        expect(book.summary, 'The summary.');
+      });
+
+      test('summary stays null when neither element is present', () {
+        final book = feedFixture().entries[3] as BookEntry;
+        expect(book.title, 'Book With Neither');
+        expect(book.summary, isNull);
+      });
+    });
+
     test('mixed feed — entries in feed order, nav and book interleaved', () {
       final bytes = File('test/fixtures/mixed_feed.xml').readAsBytesSync();
       final feed = parser.parse(bytes, base);

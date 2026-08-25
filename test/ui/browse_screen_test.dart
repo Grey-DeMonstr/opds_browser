@@ -111,11 +111,13 @@ BookEntry bookEntry({
   List<String> authors = const ['Jane Doe'],
   String? series,
   double? seriesIndex,
+  String? summary,
 }) => BookEntry(
   title: title,
   authors: authors,
   series: series,
   seriesIndex: seriesIndex,
+  summary: summary,
   acquisitionLinks: [
     AcquisitionLink(
       url: Uri.parse('http://example.com/book.fb2'),
@@ -566,6 +568,89 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Dune Chronicles #1'), findsOneWidget);
+  });
+
+  testWidgets('book entry shows its summary on the third line', (tester) async {
+    final feed = makeFeed(
+      entries: [
+        bookEntry(
+          title: 'Moby Dick; Or, The Whale',
+          authors: ['Melville, Herman'],
+          summary: 'This edition has images.',
+        ),
+      ],
+    );
+    await tester.pumpWidget(buildApp(feed: feed));
+    await tester.pumpAndSettle();
+
+    expect(find.text('This edition has images.'), findsOneWidget);
+  });
+
+  testWidgets('summary lines tell two same-titled editions apart', (
+    tester,
+  ) async {
+    final feed = makeFeed(
+      entries: [
+        bookEntry(
+          title: 'Moby Dick; Or, The Whale',
+          authors: ['Melville, Herman'],
+          summary: 'This edition had all images removed.',
+        ),
+        bookEntry(
+          title: 'Moby Dick; Or, The Whale',
+          authors: ['Melville, Herman'],
+          summary: 'This edition has images.',
+        ),
+      ],
+    );
+    await tester.pumpWidget(buildApp(feed: feed));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Moby Dick; Or, The Whale'), findsNWidgets(2));
+    expect(find.text('This edition had all images removed.'), findsOneWidget);
+    expect(find.text('This edition has images.'), findsOneWidget);
+  });
+
+  testWidgets('the series line keeps the third line when a book has both', (
+    tester,
+  ) async {
+    final feed = makeFeed(
+      entries: [
+        bookEntry(
+          title: 'Dune',
+          series: 'Dune Chronicles',
+          seriesIndex: 1,
+          summary: 'A book about spice.',
+        ),
+      ],
+    );
+    await tester.pumpWidget(buildApp(feed: feed));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Dune Chronicles #1'), findsOneWidget);
+    expect(find.text('A book about spice.'), findsNothing);
+  });
+
+  testWidgets('a long summary is kept to a single ellipsised line', (
+    tester,
+  ) async {
+    final feed = makeFeed(
+      entries: [
+        bookEntry(
+          summary:
+              'This edition has images. Title: Moby Dick; Or, The Whale '
+              'Note: Wikipedia page about this book Credits: David Widger',
+        ),
+      ],
+    );
+    await tester.pumpWidget(buildApp(feed: feed));
+    await tester.pumpAndSettle();
+
+    final text = tester.widget<Text>(
+      find.textContaining('This edition has images.'),
+    );
+    expect(text.maxLines, 1);
+    expect(text.overflow, TextOverflow.ellipsis);
   });
 
   testWidgets('book entry with authors and no series sets isThreeLine true', (

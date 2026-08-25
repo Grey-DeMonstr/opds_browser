@@ -70,6 +70,35 @@ Widget _buildApp({
   );
 }
 
+/// Opens the sheet through the same entry point the browse screen uses, so
+/// these tests cover how it is actually presented.
+Widget _openInModalSheet({required BookEntry entry, required Size screenSize}) {
+  return MediaQuery(
+    data: MediaQueryData(size: screenSize),
+    child: ProviderScope(
+      overrides: [
+        settingsProvider.overrideWith(() => FakeSettingsNotifier()),
+        httpClientProvider.overrideWith(
+          (ref) => MockClient((_) async => http.Response.bytes([1], 200)),
+        ),
+        downloadStorageProvider.overrideWith(
+          (ref) => FakeDownloadStorage(existsResult: false),
+        ),
+      ],
+      child: MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => showBookDetailsSheet(context, entry),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 void main() {
@@ -146,6 +175,77 @@ void main() {
       expect(find.text('Jane Doe'), findsOneWidget);
       expect(find.text('Great Series #1'), findsOneWidget);
       expect(find.text('A great summary.'), findsOneWidget);
+    });
+
+    testWidgets('a long summary is shown whole, never clipped', (tester) async {
+      final longSummary = List.generate(
+        60,
+        (i) => 'Sentence number $i about the whale.',
+      ).join(' ');
+      final entry = BookEntry(
+        title: 'Moby Dick; Or, The Whale',
+        authors: ['Melville, Herman'],
+        summary: longSummary,
+        acquisitionLinks: [_link('EPUB')],
+      );
+
+      await tester.pumpWidget(
+        _buildApp(
+          entry: entry,
+          mockClient: MockClient((_) async => http.Response.bytes([1], 200)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final text = tester.widget<Text>(find.text(longSummary));
+      expect(text.maxLines, isNull);
+      expect(text.overflow, anyOf(isNull, TextOverflow.clip));
+    });
+
+    testWidgets('a long summary does not push the actions out of reach', (
+      tester,
+    ) async {
+      final longSummary = List.generate(
+        60,
+        (i) => 'Sentence number $i about the whale.',
+      ).join(' ');
+      final entry = BookEntry(
+        title: 'Moby Dick; Or, The Whale',
+        authors: ['Melville, Herman'],
+        summary: longSummary,
+        acquisitionLinks: [_link('EPUB'), _link('MOBI')],
+      );
+
+      await tester.pumpWidget(
+        _openInModalSheet(entry: entry, screenSize: const Size(400, 600)),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      // The panel scrolls rather than overflowing, so everything below the
+      // summary — the Download button and the format list — stays reachable.
+      await tester.scrollUntilVisible(find.text('MOBI'), 200);
+      expect(find.text('MOBI'), findsOneWidget);
+      expect(find.widgetWithText(ElevatedButton, 'Download'), findsOneWidget);
+    });
+
+    testWidgets('the panel is swipable, with a drag handle', (tester) async {
+      final entry = BookEntry(
+        title: 'Book Title',
+        authors: ['Jane Doe'],
+        summary: 'A great summary.',
+        acquisitionLinks: [_link('FB2')],
+      );
+
+      await tester.pumpWidget(
+        _openInModalSheet(entry: entry, screenSize: const Size(400, 600)),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      final sheet = tester.widget<BottomSheet>(find.byType(BottomSheet));
+      expect(sheet.showDragHandle, isTrue);
+      expect(sheet.enableDrag, isTrue);
     });
 
     testWidgets('renders cover placeholder when no coverUrl', (tester) async {

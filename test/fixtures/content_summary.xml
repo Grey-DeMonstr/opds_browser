@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Two entries for the same book, distinguished only by <content>. Modelled on
+  Project Gutenberg's per-book feeds (e.g. /ebooks/2701.opds), which publish one
+  entry per edition and never emit <summary>.
+-->
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:opds="http://opds-spec.org/2010/catalog">
+  <title>Moby Dick; Or, The Whale by Herman Melville</title>
+  <entry>
+    <title>Moby Dick; Or, The Whale</title>
+    <content type="xhtml">
+      <div xmlns="http://www.w3.org/1999/xhtml">
+        <p>This edition had all images removed.</p>
+        <p>EBook No.: 2701</p>
+      </div>
+    </content>
+    <id>urn:gutenberg:2701:2</id>
+    <author><name>Melville, Herman</name></author>
+    <link type="application/epub+zip" rel="http://opds-spec.org/acquisition"
+          title="EPUB (no images, older E-readers)"
+          href="https://example.com/ebooks/2701.epub.noimages"/>
+    <link type="image/jpeg" rel="http://opds-spec.org/image/thumbnail"
+          href="https://example.com/covers/pg2701.small.jpg"/>
+  </entry>
+  <entry>
+    <title>Moby Dick; Or, The Whale</title>
+    <content type="xhtml">
+      <div xmlns="http://www.w3.org/1999/xhtml">
+        <p>This edition has images.</p>
+        <p>EBook No.: 2701</p>
+      </div>
+    </content>
+    <id>urn:gutenberg:2701:3</id>
+    <author><name>Melville, Herman</name></author>
+    <link type="application/epub+zip" rel="http://opds-spec.org/acquisition"
+          title="EPUB3 (E-readers incl. Send-to-Kindle)"
+          href="https://example.com/ebooks/2701.epub3.images"/>
+    <link type="image/jpeg" rel="http://opds-spec.org/image/thumbnail"
+          href="https://example.com/covers/pg2701.small.jpg"/>
+  </entry>
+  <!-- <summary> wins when a feed supplies both. -->
+  <entry>
+    <title>Book With Both</title>
+    <summary>The summary.</summary>
+    <content type="text">The content.</content>
+    <link type="application/epub+zip" rel="http://opds-spec.org/acquisition"
+          href="https://example.com/ebooks/both.epub"/>
+  </entry>
+  <!-- Neither element present — summary stays null. -->
+  <entry>
+    <title>Book With Neither</title>
+    <link type="application/epub+zip" rel="http://opds-spec.org/acquisition"
+          href="https://example.com/ebooks/neither.epub"/>
+  </entry>
+</feed>

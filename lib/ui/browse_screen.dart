@@ -549,11 +549,7 @@ class _BookEntryTileState extends ConsumerState<_BookEntryTile> {
     final isDownloading = downloadState is DownloadInProgress;
 
     return ListTile(
-      onTap: () => showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        builder: (_) => BookDetailsSheet(entry: entry),
-      ),
+      onTap: () => showBookDetailsSheet(context, entry),
       leading: SizedBox(
         width: 56,
         height: 80,
@@ -572,12 +568,23 @@ class _BookEntryTileState extends ConsumerState<_BookEntryTile> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (authors.isNotEmpty) Text(authors),
-          Text(
-            seriesText ?? '',
-            style: isInferredSeries
-                ? const TextStyle(fontStyle: FontStyle.italic)
-                : null,
-          ),
+          // The third line carries the series when there is one, and otherwise
+          // the description. Catalogues that publish several editions of one
+          // book — Project Gutenberg lists a stripped and an illustrated
+          // edition under the same title — are told apart only by that text.
+          if (seriesText != null)
+            Text(
+              seriesText,
+              style: isInferredSeries
+                  ? const TextStyle(fontStyle: FontStyle.italic)
+                  : null,
+            )
+          else
+            Text(
+              entry.summary ?? '',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
         ],
       ),
       isThreeLine: authors.isNotEmpty,
