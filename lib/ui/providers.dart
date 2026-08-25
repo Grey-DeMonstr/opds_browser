@@ -84,6 +84,10 @@ class CatalogsNotifier extends AsyncNotifier<List<Catalog>> {
     final repo = ref.read(catalogRepositoryProvider);
     await repo.delete(catalogId);
     state = AsyncData(await repo.getAll());
+    // The database takes the catalogue's favourites with it, but the
+    // favourites notifier holds its own copy. Left alone it keeps listing rows
+    // that no longer exist, and opening one browses a catalogue that is gone.
+    await ref.read(favoritesProvider.notifier).reload();
   }
 }
 
@@ -101,6 +105,12 @@ class FavoritesNotifier extends AsyncNotifier<List<Favorite>> {
     final repo = ref.read(favoritesRepositoryProvider);
     await repo.remove(favoriteId);
     state = AsyncData(await repo.getAll());
+  }
+
+  /// Re-reads the stored favourites, for when something other than this
+  /// notifier has changed them — deleting a catalogue, which cascades.
+  Future<void> reload() async {
+    state = AsyncData(await ref.read(favoritesRepositoryProvider).getAll());
   }
 
   Future<void> toggle(int catalogId, Uri url, String title) async {

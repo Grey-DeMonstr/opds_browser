@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opds_browser/domain/entities.dart';
 import 'package:opds_browser/domain/repositories.dart';
+import 'package:opds_browser/data/app_database.dart';
 import 'package:opds_browser/ui/providers.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class FakeCatalogRepository implements CatalogRepository {
   final List<Catalog> _data;
@@ -42,12 +44,29 @@ class FakeCatalogRepository implements CatalogRepository {
   }
 }
 
+class FakeFavoritesRepository implements FavoritesRepository {
+  @override
+  Future<List<Favorite>> getAll() async => const [];
+
+  @override
+  Future<void> add(int catalogId, Uri url, String title) async {}
+
+  @override
+  Future<void> remove(int favoriteId) async {}
+
+  @override
+  Future<bool> isFavorite(int catalogId, Uri url) async => false;
+}
+
 ProviderContainer makeContainer({List<Catalog> initial = const []}) {
   final container = ProviderContainer(
     overrides: [
       catalogRepositoryProvider.overrideWithValue(
         FakeCatalogRepository(initial: initial),
       ),
+      // Deleting a catalogue reloads the favourites, so they need a repository
+      // even in tests that are only interested in the catalogues.
+      favoritesRepositoryProvider.overrideWithValue(FakeFavoritesRepository()),
     ],
   );
   return container;
@@ -121,5 +140,54 @@ void main() {
 
     final catalogs = container.read(catalogsProvider).value!;
     expect(catalogs, isEmpty);
+  });
+
+  _deleteTests();
+}
+
+// ── Deleting a catalogue ──────────────────────────────────────────────────────
+//
+// The database drops a catalogue's favourites with it (ON DELETE CASCADE), so
+// these tests run against a real one rather than a fake that would have to
+// imitate the cascade.
+
+ProviderContainer _makeDbContainer() {
+  final db = AppDatabase(
+    factory: databaseFactoryFfi,
+    path: inMemoryDatabasePath,
+    seedDefaultCatalogs: false,
+  );
+  addTearDown(db.close);
+  return ProviderContainer(
+    overrides: [appDatabaseProvider.overrideWithValue(db)],
+  );
+}
+
+void _deleteTests() {
+  test('delete() drops the deleted catalogue favourites', () async {
+    final container = _makeDbContainer();
+    addTearDown(container.dispose);
+
+    final catalogRepo = container.read(catalogRepositoryProvider);
+    final kept = await catalogRepo.add('Keep', Uri.parse('https://keep.com'));
+    final doomed = await catalogRepo.add(
+      'Doomed',
+      Uri.parse('https://doomed.com'),
+    );
+    final favoritesRepo = container.read(favoritesRepositoryProvider);
+    await favoritesRepo.add(kept.id, Uri.parse('https://keep.com/f'), 'Kept');
+    await favoritesRepo.add(
+      doomed.id,
+      Uri.parse('https://doomed.com/f'),
+      'Doomed',
+    );
+
+    await container.read(catalogsProvider.future);
+    await container.read(favoritesProvider.future);
+
+    await container.read(catalogsProvider.notifier).delete(doomed.id);
+
+    final favorites = container.read(favoritesProvider).value!;
+    expect(favorites.map((f) => f.title), ['Kept']);
   });
 }
