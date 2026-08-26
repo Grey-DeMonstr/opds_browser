@@ -38,11 +38,25 @@ class FakeDownloadStorage implements DownloadStorage {
 // ── Fake settings notifier ────────────────────────────────────────────────────
 
 class FakeSettingsNotifier extends SettingsNotifier {
-  final AppSettings _initial;
-  FakeSettingsNotifier({this._initial = const AppSettings()});
+  FakeSettingsNotifier({this.initial = _configured});
+
+  final AppSettings initial;
+
+  static const _configured = AppSettings(
+    target: CustomSafFolder('content://example', 'Folder'),
+  );
+
+  int pickCalls = 0;
 
   @override
-  Future<AppSettings> build() async => _initial;
+  Future<AppSettings> build() async => initial;
+
+  @override
+  Future<bool> pickCustomFolder() async {
+    pickCalls++;
+    state = AsyncData(_configured);
+    return true;
+  }
 }
 
 // ── Helper ────────────────────────────────────────────────────────────────────
@@ -57,10 +71,13 @@ Widget _buildApp({
   required BookEntry entry,
   required MockClient mockClient,
   bool storageExists = false,
+  SettingsNotifier? settingsNotifier,
 }) {
   return ProviderScope(
     overrides: [
-      settingsProvider.overrideWith(() => FakeSettingsNotifier()),
+      settingsProvider.overrideWith(
+        () => settingsNotifier ?? FakeSettingsNotifier(),
+      ),
       httpClientProvider.overrideWith((ref) => mockClient),
       downloadStorageProvider.overrideWith(
         (ref) => FakeDownloadStorage(existsResult: storageExists),
@@ -654,6 +671,52 @@ void main() {
 
       expect(find.textContaining('Download failed'), findsOneWidget);
       expect(find.text('Retry'), findsOneWidget);
+    });
+  });
+
+  group('library folder gate', () {
+    final entry = BookEntry(
+      title: 'Book Title',
+      authors: ['Jane Doe'],
+      acquisitionLinks: [_link('FB2')],
+    );
+
+    testWidgets('Download asks for a folder when none is set', (tester) async {
+      final notifier = FakeSettingsNotifier(initial: const AppSettings());
+      await tester.pumpWidget(
+        _buildApp(
+          entry: entry,
+          mockClient: MockClient((_) async => http.Response('Error', 500)),
+          settingsNotifier: notifier,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Download FB2'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Choose a library folder'), findsOneWidget);
+      expect(find.textContaining('Download failed'), findsNothing);
+    });
+
+    testWidgets('Download proceeds once a folder is picked', (tester) async {
+      final notifier = FakeSettingsNotifier(initial: const AppSettings());
+      await tester.pumpWidget(
+        _buildApp(
+          entry: entry,
+          mockClient: MockClient((_) async => http.Response('Error', 500)),
+          settingsNotifier: notifier,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Download FB2'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Choose folder'));
+      await tester.pumpAndSettle();
+
+      expect(notifier.pickCalls, 1);
+      expect(find.textContaining('Download failed'), findsOneWidget);
     });
   });
 }

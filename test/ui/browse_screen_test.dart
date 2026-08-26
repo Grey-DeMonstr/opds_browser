@@ -147,6 +147,29 @@ BookEntry bookEntry({
   ],
 );
 
+/// Settings under test control: a folder is configured unless a test says
+/// otherwise, and picking one always succeeds.
+class FakeSettingsNotifier extends SettingsNotifier {
+  FakeSettingsNotifier({this.initial = _configured});
+
+  static const _configured = AppSettings(
+    target: CustomSafFolder('content://example', 'Folder'),
+  );
+
+  final AppSettings initial;
+  int pickCalls = 0;
+
+  @override
+  Future<AppSettings> build() async => initial;
+
+  @override
+  Future<bool> pickCustomFolder() async {
+    pickCalls++;
+    state = AsyncData(_configured);
+    return true;
+  }
+}
+
 Widget buildApp({
   required CachedFeed feed,
   List<Favorite> favorites = const [],
@@ -157,6 +180,7 @@ Widget buildApp({
   String? navSubtitle,
   void Function(GoRouterState)? onBrowse,
   FolderJobState folderJobState = const FolderJobIdle(),
+  SettingsNotifier? settingsNotifier,
 }) {
   final feedRepo = FakeFeedRepository(
     initialFeed: feed,
@@ -182,6 +206,10 @@ Widget buildApp({
           return const Scaffold(body: Text('sub'));
         },
       ),
+      GoRoute(
+        path: '/folder-scan',
+        builder: (_, _) => const Scaffold(body: Text('scan')),
+      ),
     ],
   );
   return ProviderScope(
@@ -189,6 +217,9 @@ Widget buildApp({
       feedRepositoryProvider.overrideWithValue(feedRepo),
       favoritesRepositoryProvider.overrideWithValue(favRepo),
       folderDownloadProvider.overrideWith(() => _FolderJobStub(folderJobState)),
+      settingsProvider.overrideWith(
+        () => settingsNotifier ?? FakeSettingsNotifier(),
+      ),
     ],
     child: MaterialApp.router(
       theme: buildLightTheme(),
@@ -202,6 +233,7 @@ Widget buildAppWithDownload({
   required CachedFeed feed,
   int catalogId = 1,
   Uri? url,
+  SettingsNotifier? settingsNotifier,
 }) {
   final feedRepo = FakeFeedRepository(initialFeed: feed);
   final favRepo = FakeFavoritesRepository();
@@ -223,6 +255,9 @@ Widget buildAppWithDownload({
         (ref) => MockClient((_) async => http.Response.bytes([1], 200)),
       ),
       downloadStorageProvider.overrideWith((ref) => null),
+      settingsProvider.overrideWith(
+        () => settingsNotifier ?? FakeSettingsNotifier(),
+      ),
     ],
     child: MaterialApp.router(
       theme: buildLightTheme(),
@@ -709,6 +744,43 @@ void main() {
     expect(find.textContaining('Download failed'), findsOneWidget);
   });
 
+  testWidgets('tapping book row download button asks for a folder first', (
+    tester,
+  ) async {
+    final feed = makeFeed(entries: [bookEntry(title: 'My Book')]);
+    final notifier = FakeSettingsNotifier(initial: const AppSettings());
+    await tester.pumpWidget(
+      buildAppWithDownload(feed: feed, settingsNotifier: notifier),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.download_outlined));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Choose a library folder'), findsOneWidget);
+    expect(find.textContaining('Download failed'), findsNothing);
+  });
+
+  testWidgets('book row download proceeds once a folder is picked', (
+    tester,
+  ) async {
+    final feed = makeFeed(entries: [bookEntry(title: 'My Book')]);
+    final notifier = FakeSettingsNotifier(initial: const AppSettings());
+    await tester.pumpWidget(
+      buildAppWithDownload(feed: feed, settingsNotifier: notifier),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.download_outlined));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Choose folder'));
+    await tester.pumpAndSettle();
+
+    expect(notifier.pickCalls, 1);
+    // Storage is stubbed out, so a started download surfaces as a failure.
+    expect(find.textContaining('Download failed'), findsOneWidget);
+  });
+
   testWidgets('mixed feed preserves entry order', (tester) async {
     final feed = makeFeed(
       entries: [
@@ -1184,6 +1256,7 @@ void main() {
             folderDownloadProvider.overrideWith(
               () => _FolderJobStub(const FolderJobIdle()),
             ),
+            settingsProvider.overrideWith(FakeSettingsNotifier.new),
           ],
           child: MaterialApp.router(
             theme: buildLightTheme(),
@@ -1202,6 +1275,42 @@ void main() {
       expect(pushedRoute, isNotNull);
       expect(pushedRoute, contains('catalogId=1'));
       expect(pushedRoute, contains(Uri.encodeComponent(_feedUrl.toString())));
+    });
+
+    testWidgets('tapping button asks for a folder when none is set', (
+      tester,
+    ) async {
+      final notifier = FakeSettingsNotifier(initial: const AppSettings());
+      await tester.pumpWidget(
+        buildApp(feed: makeFeed(), settingsNotifier: notifier),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.widgetWithIcon(IconButton, Icons.download_for_offline_outlined),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Choose a library folder'), findsOneWidget);
+      expect(find.text('scan'), findsNothing);
+    });
+
+    testWidgets('tapping button scans once a folder is picked', (tester) async {
+      final notifier = FakeSettingsNotifier(initial: const AppSettings());
+      await tester.pumpWidget(
+        buildApp(feed: makeFeed(), settingsNotifier: notifier),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.widgetWithIcon(IconButton, Icons.download_for_offline_outlined),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Choose folder'));
+      await tester.pumpAndSettle();
+
+      expect(notifier.pickCalls, 1);
+      expect(find.text('scan'), findsOneWidget);
     });
 
     testWidgets('button disabled when FolderJobDone', (tester) async {

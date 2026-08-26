@@ -52,9 +52,9 @@ class _FakeSettingsNotifier extends SettingsNotifier {
 
 void main() {
   testWidgets(
-    'router redirect: when target is null, navigating to / redirects to /setup',
+    'with no library folder the app still opens on the start screen',
     (tester) async {
-      // Use AppSettings() with no target (target = null)
+      // The folder is asked for on demand now, not behind a first-launch gate.
       final notifier = _FakeSettingsNotifier();
       await tester.pumpWidget(
         ProviderScope(
@@ -72,38 +72,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Should be on setup screen since target is null
-      expect(find.text('Pick library folder'), findsOneWidget);
-    },
-  );
-
-  testWidgets(
-    'router redirect: when target is set, navigating to /setup redirects to /',
-    (tester) async {
-      // Use AppSettings with a target folder
-      final notifier = _FakeSettingsNotifier(
-        settings: const AppSettings(
-          target: CustomSafFolder('content://example', 'Folder'),
-        ),
-      );
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            catalogRepositoryProvider.overrideWithValue(
-              _FakeCatalogRepository(),
-            ),
-            favoritesRepositoryProvider.overrideWithValue(
-              _FakeFavoritesRepository(),
-            ),
-            settingsProvider.overrideWith(() => notifier),
-          ],
-          child: const OpdsBrowserApp(),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Should be on start screen (home) since target is set
       expect(find.text('OPDS Browser'), findsOneWidget);
+      expect(find.text('Pick library folder'), findsNothing);
     },
   );
 

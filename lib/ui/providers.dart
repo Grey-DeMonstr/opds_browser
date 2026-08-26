@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
-import 'package:flutter/foundation.dart';
 import 'package:opds_browser/data/folder_download_job.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -301,17 +300,6 @@ final safPermissionCheckerProvider = Provider<Future<bool> Function(String)>((
     return (path) => Directory(path).exists();
   }
   return (uri) => SafUtil().hasPersistedPermission(uri, checkWrite: true);
-});
-
-class _RouterRefreshNotifier extends ChangeNotifier {
-  void ping() => notifyListeners();
-}
-
-final routerRefreshProvider = Provider<_RouterRefreshNotifier>((ref) {
-  final notifier = _RouterRefreshNotifier();
-  ref.onDispose(notifier.dispose);
-  ref.listen(settingsProvider, (prev, next) => notifier.ping());
-  return notifier;
 });
 
 class SettingsNotifier extends AsyncNotifier<AppSettings> {

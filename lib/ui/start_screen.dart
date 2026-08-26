@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:opds_browser/domain/catalog_url_formatter.dart';
 import 'package:opds_browser/domain/entities.dart';
 import 'package:opds_browser/ui/providers.dart';
+import 'package:opds_browser/ui/require_library_folder.dart';
 import 'package:opds_browser/ui/theme.dart';
 import 'package:opds_browser/ui/widgets/add_edit_catalog_dialog.dart';
 
@@ -51,7 +52,10 @@ class _StartScreenContent extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.local_library_outlined),
             tooltip: 'Manage local library',
-            onPressed: () => context.push('/library'),
+            onPressed: () async {
+              if (!await ensureLibraryFolder(context, ref)) return;
+              if (context.mounted) context.push('/library');
+            },
           ),
           IconButton(
             icon: const Icon(Icons.settings),

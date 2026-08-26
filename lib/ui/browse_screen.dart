@@ -12,6 +12,7 @@ import 'package:opds_browser/domain/download_utils.dart';
 import 'package:opds_browser/domain/entities.dart';
 import 'package:opds_browser/ui/book_details_sheet.dart';
 import 'package:opds_browser/ui/providers.dart';
+import 'package:opds_browser/ui/require_library_folder.dart';
 import 'package:opds_browser/ui/theme.dart';
 import 'package:opds_browser/ui/widgets/filter_chip_bar.dart';
 
@@ -235,9 +236,13 @@ class _BrowseContentState extends ConsumerState<_BrowseContent> {
             iconSize: 19,
             tooltip: 'Download folder',
             onPressed: jobState is FolderJobIdle
-                ? () => context.push(
-                    '/folder-scan?catalogId=$catalogId&url=${Uri.encodeComponent(url.toString())}',
-                  )
+                ? () async {
+                    if (!await ensureLibraryFolder(context, ref)) return;
+                    if (!context.mounted) return;
+                    context.push(
+                      '/folder-scan?catalogId=$catalogId&url=${Uri.encodeComponent(url.toString())}',
+                    );
+                  }
                 : null,
           ),
           const SizedBox(width: 4),
@@ -597,14 +602,19 @@ class _BookEntryTileState extends ConsumerState<_BookEntryTile> {
                   )
                 : IconButton(
                     icon: const Icon(Icons.download_outlined),
-                    onPressed: () => _onDownloadTap(context),
+                    onPressed: _onDownloadTap,
                   )
           : null,
     );
   }
 
-  Future<void> _onDownloadTap(BuildContext context) async {
+  // Uses the State's own context throughout, so the `mounted` guards after
+  // each await are the ones the analyzer expects.
+  Future<void> _onDownloadTap() async {
+    if (!await ensureLibraryFolder(context, ref)) return;
+    if (!mounted) return;
     final entry = widget.entry;
+    // Read after the gate: it may have just set the folder.
     final settings = ref.read(settingsProvider).value ?? const AppSettings();
     final preferred = preferredLink(entry.acquisitionLinks);
     if (preferred != null) {

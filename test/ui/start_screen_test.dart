@@ -98,6 +98,25 @@ class FakeOpdsClient implements OpdsClient {
   Future<bool> probe(Uri url) async => probeResult;
 }
 
+class FakeSettingsNotifier extends SettingsNotifier {
+  FakeSettingsNotifier({this.initial = const AppSettings()});
+
+  final AppSettings initial;
+  int pickCalls = 0;
+
+  @override
+  Future<AppSettings> build() async => initial;
+
+  @override
+  Future<bool> pickCustomFolder() async {
+    pickCalls++;
+    state = AsyncData(
+      const AppSettings(target: CustomSafFolder('content://picked', 'Lib')),
+    );
+    return true;
+  }
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 GoRouter _makeRouter() {
@@ -106,7 +125,7 @@ GoRouter _makeRouter() {
       GoRoute(path: '/', builder: (_, _) => const StartScreen()),
       GoRoute(path: '/browse', builder: (_, _) => const SizedBox()),
       GoRoute(path: '/settings', builder: (_, _) => const SizedBox()),
-      GoRoute(path: '/library', builder: (_, _) => const SizedBox()),
+      GoRoute(path: '/library', builder: (_, _) => const Text('LIBRARY')),
     ],
   );
 }
@@ -116,6 +135,7 @@ Widget buildApp({
   List<Favorite> favorites = const [],
   bool probeResult = true,
   GoRouter? router,
+  SettingsNotifier? settingsNotifier,
 }) {
   return ProviderScope(
     overrides: [
@@ -127,6 +147,9 @@ Widget buildApp({
       ),
       opdsClientProvider.overrideWithValue(
         FakeOpdsClient(probeResult: probeResult),
+      ),
+      settingsProvider.overrideWith(
+        () => settingsNotifier ?? FakeSettingsNotifier(),
       ),
     ],
     child: MaterialApp.router(
@@ -514,32 +537,6 @@ void main() {
     expect(find.byIcon(Icons.local_library_outlined), findsOneWidget);
   });
 
-  testWidgets('tapping library icon navigates to /library', (tester) async {
-    String? capturedUri;
-    final router = GoRouter(
-      routes: [
-        GoRoute(path: '/', builder: (_, _) => const StartScreen()),
-        GoRoute(path: '/browse', builder: (_, _) => const SizedBox()),
-        GoRoute(path: '/settings', builder: (_, _) => const SizedBox()),
-        GoRoute(
-          path: '/library',
-          builder: (_, state) {
-            capturedUri = state.uri.toString();
-            return const SizedBox();
-          },
-        ),
-      ],
-    );
-
-    await tester.pumpWidget(buildApp(router: router));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byIcon(Icons.local_library_outlined));
-    await tester.pumpAndSettle();
-
-    expect(capturedUri, equals('/library'));
-  });
-
   testWidgets('section labels are set in caps', (tester) async {
     await tester.pumpWidget(
       buildApp(catalogs: [_gutenberg], favorites: [_science]),
@@ -643,4 +640,62 @@ void main() {
     );
     expect(find.byType(FloatingActionButton), findsNothing);
   });
+
+  testWidgets('library button asks for a folder when none is set', (
+    tester,
+  ) async {
+    final notifier = FakeSettingsNotifier();
+    final router = _makeRouter();
+    await tester.pumpWidget(
+      buildApp(router: router, settingsNotifier: notifier),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Manage local library'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Choose a library folder'), findsOneWidget);
+    expect(find.text('LIBRARY'), findsNothing);
+  });
+
+  testWidgets('library button opens the library once a folder is picked', (
+    tester,
+  ) async {
+    final notifier = FakeSettingsNotifier();
+    final router = _makeRouter();
+    await tester.pumpWidget(
+      buildApp(router: router, settingsNotifier: notifier),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Manage local library'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Choose folder'));
+    await tester.pumpAndSettle();
+
+    expect(notifier.pickCalls, 1);
+    expect(find.text('LIBRARY'), findsOneWidget);
+  });
+
+  testWidgets(
+    'library button opens the library directly when a folder is set',
+    (tester) async {
+      final notifier = FakeSettingsNotifier(
+        initial: const AppSettings(
+          target: CustomSafFolder('content://example', 'Folder'),
+        ),
+      );
+      final router = _makeRouter();
+      await tester.pumpWidget(
+        buildApp(router: router, settingsNotifier: notifier),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Manage local library'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Choose a library folder'), findsNothing);
+      expect(find.text('LIBRARY'), findsOneWidget);
+    },
+  );
 }

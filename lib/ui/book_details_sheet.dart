@@ -6,6 +6,7 @@ import 'package:opds_browser/domain/download_utils.dart';
 import 'package:opds_browser/domain/entities.dart';
 import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/ui/providers.dart';
+import 'package:opds_browser/ui/require_library_folder.dart';
 import 'package:opds_browser/ui/theme.dart';
 
 /// Presents [BookDetailsSheet] as a draggable panel that can grow to the full
@@ -108,7 +109,10 @@ class _BookDetailsSheetState extends ConsumerState<BookDetailsSheet> {
     );
   }
 
-  void _startDownload(AcquisitionLink link) {
+  Future<void> _startDownload(AcquisitionLink link) async {
+    if (!await ensureLibraryFolder(context, ref)) return;
+    if (!mounted) return;
+    // Read after the gate: it may have just set the folder.
     final settings = ref.read(settingsProvider).value ?? const AppSettings();
     setState(() => _activeDownloadUrl = link.url);
     ref

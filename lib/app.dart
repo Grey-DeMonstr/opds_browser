@@ -5,10 +5,8 @@ import 'package:opds_browser/ui/browse_screen.dart';
 import 'package:opds_browser/ui/local_library_screen.dart';
 import 'package:opds_browser/ui/folder_scan_screen.dart';
 import 'package:opds_browser/ui/folder_tree_screen.dart';
-import 'package:opds_browser/ui/setup_screen.dart';
 import 'package:opds_browser/ui/settings_screen.dart';
 import 'package:opds_browser/ui/start_screen.dart';
-import 'package:opds_browser/ui/providers.dart';
 import 'package:opds_browser/ui/theme.dart';
 
 class OpdsBrowserApp extends ConsumerStatefulWidget {
@@ -24,27 +22,9 @@ class _OpdsBrowserAppState extends ConsumerState<OpdsBrowserApp> {
   @override
   void initState() {
     super.initState();
-    final refresher = ref.read(routerRefreshProvider);
     _router = GoRouter(
-      refreshListenable: refresher,
-      redirect: (context, state) {
-        final container = ProviderScope.containerOf(context, listen: false);
-        final settings = container.read(settingsProvider).value;
-        if (settings == null) return null; // still loading
-        if (settings.target == null && state.matchedLocation != '/setup') {
-          return '/setup';
-        }
-        if (settings.target != null && state.matchedLocation == '/setup') {
-          return '/';
-        }
-        return null;
-      },
       routes: [
         GoRoute(path: '/', builder: (context, state) => const StartScreen()),
-        GoRoute(
-          path: '/setup',
-          builder: (context, state) => const SetupScreen(),
-        ),
         GoRoute(
           path: '/browse',
           builder: (_, state) {
