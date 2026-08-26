@@ -9,6 +9,8 @@ import 'package:path/path.dart' as p;
 import 'package:opds_browser/data/app_database.dart';
 import 'package:opds_browser/data/book_downloader.dart';
 import 'package:opds_browser/data/caching_feed_repository.dart';
+import 'package:opds_browser/data/file_system_book_read_writer.dart';
+import 'package:opds_browser/data/file_system_local_library_scanner.dart';
 import 'package:opds_browser/data/file_system_download_storage.dart';
 import 'package:opds_browser/data/opds1/opds1_client.dart';
 import 'package:opds_browser/data/saf_download_storage.dart';
@@ -619,7 +621,9 @@ final folderDownloadProvider =
 // ── Local library ─────────────────────────────────────────────────────────────
 
 final localLibraryScannerProvider = Provider<LocalLibraryScanner>(
-  (ref) => SafLocalLibraryScanner(),
+  (ref) => Platform.isAndroid
+      ? SafLocalLibraryScanner()
+      : const FileSystemLocalLibraryScanner(),
 );
 
 final localLibraryCacheProvider = Provider<SqfliteLocalLibraryCache>(
@@ -631,7 +635,9 @@ final fb2MetadataParserProvider = Provider<Fb2MetadataParser>(
 );
 
 final localBookReadWriterProvider = Provider<LocalBookReadWriter>(
-  (ref) => SafBookReadWriter(),
+  (ref) => Platform.isAndroid
+      ? SafBookReadWriter()
+      : const FileSystemBookReadWriter(),
 );
 
 final fb2MetadataWriterProvider = Provider<Fb2MetadataWriter>(

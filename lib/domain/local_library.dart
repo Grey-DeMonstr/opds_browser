@@ -38,8 +38,8 @@ class LibraryFile {
   });
 
   final String relativePath; // e.g. "Jane Doe/Series/book.fb2"
-  final String documentUri; // SAF document URI for reading
-  final String parentUri; // SAF directory URI for writing
+  final String documentUri; // SAF document URI, or a file path off Android
+  final String parentUri; // the folder it sits in, in the same form
 }
 
 sealed class LibraryNode {}
