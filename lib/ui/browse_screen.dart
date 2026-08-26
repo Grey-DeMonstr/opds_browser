@@ -132,19 +132,6 @@ class _BrowseContentState extends ConsumerState<_BrowseContent> {
     });
   }
 
-  Future<void> _openDownload(DownloadDone result) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await ref
-          .read(fileOpenerProvider)
-          .open(result.contentUri, result.mimeType);
-    } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('Could not open ${result.fileName}: $e')),
-      );
-    }
-  }
-
   /// Where this folder was reached from — the entry that was tapped, and what
   /// it said was inside. Absent at the root of a catalogue.
   String? get _contextLine {
@@ -171,26 +158,6 @@ class _BrowseContentState extends ConsumerState<_BrowseContent> {
       query: _query,
     );
     final contextLine = _contextLine;
-
-    ref.listen(lastDownloadResultProvider, (_, result) {
-      if (result == null) return;
-      ref.read(lastDownloadResultProvider.notifier).clear();
-      final msg = result.alreadyExisted
-          ? 'Already downloaded: ${result.fileName}'
-          : 'Downloaded: ${result.fileName}';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(msg),
-          showCloseIcon: true,
-          action: result.alreadyExisted
-              ? null
-              : SnackBarAction(
-                  label: 'Open',
-                  onPressed: () => _openDownload(result),
-                ),
-        ),
-      );
-    });
 
     return Scaffold(
       appBar: AppBar(
