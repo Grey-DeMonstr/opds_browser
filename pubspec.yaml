@@ -1,7 +1,7 @@
 name: opds_browser
 description: "Browse open OPDS catalogues and download ebooks"
 publish_to: 'none'
-version: 0.2.0+1
+version: 0.2.1+1
 
 environment:
   sdk: ^3.12.1
