@@ -7,7 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:opds_browser/data/app_database.dart';
+import 'package:opds_browser/data/android_file_opener.dart';
 import 'package:opds_browser/data/book_downloader.dart';
+import 'package:opds_browser/data/desktop_file_opener.dart';
 import 'package:opds_browser/data/caching_feed_repository.dart';
 import 'package:opds_browser/data/file_system_book_read_writer.dart';
 import 'package:opds_browser/data/file_system_local_library_scanner.dart';
@@ -638,6 +640,11 @@ final localBookReadWriterProvider = Provider<LocalBookReadWriter>(
   (ref) => Platform.isAndroid
       ? SafBookReadWriter()
       : const FileSystemBookReadWriter(),
+);
+
+/// Android opens books through an intent; the desktop builds shell out.
+final fileOpenerProvider = Provider<FileOpener>(
+  (ref) => Platform.isAndroid ? const AndroidFileOpener() : DesktopFileOpener(),
 );
 
 final fb2MetadataWriterProvider = Provider<Fb2MetadataWriter>(

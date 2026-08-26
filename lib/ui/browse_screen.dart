@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:opds_browser/data/android_file_opener.dart';
 import 'package:opds_browser/data/folder_download_job.dart';
 import 'package:opds_browser/domain/browse_list.dart';
 import 'package:opds_browser/domain/models.dart';
@@ -133,6 +132,19 @@ class _BrowseContentState extends ConsumerState<_BrowseContent> {
     });
   }
 
+  Future<void> _openDownload(DownloadDone result) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref
+          .read(fileOpenerProvider)
+          .open(result.contentUri, result.mimeType);
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not open ${result.fileName}: $e')),
+      );
+    }
+  }
+
   /// Where this folder was reached from — the entry that was tapped, and what
   /// it said was inside. Absent at the root of a catalogue.
   String? get _contextLine {
@@ -174,7 +186,7 @@ class _BrowseContentState extends ConsumerState<_BrowseContent> {
               ? null
               : SnackBarAction(
                   label: 'Open',
-                  onPressed: () => openFile(result.contentUri, result.mimeType),
+                  onPressed: () => _openDownload(result),
                 ),
         ),
       );

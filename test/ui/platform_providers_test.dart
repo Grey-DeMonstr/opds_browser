@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opds_browser/data/desktop_file_opener.dart';
 import 'package:opds_browser/data/file_system_book_read_writer.dart';
 import 'package:opds_browser/data/file_system_local_library_scanner.dart';
 import 'package:opds_browser/ui/providers.dart';
@@ -28,5 +29,9 @@ void main() {
       container.read(localBookReadWriterProvider),
       isA<FileSystemBookReadWriter>(),
     );
+  });
+
+  test('file opener hands off to the desktop shell off Android', () {
+    expect(container.read(fileOpenerProvider), isA<DesktopFileOpener>());
   });
 }

@@ -28,6 +28,13 @@ abstract interface class SettingsRepository {
   Future<void> save(AppSettings settings);
 }
 
+/// Hands a finished download to whatever the platform opens books with.
+abstract interface class FileOpener {
+  /// [uri] is whatever [DownloadStorage.write] returned — a content URI on
+  /// Android, a file path everywhere else.
+  Future<void> open(String uri, String mimeType);
+}
+
 abstract interface class DownloadStorage {
   /// Returns true if a file with this path already exists.
   Future<bool> exists(List<String> pathSegments, String fileName);

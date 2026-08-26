@@ -7,6 +7,7 @@ void main() {
 
   const channel = MethodChannel('monster.greyde.opds_browser/open_file');
   final log = <MethodCall>[];
+  const opener = AndroidFileOpener();
 
   setUp(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -22,8 +23,8 @@ void main() {
         .setMockMethodCallHandler(channel, null);
   });
 
-  test('openFile sends correct uri and mimeType to native channel', () async {
-    await openFile('content://test/document/1', 'application/epub+zip');
+  test('open sends correct uri and mimeType to native channel', () async {
+    await opener.open('content://test/document/1', 'application/epub+zip');
 
     expect(log, hasLength(1));
     expect(log.first.method, 'openFile');
@@ -31,12 +32,9 @@ void main() {
     expect(log.first.arguments['mimeType'], 'application/epub+zip');
   });
 
-  test(
-    'openFile with different mimeType passes it through unchanged',
-    () async {
-      await openFile('content://test/document/2', 'application/pdf');
+  test('open with different mimeType passes it through unchanged', () async {
+    await opener.open('content://test/document/2', 'application/pdf');
 
-      expect(log.first.arguments['mimeType'], 'application/pdf');
-    },
-  );
+    expect(log.first.arguments['mimeType'], 'application/pdf');
+  });
 }
