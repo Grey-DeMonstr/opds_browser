@@ -7,7 +7,6 @@ import 'package:opds_browser/data/url_normalizer.dart';
 import 'package:opds_browser/domain/browse_list.dart';
 import 'package:opds_browser/domain/catalog_url_formatter.dart';
 import 'package:opds_browser/domain/download_utils.dart';
-import 'package:opds_browser/domain/entry_icon.dart';
 import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/domain/opds_search.dart';
 import 'package:opds_browser/domain/url_debug_formatter.dart';
@@ -16,7 +15,7 @@ import 'package:opds_browser/ui/require_library_folder.dart';
 import 'package:opds_browser/ui/theme.dart';
 import 'package:opds_browser/ui/widgets/entry_rows.dart';
 import 'package:opds_browser/ui/widgets/filter_chip_bar.dart';
-import 'package:opds_browser/ui/widgets/mark_row.dart';
+import 'package:opds_browser/ui/widgets/root_rows.dart';
 
 class BrowseScreen extends ConsumerStatefulWidget {
   final int catalogId;
@@ -293,7 +292,7 @@ class _BrowseContentState extends ConsumerState<_BrowseContent> {
                   slivers: [
                     if (searchable)
                       SliverToBoxAdapter(
-                        child: _SearchRow(
+                        child: RootSearchRow(
                           catalogId: catalogId,
                           rootUrl: catalog.rootUrl,
                         ),
@@ -313,7 +312,7 @@ class _BrowseContentState extends ConsumerState<_BrowseContent> {
                         delegate: SliverChildBuilderDelegate((context, index) {
                           final entry = visible[index];
                           return switch (entry) {
-                            NavigationEntry e when atRoot => _RootSectionRow(
+                            NavigationEntry e when atRoot => RootSectionRow(
                               entry: e,
                               catalogId: catalogId,
                               key: ValueKey(e.url),
@@ -373,152 +372,6 @@ class _DebugUrlPanel extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// The metrics every root row shares. The root reads as a short list of ways
-/// into the catalogue rather than a feed of entries, so its rows are set the
-/// way the home screen sets a catalogue — one square, one glyph, the title and
-/// its count beside it — on this screen's own inset.
-const _rootRowPadding = EdgeInsets.symmetric(horizontal: gutter, vertical: 13);
-const _rootRowGap = 13.0;
-
-/// The glyph a root section is marked with.
-///
-/// A switch rather than a map, so that adding an [EntryGlyph] is a compile
-/// error here instead of a null at the moment the row is drawn.
-IconData _iconFor(EntryGlyph glyph) => switch (glyph) {
-  EntryGlyph.author => Icons.person_outline,
-  EntryGlyph.series => Icons.layers_outlined,
-  EntryGlyph.title => Icons.menu_book_outlined,
-  EntryGlyph.genre => Icons.sell_outlined,
-  EntryGlyph.popular => Icons.trending_up,
-  EntryGlyph.newest => Icons.history,
-  EntryGlyph.random => Icons.shuffle,
-  EntryGlyph.folder => Icons.folder_outlined,
-};
-
-/// The quieter line under a root section's title — what the catalogue said is
-/// inside it. Absent when the catalogue said nothing.
-class _RootSubtitle extends StatelessWidget {
-  final String? text;
-
-  const _RootSubtitle(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    final text = this.text;
-    if (text == null || text.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(top: 2),
-      child: Text(
-        text,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontSize: 11.5,
-          height: 1.4,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-}
-
-/// One of the ways into a catalogue, as its root lists them.
-class _RootSectionRow extends StatelessWidget {
-  final NavigationEntry entry;
-  final int catalogId;
-
-  const _RootSectionRow({
-    required this.entry,
-    required this.catalogId,
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final palette = appPaletteOf(context);
-    final subtitleParam = entry.subtitle != null
-        ? '&subtitle=${Uri.encodeComponent(entry.subtitle!)}'
-        : '';
-
-    return MarkRow(
-      mark: Mark(
-        background: palette.catalogMarkSurface,
-        border: scheme.outlineVariant,
-        child: Icon(
-          _iconFor(glyphForEntryUrl(entry.url)),
-          size: 18,
-          color: scheme.primary,
-        ),
-      ),
-      title: entry.title,
-      subtitle: _RootSubtitle(entry.subtitle),
-      padding: _rootRowPadding,
-      gap: _rootRowGap,
-      trailing: Icon(Icons.chevron_right, size: 18, color: palette.dim),
-      onTap: () => context.push(
-        '/browse?catalogId=$catalogId'
-        '&url=${Uri.encodeComponent(entry.url.toString())}'
-        '&title=${Uri.encodeComponent(entry.title)}$subtitleParam',
-      ),
-    );
-  }
-}
-
-/// The catalogue root's first row: the way into a catalogue-wide search.
-///
-/// It takes the same shape as the sections beneath it, because that is what it
-/// is — one more way into the catalogue — and it is accented to mark it as the
-/// one row the catalogue did not itself publish.
-class _SearchRow extends StatelessWidget {
-  final int catalogId;
-  final Uri rootUrl;
-
-  const _SearchRow({required this.catalogId, required this.rootUrl});
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final palette = appPaletteOf(context);
-
-    return Column(
-      children: [
-        MarkRow(
-          mark: Mark(
-            background: palette.accentFill,
-            border: palette.accentStrong,
-            child: Icon(Icons.search, size: 18, color: scheme.primary),
-          ),
-          title: 'Search',
-          titleColor: scheme.primary,
-          padding: _rootRowPadding,
-          gap: _rootRowGap,
-          trailing: Icon(Icons.chevron_right, size: 18, color: scheme.primary),
-          background: scheme.primary.withValues(alpha: 0.06),
-          onTap: () => context.push(
-            '/search?catalogId=$catalogId'
-            '&rootUrl=${Uri.encodeComponent(rootUrl.toString())}',
-          ),
-        ),
-        // Sets the one row that is not a published section apart from them,
-        // fading out rather than ruling all the way across.
-        Container(
-          height: 1,
-          margin: const EdgeInsets.fromLTRB(gutter, 6, gutter, 6),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                palette.accentStrong,
-                palette.accentStrong.withValues(alpha: 0),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
