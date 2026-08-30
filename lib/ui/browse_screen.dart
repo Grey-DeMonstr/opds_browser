@@ -538,8 +538,7 @@ class _RootSectionRow extends StatelessWidget {
 ///
 /// It takes the same shape as the sections beneath it, because that is what it
 /// is — one more way into the catalogue — and it is accented to mark it as the
-/// one row the catalogue did not itself publish. The subtitle carries the
-/// caveat, since a search really can take a while.
+/// one row the catalogue did not itself publish.
 class _SearchRow extends StatelessWidget {
   final int catalogId;
   final Uri rootUrl;
@@ -561,7 +560,7 @@ class _SearchRow extends StatelessWidget {
             foreground: scheme.primary,
           ),
           title: 'Search',
-          subtitle: 'Every book in the catalogue · slow',
+          subtitle: null,
           titleColor: scheme.primary,
           caretColor: scheme.primary,
           background: scheme.primary.withValues(alpha: 0.06),

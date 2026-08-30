@@ -213,9 +213,9 @@ one query parameter per line. Tapping it copies the full URL.
 ### 5.6 Searching the whole catalogue
 
 **Where it is.** A catalogue's root page opens with a **Search** row — the first row,
-accented, subtitled *"Every book in the catalogue · slow"*. It is not a folder the
-catalogue published; it is one more way in, so it takes the same shape as the rows beneath
-it.
+accented, and reading simply *Search*. It is not a folder the catalogue published; it is
+one more way in, so it takes the same shape as the rows beneath it. What a search costs is
+said on the screen it opens rather than on the row.
 
 The row appears only on a catalogue's root, and only when that catalogue says it can be
 searched. A catalogue that advertises no search simply has no row, rather than a dead one.

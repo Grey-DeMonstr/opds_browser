@@ -721,9 +721,7 @@ void main() {
       fromCache: true,
     );
 
-    testWidgets('a searchable root offers it, with its one caveat', (
-      tester,
-    ) async {
+    testWidgets('a searchable root offers it, unadorned', (tester) async {
       await tester.pumpWidget(
         buildApp(
           feed: rootFeed(links: searchable),
@@ -734,7 +732,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Search'), findsOneWidget);
-      expect(find.text('Every book in the catalogue · slow'), findsOneWidget);
+      expect(
+        find.text('Every book in the catalogue · slow'),
+        findsNothing,
+        reason: 'the row is just Search',
+      );
     });
 
     testWidgets('a root advertising no search does not offer it', (
