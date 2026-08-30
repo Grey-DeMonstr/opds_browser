@@ -789,7 +789,7 @@ void main() {
             navEntry(title: 'Серии', url: 'https://example.com/opds/series'),
             navEntry(title: 'Книги', url: 'https://example.com/opds/title'),
             navEntry(title: 'Жанры', url: 'https://example.com/opds/genre'),
-            navEntry(title: 'Свежее', url: 'https://example.com/opds/latest'),
+            navEntry(title: 'Полки', url: 'https://example.com/opds/misc'),
           ],
         ),
         fetchedAt: DateTime(2026, 8, 30),
@@ -806,6 +806,46 @@ void main() {
       expect(find.byIcon(Icons.menu_book_outlined), findsOneWidget);
       expect(find.byIcon(Icons.sell_outlined), findsOneWidget);
       expect(find.byIcon(Icons.folder_outlined), findsOneWidget);
+    });
+
+    testWidgets('a root that sorts by query gets a mark per section', (
+      tester,
+    ) async {
+      // Project Gutenberg hangs its three entry points off one path.
+      final feed = CachedFeed(
+        feed: ParsedFeed(
+          title: 'Project Gutenberg',
+          entries: [
+            navEntry(
+              title: 'Popular',
+              url:
+                  'https://example.com/ebooks/search.opds/'
+                  '?sort_order=downloads',
+            ),
+            navEntry(
+              title: 'Latest',
+              url:
+                  'https://example.com/ebooks/search.opds/'
+                  '?sort_order=release_date',
+            ),
+            navEntry(
+              title: 'Random',
+              url: 'https://example.com/ebooks/search.opds/?sort_order=random',
+            ),
+          ],
+        ),
+        fetchedAt: DateTime(2026, 8, 30),
+        fromCache: true,
+      );
+      await tester.pumpWidget(
+        buildApp(feed: feed, url: rootUrl, catalogs: [catalogue]),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.trending_up), findsOneWidget);
+      expect(find.byIcon(Icons.history), findsOneWidget);
+      expect(find.byIcon(Icons.shuffle), findsOneWidget);
+      expect(find.byIcon(Icons.folder_outlined), findsNothing);
     });
 
     testWidgets('a level below the root keeps the plain row', (tester) async {

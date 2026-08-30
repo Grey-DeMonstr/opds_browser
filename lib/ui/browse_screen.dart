@@ -500,6 +500,9 @@ class _RootSectionRow extends StatelessWidget {
     EntryGlyph.series: Icons.layers_outlined,
     EntryGlyph.title: Icons.menu_book_outlined,
     EntryGlyph.genre: Icons.sell_outlined,
+    EntryGlyph.popular: Icons.trending_up,
+    EntryGlyph.newest: Icons.history,
+    EntryGlyph.random: Icons.shuffle,
     EntryGlyph.folder: Icons.folder_outlined,
   };
 

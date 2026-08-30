@@ -20,7 +20,7 @@ void main() {
     });
 
     test('an unrecognised section gets the neutral folder glyph', () {
-      expect(glyph('https://example.com/opds/latest'), EntryGlyph.folder);
+      expect(glyph('https://example.com/opds/misc'), EntryGlyph.folder);
       expect(glyph('https://example.com/opds'), EntryGlyph.folder);
     });
 
@@ -28,7 +28,6 @@ void main() {
       // Project Gutenberg hangs its whole root under /ebooks/. Matching a
       // keyword anywhere in the URL would call all of it "titles".
       expect(glyph('https://example.com/ebooks/'), EntryGlyph.folder);
-      expect(glyph('https://example.com/ebooks/latest/'), EntryGlyph.folder);
       expect(glyph('https://example.com/ebooks/author/123'), EntryGlyph.author);
     });
 
@@ -45,6 +44,36 @@ void main() {
         glyph('https://example.com/opds/find?q=authorship+studies'),
         EntryGlyph.folder,
       );
+    });
+
+    test('a sort order names the section when the path does not', () {
+      // Project Gutenberg hangs its whole root off one path and distinguishes
+      // the sections by query alone.
+      expect(
+        glyph('https://example.com/ebooks/search.opds/?sort_order=downloads'),
+        EntryGlyph.popular,
+      );
+      expect(
+        glyph(
+          'https://example.com/ebooks/search.opds/?sort_order=release_date',
+        ),
+        EntryGlyph.newest,
+      );
+      expect(
+        glyph('https://example.com/ebooks/search.opds/?sort_order=random'),
+        EntryGlyph.random,
+      );
+    });
+
+    test('the same sections named in a path are read too', () {
+      expect(glyph('https://example.com/opds/popular'), EntryGlyph.popular);
+      expect(glyph('https://example.com/opds/latest'), EntryGlyph.newest);
+      expect(glyph('https://example.com/opds/random'), EntryGlyph.random);
+    });
+
+    test('a longer word is not cut down to one of these', () {
+      // "newspapers" is a folder of newspapers, not the newest anything.
+      expect(glyph('https://example.com/opds/newspapers'), EntryGlyph.folder);
     });
 
     test('matching ignores case', () {

@@ -120,12 +120,16 @@ ways into the catalogue rather than a feed of entries, so each row carries a squ
 with a glyph, the title, what the catalogue said is inside, and a chevron. The **Search**
 row (§5.6) is the first of them, accented and set off by a fading rule.
 
-The glyph comes from where the row's link points, not from its title: a link whose path
-names an author, series, title or genre section gets a mark for it, and anything else gets
-a neutral folder. Catalogues write those paths in English whatever language they publish
-in, so a section titled *Жанры* is still marked as genres. A keyword has to be a whole
-path segment, so a catalogue that hangs its entire root under one folder does not have
-every row marked the same.
+The glyph comes from where the row's link points, not from its title: a link naming an
+author, series, title, genre, most-popular, newest or random section gets a mark for it,
+and anything else gets a neutral folder. Catalogues write those names in English whatever
+language they publish in, so a section titled *Жанры* is still marked as genres.
+
+The name is looked for in the link's path, and failing that in its query — some
+catalogues hang every section off one path and tell them apart by a sort order alone. A
+path keyword has to be a whole segment and a query keyword a whole value, so a catalogue
+rooted under one folder does not have every row marked the same, and a URL that happens
+to carry someone's search terms cannot have a glyph picked out of them.
 
 Below the root, **folder rows** show the title as the catalogue wrote it, with what the catalogue said
 is inside on a quieter line beneath — "930 authors", "1 book by this author" — with

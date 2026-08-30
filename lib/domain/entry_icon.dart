@@ -1,5 +1,14 @@
 /// The kinds of section a catalogue root commonly offers.
-enum EntryGlyph { author, series, title, genre, folder }
+enum EntryGlyph {
+  author,
+  series,
+  title,
+  genre,
+  popular,
+  newest,
+  random,
+  folder,
+}
 
 /// Keywords per glyph, in the order they are tried.
 const _keywords = <EntryGlyph, List<String>>{
@@ -7,6 +16,9 @@ const _keywords = <EntryGlyph, List<String>>{
   EntryGlyph.series: ['series', 'serie', 'sequence', 'cycle'],
   EntryGlyph.genre: ['genre', 'category', 'subject', 'shelf', 'bookshelf'],
   EntryGlyph.title: ['title', 'alphabet'],
+  EntryGlyph.popular: ['popular', 'downloads', 'downloaded'],
+  EntryGlyph.newest: ['newest', 'latest', 'recent', 'release_date'],
+  EntryGlyph.random: ['random', 'shuffle'],
 };
 
 /// The glyph [url] earns, inferred from the link itself.
@@ -20,6 +32,11 @@ const _keywords = <EntryGlyph, List<String>>{
 /// A substring match would read `/ebooks/` — the root of a catalogue whose
 /// every section lives under it — as a section about books, and give the whole
 /// root one glyph.
+///
+/// Some catalogues put the section in the query instead, hanging every row off
+/// one path and telling them apart by a sort order. Those are matched on the
+/// whole value, so a query carrying someone's search terms cannot pick a
+/// glyph out of them.
 EntryGlyph glyphForEntryUrl(Uri url) {
   final segments = [
     for (final s in url.pathSegments)
