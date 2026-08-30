@@ -73,6 +73,39 @@ jobs:
           TAG: ${{ steps.version.outputs.tag }}
         run: dart run tool/check_version.dart "$TAG"
 
+      # Release notes are the version's section of changelog.txt, not a list of
+      # commit subjects: the release page is read by users, and the changelog is
+      # the one place that describes a version in their language. A tag whose
+      # version has no section fails the release rather than publishing a page
+      # nobody wrote - and it fails here, before the ~15 minute build, for the
+      # same reason the keystore is validated up front.
+      - name: Generate release notes
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          NOTES="$RUNNER_TEMP/release-notes.md"
+
+          # A version header is the only line that is exactly X.Y.Z, so the
+          # section runs from one to the next. `NF || started` drops the blank
+          # line under the header without touching blanks inside the section.
+          awk -v v="$VERSION" '
+            $0 == v { inside = 1; next }
+            /^[0-9]+\.[0-9]+\.[0-9]+$/ { inside = 0 }
+            inside && (NF || started) { started = 1; print }
+          ' changelog.txt > "$NOTES.raw"
+
+          if ! grep -q '[^[:space:]]' "$NOTES.raw"; then
+            echo "::error::changelog.txt has no entry for $VERSION. Add its section before tagging."
+            exit 1
+          fi
+
+          # Command substitution strips the trailing newlines the section
+          # carries ahead of the next version header.
+          printf '%s\n' "$(cat "$NOTES.raw")" > "$NOTES"
+
+          echo "Release notes for $VERSION:"
+          cat "$NOTES"
+
       - name: Analyze and test
         run: dart run tool/check.dart
 
@@ -158,23 +191,6 @@ jobs:
             echo "::error::$APK is signed with the Android debug certificate, not the upload key. A debug-signed public release can never be upgraded over - refusing to publish it."
             exit 1
           fi
-
-      - name: Generate release notes
-        env:
-          TAG: ${{ steps.version.outputs.tag }}
-        run: |
-          PREV_TAG="$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)"
-          if [ -n "$PREV_TAG" ]; then
-            RANGE="${PREV_TAG}..${TAG}"
-          else
-            # First release: no previous tag, so use the full history.
-            RANGE="${TAG}"
-          fi
-          {
-            echo "## Changes"
-            echo
-            git log --no-merges --pretty=format:'- %s' "$RANGE"
-          } > "$RUNNER_TEMP/release-notes.md"
 
       # Idempotent: a re-run after a later step fails (e.g. the Play upload,
       # once enabled) must not die on `gh release create`'s 422 for a release
