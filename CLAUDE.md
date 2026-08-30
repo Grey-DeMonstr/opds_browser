@@ -26,9 +26,25 @@ flutter pub get               # resolve dependencies
 dart format .                 # format all Dart files
 flutter analyze               # static analysis (must be clean)
 flutter test                  # run all tests (host only, no device needed)
+dart run tool/check_privacy.dart  # scan tracked files for private data
 dart run tool/check.dart      # canonical quality gate: analyze + test
 make check                    # same, via Makefile
 ```
+
+`tool/check_privacy.dart` rejects any hostname, IP address or absolute
+filesystem path that is not on the allow-list it carries. The list is an
+*allow*-list on purpose: a deny-list would have to name the very strings we
+keep out of the repository. When a genuinely public host or a synthetic test
+path trips it, add it to `allowedHosts` / `allowedPaths` there. Prefer the
+RFC 2606 reserved names (`example.com`, `*.test`, `*.invalid`) and the RFC 5737
+documentation addresses (`192.0.2.x`) in new tests — those pass without any
+allow-list entry.
+
+The sweep over the working tree runs as an ordinary test in
+`test/tool/check_privacy_test.dart`, so `flutter test` covers it. **It is
+local-only**: that test is skipped when `CI` is set, because catching private
+data is a pre-commit concern. The rules themselves are unit-tested and do run
+on CI.
 
 ## Architecture
 
