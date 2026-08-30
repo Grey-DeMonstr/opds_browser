@@ -126,6 +126,21 @@ NavigationEntry navEntry({
   String url = 'http://example.com/sub',
 }) => NavigationEntry(title: title, subtitle: subtitle, url: Uri.parse(url));
 
+/// [count] distinct folder rows — enough of them to bring out the filter, or
+/// few enough to keep it away.
+List<FeedEntry> numberedNav(int count) => [
+  for (var i = 0; i < count; i++)
+    navEntry(title: 'Folder $i', url: 'http://example.com/$i'),
+];
+
+/// A folder long enough to offer the filter, holding two rows a query can tell
+/// apart.
+List<FeedEntry> filterableEntries() => [
+  navEntry(title: 'Dickens, Charles', url: 'http://example.com/a'),
+  navEntry(title: 'Trollope, Anthony', url: 'http://example.com/b'),
+  ...numberedNav(4),
+];
+
 BookEntry bookEntry({
   String title = 'My Book',
   List<String> authors = const ['Jane Doe'],
@@ -545,17 +560,12 @@ void main() {
     expect(find.text('DIC~'), findsOneWidget);
   });
 
-  testWidgets('Search opens a field that narrows the list', (tester) async {
-    final feed = makeFeed(
-      entries: [
-        navEntry(title: 'Dickens, Charles', url: 'http://example.com/a'),
-        navEntry(title: 'Trollope, Anthony', url: 'http://example.com/b'),
-      ],
-    );
+  testWidgets('Filter opens a field that narrows the list', (tester) async {
+    final feed = makeFeed(entries: filterableEntries());
     await tester.pumpWidget(buildApp(feed: feed));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Search'));
+    await tester.tap(find.text('Filter'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'dickens');
     await tester.pumpAndSettle();
@@ -564,27 +574,76 @@ void main() {
     expect(find.text('Trollope, Anthony'), findsNothing);
   });
 
-  testWidgets('closing Search clears the query and restores the list', (
+  testWidgets('closing Filter clears the query and restores the list', (
     tester,
   ) async {
-    final feed = makeFeed(
-      entries: [
-        navEntry(title: 'Dickens, Charles', url: 'http://example.com/a'),
-        navEntry(title: 'Trollope, Anthony', url: 'http://example.com/b'),
-      ],
-    );
+    final feed = makeFeed(entries: filterableEntries());
     await tester.pumpWidget(buildApp(feed: feed));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Search'));
+    await tester.tap(find.text('Filter'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'dickens');
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Search'));
+    await tester.tap(find.text('Filter'));
     await tester.pumpAndSettle();
 
     expect(find.byType(TextField), findsNothing);
     expect(find.text('Trollope, Anthony'), findsOneWidget);
+  });
+
+  testWidgets('the list is never offered a "Search" chip', (tester) async {
+    await tester.pumpWidget(
+      buildApp(feed: makeFeed(entries: filterableEntries())),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Search'), findsNothing);
+  });
+
+  testWidgets('Filter is offered once a folder holds more than five rows', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp(feed: makeFeed(entries: numberedNav(6))));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Filter'), findsOneWidget);
+  });
+
+  testWidgets('Filter is withheld from a folder of five rows or fewer', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp(feed: makeFeed(entries: numberedNav(5))));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Filter'), findsNothing);
+    expect(find.text('All'), findsOneWidget);
+  });
+
+  testWidgets('the field names the page it narrows', (tester) async {
+    await tester.pumpWidget(
+      buildApp(feed: makeFeed(entries: filterableEntries())),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Filter'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Filter this page'), findsOneWidget);
+  });
+
+  testWidgets('a query matching nothing says so of the page', (tester) async {
+    await tester.pumpWidget(
+      buildApp(feed: makeFeed(entries: filterableEntries())),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Filter'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'nothing matches this');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nothing on this page matches.'), findsOneWidget);
   });
 
   testWidgets('navigation entry renders subtitle when present', (tester) async {

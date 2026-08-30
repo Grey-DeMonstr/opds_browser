@@ -30,8 +30,8 @@ favourites, the feed cache) or in a folder on the device the user picks once.
 
 - **OPDS 2.0.** Only OPDS 1.x (Atom/XML) catalogues work. A 2.0-only catalogue fails
   when added.
-- **Catalogue search.** The browse screen filters the folder you are looking at; it
-  does not query the server. OpenSearch is not implemented.
+- **Catalogue search.** The browse screen's **Filter** narrows the page you are looking
+  at; it does not query the server. OpenSearch is not implemented.
 - **Authentication.** No HTTP Basic, no OAuth. A catalogue that demands credentials
   reports that it is unsupported.
 - **Reading.** No reader, no reading progress, no bookshelf of what you have read.
@@ -130,16 +130,24 @@ second line.
 
 ### 5.1 Filtering
 
-Three chips sit above the list:
+Chips sit above the list:
 
 - **All** — everything the catalogue sent.
 - **Entries only** — hides prefix buckets.
-- **Search** — opens a field that keeps only rows whose title contains what is typed,
-  ignoring case.
+- **Filter** — opens a field, *"Filter this page"*, that keeps only rows whose title
+  contains what is typed, ignoring case.
 
-All three act on the folder already loaded; none of them sends anything to the server.
-When a filter empties the list, the screen says *"Nothing here matches."*; a folder that is
-genuinely empty says *"This folder is empty."*
+All of them act on the folder already loaded; none sends anything to the server. The word
+is **Filter** rather than Search for that reason: it narrows the rows in front of you and
+nothing else, and the app has no catalogue-wide search to be mistaken for (§1.2).
+
+**Filter is offered only on a page holding more than five rows** — folders, books or
+both. Below that the list is short enough to read as it stands. The count is taken over
+everything the catalogue sent, before **All** or **Entries only** narrows it, so the chip
+does not appear and vanish as those are switched.
+
+When a filter empties the list, the screen says *"Nothing on this page matches."*; a folder
+that is genuinely empty says *"This folder is empty."*
 
 ### 5.2 Cached folders and refreshing
 

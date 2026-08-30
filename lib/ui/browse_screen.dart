@@ -112,22 +112,22 @@ class _BrowseContent extends ConsumerStatefulWidget {
 
 class _BrowseContentState extends ConsumerState<_BrowseContent> {
   bool _bucketsHidden = false;
-  bool _searchOpen = false;
+  bool _filterOpen = false;
   String _query = '';
-  final _searchController = TextEditingController();
+  final _filterController = TextEditingController();
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _filterController.dispose();
     super.dispose();
   }
 
-  void _toggleSearch() {
+  void _toggleFilter() {
     setState(() {
-      _searchOpen = !_searchOpen;
-      if (!_searchOpen) {
+      _filterOpen = !_filterOpen;
+      if (!_filterOpen) {
         _query = '';
-        _searchController.clear();
+        _filterController.clear();
       }
     });
   }
@@ -152,10 +152,16 @@ class _BrowseContentState extends ConsumerState<_BrowseContent> {
       settingsProvider.select((s) => s.value?.debugMode ?? false),
     );
     final inferredSeries = inferSeriesFromUrl(url) ?? widget.inheritedSeries;
+    // Counted over everything the catalogue sent, before All / Entries only
+    // narrows it, so the chip does not appear and vanish as those are
+    // switched. A shorter page is readable as it stands and the chip would
+    // only be noise.
+    final filterAvailable = entries.length > _filterMinRows;
+    final filterOpen = _filterOpen && filterAvailable;
     final visible = filterBrowseEntries(
       entries,
       bucketsHidden: _bucketsHidden,
-      query: _query,
+      query: filterOpen ? _query : '',
     );
     final contextLine = _contextLine;
 
@@ -235,22 +241,23 @@ class _BrowseContentState extends ConsumerState<_BrowseContent> {
             if (state.isRefreshing) const LinearProgressIndicator(),
             _FilterBar(
               bucketsHidden: _bucketsHidden,
-              searchOpen: _searchOpen,
+              filterAvailable: filterAvailable,
+              filterOpen: filterOpen,
               onShowAll: () => setState(() => _bucketsHidden = false),
               onHideBuckets: () => setState(() => _bucketsHidden = true),
-              onToggleSearch: _toggleSearch,
+              onToggleFilter: _toggleFilter,
             ),
-            if (_searchOpen)
+            if (filterOpen)
               Padding(
                 padding: const EdgeInsets.fromLTRB(_gutter, 0, _gutter, 10),
                 child: TextField(
-                  controller: _searchController,
+                  controller: _filterController,
                   autofocus: true,
                   onChanged: (value) => setState(() => _query = value),
                   decoration: const InputDecoration(
                     isDense: true,
-                    hintText: 'Filter this folder',
-                    prefixIcon: Icon(Icons.search, size: 18),
+                    hintText: 'Filter this page',
+                    prefixIcon: Icon(Icons.filter_alt_outlined, size: 18),
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -268,7 +275,7 @@ class _BrowseContentState extends ConsumerState<_BrowseContent> {
                           child: Text(
                             entries.isEmpty
                                 ? 'This folder is empty.'
-                                : 'Nothing here matches.',
+                                : 'Nothing on this page matches.',
                           ),
                         ),
                       )
@@ -336,20 +343,28 @@ class _DebugUrlPanel extends StatelessWidget {
   }
 }
 
-/// The chips that narrow the list: everything, entries only, or a search.
+/// The number of rows a page must exceed before the filter is offered.
+const _filterMinRows = 5;
+
+/// The chips that narrow the list: everything, entries only, or a name filter.
+///
+/// The filter is a filter and not a search: it narrows the rows already on
+/// screen and never asks the catalogue anything.
 class _FilterBar extends StatelessWidget {
   final bool bucketsHidden;
-  final bool searchOpen;
+  final bool filterAvailable;
+  final bool filterOpen;
   final VoidCallback onShowAll;
   final VoidCallback onHideBuckets;
-  final VoidCallback onToggleSearch;
+  final VoidCallback onToggleFilter;
 
   const _FilterBar({
     required this.bucketsHidden,
-    required this.searchOpen,
+    required this.filterAvailable,
+    required this.filterOpen,
     required this.onShowAll,
     required this.onHideBuckets,
-    required this.onToggleSearch,
+    required this.onToggleFilter,
   });
 
   @override
@@ -369,13 +384,15 @@ class _FilterBar extends StatelessWidget {
             selected: bucketsHidden,
             onTap: onHideBuckets,
           ),
-          const SizedBox(width: 7),
-          NocturneChip(
-            label: 'Search',
-            icon: Icons.search,
-            selected: searchOpen,
-            onTap: onToggleSearch,
-          ),
+          if (filterAvailable) ...[
+            const SizedBox(width: 7),
+            NocturneChip(
+              label: 'Filter',
+              icon: Icons.filter_alt_outlined,
+              selected: filterOpen,
+              onTap: onToggleFilter,
+            ),
+          ],
         ],
       ),
     );
