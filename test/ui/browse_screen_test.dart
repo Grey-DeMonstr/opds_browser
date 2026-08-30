@@ -763,6 +763,65 @@ void main() {
       expect(find.text('Search'), findsNothing);
     });
 
+    testWidgets('the root names its catalogue URL beneath the title', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildApp(
+          feed: rootFeed(links: searchable),
+          url: rootUrl,
+          catalogs: [catalogue],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('example.com/opds'), findsOneWidget);
+    });
+
+    testWidgets('root sections are marked by what their link points at', (
+      tester,
+    ) async {
+      final feed = CachedFeed(
+        feed: ParsedFeed(
+          title: 'Example',
+          entries: [
+            navEntry(title: 'Авторы', url: 'https://example.com/opds/author'),
+            navEntry(title: 'Серии', url: 'https://example.com/opds/series'),
+            navEntry(title: 'Книги', url: 'https://example.com/opds/title'),
+            navEntry(title: 'Жанры', url: 'https://example.com/opds/genre'),
+            navEntry(title: 'Свежее', url: 'https://example.com/opds/latest'),
+          ],
+        ),
+        fetchedAt: DateTime(2026, 8, 30),
+        fromCache: true,
+      );
+      await tester.pumpWidget(
+        buildApp(feed: feed, url: rootUrl, catalogs: [catalogue]),
+      );
+      await tester.pumpAndSettle();
+
+      // The titles are Russian; the glyphs come from the English paths.
+      expect(find.byIcon(Icons.person_outline), findsOneWidget);
+      expect(find.byIcon(Icons.layers_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.menu_book_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.sell_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.folder_outlined), findsOneWidget);
+    });
+
+    testWidgets('a level below the root keeps the plain row', (tester) async {
+      await tester.pumpWidget(
+        buildApp(
+          feed: rootFeed(links: searchable),
+          url: Uri.parse('https://example.com/opds/authors'),
+          catalogs: [catalogue],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.folder_outlined), findsNothing);
+      expect(find.byIcon(Icons.chevron_right), findsNothing);
+    });
+
     testWidgets('tapping it opens the search screen for this catalogue', (
       tester,
     ) async {
