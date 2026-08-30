@@ -193,8 +193,8 @@ class _QueryForm extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 10),
             child: Text(
-              'Searches all of $catalogTitle — not the folder you came from. '
-              'Results arrive one page at a time and can take a while.',
+              'Searches all of $catalogTitle, and results arrive '
+              'one page at a time and can take a while.',
               style: TextStyle(
                 fontSize: 12,
                 height: 1.5,

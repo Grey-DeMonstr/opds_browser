@@ -139,13 +139,18 @@ void main() {
   testWidgets('the screen says the scope is the whole catalogue', (
     tester,
   ) async {
-    // The one thing this screen exists to make plain: it is not the folder
-    // you came from.
     await tester.pumpWidget(buildApp(client: FakeClient()));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Searches all of Example'), findsOneWidget);
-    expect(find.textContaining('not the folder you came from'), findsOneWidget);
+    // Pinned whole: the sentence is built from two literals, and a missing
+    // separator between them reads as one run-on sentence.
+    expect(
+      find.text(
+        'Searches all of Example, and results arrive one page at a time '
+        'and can take a while.',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('results are listed and the header counts what arrived', (

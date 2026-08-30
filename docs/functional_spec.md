@@ -223,9 +223,8 @@ Levels below the root have no Search row even though most catalogues repeat the 
 every page they serve.
 
 **Asking.** The screen opens with the field focused, above one sentence saying what a
-query costs: it searches all of the named catalogue, *not the folder you came from*, and
-results arrive one page at a time and can take a while. The field asks for a title, author
-or series.
+query costs: it searches all of the named catalogue, and results arrive one page at a
+time and can take a while. The field asks for a title, author or series.
 
 **Results.** The header carries the catalogue's name, how many results have arrived, and
 which page that took — *"Example · 40 loaded · page 2"*. That is a count of what has
