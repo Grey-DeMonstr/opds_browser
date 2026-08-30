@@ -2,8 +2,10 @@ import 'package:http/http.dart' as http;
 import 'package:opds_browser/data/opds_feed_parser.dart';
 import 'package:opds_browser/data/opds_http_fetcher.dart';
 import 'package:opds_browser/data/opds1/opds1_feed_parser.dart';
+import 'package:opds_browser/data/opds1/opensearch_parser.dart';
 import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/domain/opds_client.dart';
+import 'package:opds_browser/domain/opds_search.dart';
 
 class Opds1Client implements OpdsClient {
   final OpdsHttpFetcher _fetcher;
@@ -35,5 +37,16 @@ class Opds1Client implements OpdsClient {
       return false;
     }
     // NetworkException and HttpStatusException propagate to caller.
+  }
+
+  @override
+  Future<String?> resolveSearchTemplate(SearchLink link) async {
+    if (isSearchTemplate(link)) return searchTemplateOf(link);
+    if (!isOpenSearchDescription(link)) return null;
+
+    final bytes = await _fetcher.fetch(link.url);
+    final template = parseOpenSearchTemplate(decodeXmlBytes(bytes));
+    if (template == null) return null;
+    return absoluteSearchTemplate(link.url, template);
   }
 }

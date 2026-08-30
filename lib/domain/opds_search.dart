@@ -61,3 +61,10 @@ Uri expandSearchTemplate(String template, String terms) {
   );
   return Uri.parse(withTerms.replaceAll(_anyMacro, ''));
 }
+
+/// [template] made absolute against [base], with the macro still readable.
+///
+/// A description document commonly publishes a root-relative template, which
+/// only means anything alongside the URL the document itself came from.
+String absoluteSearchTemplate(Uri base, String template) =>
+    Uri.decodeFull(base.resolve(template).toString());

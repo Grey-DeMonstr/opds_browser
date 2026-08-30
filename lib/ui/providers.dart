@@ -28,6 +28,7 @@ import 'package:opds_browser/domain/browse_list.dart';
 import 'package:opds_browser/domain/download_utils.dart';
 import 'package:opds_browser/domain/entities.dart';
 import 'package:opds_browser/domain/models.dart';
+import 'package:opds_browser/domain/opds_search.dart';
 import 'package:opds_browser/domain/local_library.dart';
 import 'package:opds_browser/domain/opds_client.dart';
 import 'package:opds_browser/domain/repositories.dart';
@@ -281,6 +282,205 @@ class BrowseNotifier extends AsyncNotifier<BrowseState> {
 final browseProvider = AsyncNotifierProvider.autoDispose
     .family<BrowseNotifier, BrowseState, BrowseArgs>((args) {
       return BrowseNotifier().._setArgs(args);
+    });
+
+/// The catalogue an id belongs to, or null before catalogues have loaded.
+final catalogByIdProvider = Provider.autoDispose.family<Catalog?, int>((
+  ref,
+  id,
+) {
+  final catalogs = ref.watch(catalogsProvider).value;
+  if (catalogs == null) return null;
+  for (final catalog in catalogs) {
+    if (catalog.id == id) return catalog;
+  }
+  return null;
+});
+
+// ── Catalogue search ──────────────────────────────────────────────────────────
+
+/// The catalogue a search belongs to: its id, and its root URL.
+typedef SearchArgs = (int, Uri);
+
+/// How long the search waits between fetching one page of results and the
+/// next.
+///
+/// Same constraint as everywhere else the app walks a catalogue: one request
+/// at a time, unhurried. A search that raced through twenty pages would be the
+/// rudest thing the app does.
+final searchPageDelayProvider = Provider<Duration>(
+  (ref) => const Duration(milliseconds: 700),
+);
+
+enum SearchStatus { idle, running, stopped, done, failed }
+
+class SearchState {
+  final String query;
+  final List<FeedEntry> entries;
+
+  /// How many pages have arrived — what the header counts, since the protocol
+  /// offers no total.
+  final int pagesLoaded;
+
+  /// Where the next page would come from, or null when the catalogue offered
+  /// none. Null with [SearchStatus.done] is the ordinary end of a result set,
+  /// and also what an unpaginated catalogue gives after its single page.
+  final Uri? nextPageUrl;
+
+  final SearchStatus status;
+  final String? error;
+
+  const SearchState({
+    this.query = '',
+    this.entries = const [],
+    this.pagesLoaded = 0,
+    this.nextPageUrl,
+    this.status = SearchStatus.idle,
+    this.error,
+  });
+
+  SearchState copyWith({
+    String? query,
+    List<FeedEntry>? entries,
+    int? pagesLoaded,
+    Uri? nextPageUrl,
+    SearchStatus? status,
+    String? error,
+    bool clearNext = false,
+    bool clearError = false,
+  }) => SearchState(
+    query: query ?? this.query,
+    entries: entries ?? this.entries,
+    pagesLoaded: pagesLoaded ?? this.pagesLoaded,
+    nextPageUrl: clearNext ? null : (nextPageUrl ?? this.nextPageUrl),
+    status: status ?? this.status,
+    error: clearError ? null : (error ?? this.error),
+  );
+}
+
+/// Runs one catalogue-wide query and walks its pages.
+///
+/// The walk is deliberately not a single await: each page is published as it
+/// lands, so the reader sees results building rather than a spinner. A
+/// generation counter guards it, in the same way the browse screen's probe
+/// walk is guarded — a new query, or Stop, must leave nothing in flight
+/// writing into the state it superseded.
+class SearchNotifier extends Notifier<SearchState> {
+  late SearchArgs _args;
+
+  int _walk = 0;
+  bool _disposed = false;
+
+  /// Resolved once per screen. Step 2 of the search rule can cost a request,
+  /// and it would be the same answer every time.
+  String? _template;
+  bool _templateResolved = false;
+
+  void _setArgs(SearchArgs args) {
+    _args = args;
+  }
+
+  @override
+  SearchState build() {
+    ref.onDispose(() => _disposed = true);
+    return const SearchState();
+  }
+
+  /// True while this walk is still the current one and the screen is still
+  /// there to receive it. Leaving the search screen mid-walk is ordinary.
+  bool _live(int walk) => !_disposed && walk == _walk;
+
+  Future<void> search(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return;
+
+    final walk = ++_walk;
+    state = SearchState(query: trimmed, status: SearchStatus.running);
+
+    final String? template;
+    try {
+      template = await _resolveTemplate();
+    } catch (e) {
+      if (_live(walk)) _fail(e.toString());
+      return;
+    }
+    if (!_live(walk)) return;
+
+    if (template == null) {
+      _fail('This catalogue does not offer a search.');
+      return;
+    }
+    await _walkFrom(expandSearchTemplate(template, trimmed), walk);
+  }
+
+  /// Stops the walk where it is. What already arrived stays on screen.
+  void stop() {
+    if (state.status != SearchStatus.running) return;
+    _walk++;
+    state = state.copyWith(status: SearchStatus.stopped);
+  }
+
+  /// Picks the walk up from the page it stopped before.
+  Future<void> resume() async {
+    final next = state.nextPageUrl;
+    if (next == null) return;
+    final walk = ++_walk;
+    state = state.copyWith(status: SearchStatus.running, clearError: true);
+    await _walkFrom(next, walk);
+  }
+
+  Future<String?> _resolveTemplate() async {
+    if (_templateResolved) return _template;
+    final (catalogId, rootUrl) = _args;
+    final root = await ref
+        .read(feedRepositoryProvider)
+        .getFeed(catalogId, rootUrl);
+    final link = preferredSearchLink(root.feed.searchLinks);
+    _template = link == null
+        ? null
+        : await ref.read(opdsClientProvider).resolveSearchTemplate(link);
+    _templateResolved = true;
+    return _template;
+  }
+
+  Future<void> _walkFrom(Uri first, int walk) async {
+    var url = first;
+    final delay = ref.read(searchPageDelayProvider);
+
+    while (true) {
+      final ParsedFeed page;
+      try {
+        page = await ref.read(opdsClientProvider).fetchFeed(url);
+      } catch (e) {
+        if (_live(walk)) _fail(e.toString());
+        return;
+      }
+      if (!_live(walk)) return;
+
+      final next = page.nextPageUrl;
+      state = state.copyWith(
+        entries: [...state.entries, ...page.entries],
+        pagesLoaded: state.pagesLoaded + 1,
+        nextPageUrl: next,
+        clearNext: next == null,
+        status: next == null ? SearchStatus.done : SearchStatus.running,
+      );
+      if (next == null) return;
+
+      await Future<void>.delayed(delay);
+      if (!_live(walk)) return;
+      url = next;
+    }
+  }
+
+  void _fail(String message) {
+    state = state.copyWith(status: SearchStatus.failed, error: message);
+  }
+}
+
+final searchProvider = NotifierProvider.autoDispose
+    .family<SearchNotifier, SearchState, SearchArgs>((args) {
+      return SearchNotifier().._setArgs(args);
     });
 
 final isFavoriteProvider = Provider.autoDispose.family<bool, BrowseArgs>((

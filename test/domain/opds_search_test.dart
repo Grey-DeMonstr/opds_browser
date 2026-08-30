@@ -117,6 +117,29 @@ void main() {
     });
   });
 
+  group('absoluteSearchTemplate', () {
+    test('makes a relative template absolute against the document', () {
+      // A description document routinely publishes a root-relative template.
+      expect(
+        absoluteSearchTemplate(
+          Uri.parse('https://example.com/opds/opensearch'),
+          '/opds/search?term={searchTerms}',
+        ),
+        'https://example.com/opds/search?term={searchTerms}',
+      );
+    });
+
+    test('leaves an already absolute template alone', () {
+      expect(
+        absoluteSearchTemplate(
+          Uri.parse('https://example.com/opds/opensearch'),
+          'https://other.example/find?q={searchTerms}',
+        ),
+        'https://other.example/find?q={searchTerms}',
+      );
+    });
+  });
+
   group('expandSearchTemplate', () {
     test('substitutes the terms', () {
       expect(

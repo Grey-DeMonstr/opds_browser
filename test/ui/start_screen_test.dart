@@ -88,6 +88,8 @@ class FakeFavoritesRepository implements FavoritesRepository {
 }
 
 class FakeOpdsClient implements OpdsClient {
+  @override
+  Future<String?> resolveSearchTemplate(SearchLink link) async => null;
   final bool probeResult;
   FakeOpdsClient({this.probeResult = true});
 

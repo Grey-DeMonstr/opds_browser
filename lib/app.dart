@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:opds_browser/ui/browse_screen.dart';
+import 'package:opds_browser/ui/search_screen.dart';
 import 'package:opds_browser/ui/download_result_snack_bar.dart';
 import 'package:opds_browser/ui/local_library_screen.dart';
 import 'package:opds_browser/ui/folder_scan_screen.dart';
@@ -36,6 +37,16 @@ class _OpdsBrowserAppState extends ConsumerState<OpdsBrowserApp> {
               navTitle: params['title'],
               navSubtitle: params['subtitle'],
               inferredSeries: params['series'],
+            );
+          },
+        ),
+        GoRoute(
+          path: '/search',
+          builder: (_, state) {
+            final params = state.uri.queryParameters;
+            return SearchScreen(
+              catalogId: int.parse(params['catalogId']!),
+              rootUrl: Uri.parse(params['rootUrl']!),
             );
           },
         ),

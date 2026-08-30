@@ -8,6 +8,8 @@ import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/domain/opds_client.dart';
 
 class _FakeOpdsClient implements OpdsClient {
+  @override
+  Future<String?> resolveSearchTemplate(SearchLink link) async => null;
   final List<ParsedFeed> _queue;
   int callCount = 0;
 

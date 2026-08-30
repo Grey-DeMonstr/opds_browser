@@ -4,8 +4,10 @@ import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:opds_browser/data/folder_download_job.dart';
+import 'package:opds_browser/data/url_normalizer.dart';
 import 'package:opds_browser/domain/browse_list.dart';
 import 'package:opds_browser/domain/models.dart';
+import 'package:opds_browser/domain/opds_search.dart';
 import 'package:opds_browser/domain/url_debug_formatter.dart';
 import 'package:opds_browser/domain/download_utils.dart';
 import 'package:opds_browser/domain/entities.dart';
@@ -156,6 +158,15 @@ class _BrowseContentState extends ConsumerState<_BrowseContent> {
     // narrows it, so the chip does not appear and vanish as those are
     // switched. A shorter page is readable as it stands and the chip would
     // only be noise.
+    // The Search row belongs to the catalogue root and nowhere else.
+    // Catalogues repeat rel="search" on every feed they serve, so the link
+    // alone would put the row on every level; only the root is asked.
+    final catalog = ref.watch(catalogByIdProvider(catalogId));
+    final atRoot =
+        catalog != null && normalizeUrl(catalog.rootUrl) == normalizeUrl(url);
+    final searchable =
+        atRoot && preferredSearchLink(state.feed.feed.searchLinks) != null;
+
     final filterAvailable = entries.length > _filterMinRows;
     final filterOpen = _filterOpen && filterAvailable;
     final visible = filterBrowseEntries(
@@ -269,6 +280,13 @@ class _BrowseContentState extends ConsumerState<_BrowseContent> {
                 child: CustomScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [
+                    if (searchable)
+                      SliverToBoxAdapter(
+                        child: _SearchRow(
+                          catalogId: catalogId,
+                          rootUrl: catalog.rootUrl,
+                        ),
+                      ),
                     if (visible.isEmpty)
                       SliverFillRemaining(
                         child: Center(
@@ -284,13 +302,13 @@ class _BrowseContentState extends ConsumerState<_BrowseContent> {
                         delegate: SliverChildBuilderDelegate((context, index) {
                           final entry = visible[index];
                           return switch (entry) {
-                            NavigationEntry e => _NavigationEntryRow(
+                            NavigationEntry e => NavigationEntryRow(
                               entry: e,
                               catalogId: catalogId,
                               inferredSeries: inferredSeries,
                               key: ValueKey(e.url),
                             ),
-                            BookEntry e => _BookEntryTile(
+                            BookEntry e => BookEntryTile(
                               entry: e,
                               inferredSeries: inferredSeries,
                               key: ValueKey(e.title),
@@ -337,6 +355,69 @@ class _DebugUrlPanel extends StatelessWidget {
             fontFamily: 'monospace',
             color: Colors.white,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The catalogue root's first row: the way into a catalogue-wide search.
+///
+/// It takes the same shape as the folders beneath it, because that is what it
+/// is — one more way into the catalogue — and it is accented to mark it as the
+/// one row that is not a folder the catalogue published. The subtitle carries
+/// the caveat, since a search really can take a while.
+class _SearchRow extends StatelessWidget {
+  final int catalogId;
+  final Uri rootUrl;
+
+  const _SearchRow({required this.catalogId, required this.rootUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final palette = appPaletteOf(context);
+
+    return InkWell(
+      onTap: () => context.push(
+        '/search?catalogId=$catalogId'
+        '&rootUrl=${Uri.encodeComponent(rootUrl.toString())}',
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: _gutter, vertical: 13),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: palette.hairline)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.search, size: 19, color: scheme.primary),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Search',
+                  style: TextStyle(
+                    fontSize: 15,
+                    height: 1.35,
+                    color: scheme.primary,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    'Every book in the catalogue · slow',
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.4,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -409,12 +490,12 @@ String _formatSeriesIndex(double idx) =>
 /// number picked out. They sat in fixed right-hand columns until anything
 /// longer than a word ("1 book by this author", or a book row's author name)
 /// arrived and was ellipsised to nothing legible.
-class _NavigationEntryRow extends StatelessWidget {
+class NavigationEntryRow extends StatelessWidget {
   final NavigationEntry entry;
   final int catalogId;
   final String? inferredSeries;
 
-  const _NavigationEntryRow({
+  const NavigationEntryRow({
     required this.entry,
     required this.catalogId,
     this.inferredSeries,
@@ -504,17 +585,17 @@ class _NavigationEntryRow extends StatelessWidget {
   }
 }
 
-class _BookEntryTile extends ConsumerStatefulWidget {
+class BookEntryTile extends ConsumerStatefulWidget {
   final BookEntry entry;
   final String? inferredSeries;
 
-  const _BookEntryTile({required this.entry, this.inferredSeries, super.key});
+  const BookEntryTile({required this.entry, this.inferredSeries, super.key});
 
   @override
-  ConsumerState<_BookEntryTile> createState() => _BookEntryTileState();
+  ConsumerState<BookEntryTile> createState() => BookEntryTileState();
 }
 
-class _BookEntryTileState extends ConsumerState<_BookEntryTile> {
+class BookEntryTileState extends ConsumerState<BookEntryTile> {
   Uri? _downloadUrl;
 
   Uri get _defaultWatchUrl =>

@@ -120,4 +120,117 @@ void main() {
       );
     });
   });
+
+  group('Opds1Client.resolveSearchTemplate', () {
+    SearchLink link(String url, [String? type]) =>
+        SearchLink(url: Uri.parse(url), type: type);
+
+    test('a templated link needs no request at all', () async {
+      var called = false;
+      final opds = Opds1Client(
+        MockClient((_) async {
+          called = true;
+          return http.Response('', 500);
+        }),
+      );
+
+      final template = await opds.resolveSearchTemplate(
+        link('https://example.com/s?q={searchTerms}', 'application/atom+xml'),
+      );
+
+      expect(template, 'https://example.com/s?q={searchTerms}');
+      expect(called, isFalse);
+    });
+
+    test(
+      'a description document is fetched and its template resolved',
+      () async {
+        final opds = Opds1Client(
+          MockClient(
+            (_) async => http.Response.bytes(
+              utf8.encode(
+                '<?xml version="1.0" encoding="utf-8"?>'
+                '<OpenSearchDescription '
+                'xmlns="http://a9.com/-/spec/opensearch/1.1/">'
+                '<Url type="application/atom+xml" '
+                'template="/opds/search?term={searchTerms}"/>'
+                '</OpenSearchDescription>',
+              ),
+              200,
+            ),
+          ),
+        );
+
+        final template = await opds.resolveSearchTemplate(
+          link(
+            'https://example.com/opds/opensearch',
+            'application/opensearchdescription+xml',
+          ),
+        );
+
+        // Relative in the document, absolute by the time anyone substitutes.
+        expect(template, 'https://example.com/opds/search?term={searchTerms}');
+      },
+    );
+
+    test('a link that is neither resolves to null without a request', () async {
+      var called = false;
+      final opds = Opds1Client(
+        MockClient((_) async {
+          called = true;
+          return http.Response('', 200);
+        }),
+      );
+
+      expect(
+        await opds.resolveSearchTemplate(
+          link('https://example.com/s', 'text/html'),
+        ),
+        isNull,
+      );
+      expect(called, isFalse);
+    });
+
+    test('a description document holding no usable Url yields null', () async {
+      final opds = Opds1Client(
+        MockClient(
+          (_) async => http.Response.bytes(
+            utf8.encode(
+              '<OpenSearchDescription '
+              'xmlns="http://a9.com/-/spec/opensearch/1.1/">'
+              '<ShortName>x</ShortName></OpenSearchDescription>',
+            ),
+            200,
+          ),
+        ),
+      );
+
+      expect(
+        await opds.resolveSearchTemplate(
+          link(
+            'https://example.com/o',
+            'application/opensearchdescription+xml',
+          ),
+        ),
+        isNull,
+      );
+    });
+
+    test('a failure reaching the document propagates', () async {
+      // "Cannot be searched" and "could not be reached" must stay distinct.
+      final opds = Opds1Client(
+        MockClient((_) async => http.Response('nope', 503)),
+      );
+
+      expect(
+        opds.resolveSearchTemplate(
+          link(
+            'https://example.com/o',
+            'application/opensearchdescription+xml',
+          ),
+        ),
+        throwsA(isA<HttpStatusException>()),
+      );
+    });
+  });
 }

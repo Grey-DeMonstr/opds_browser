@@ -60,6 +60,25 @@ class WrapperFeedRepository implements FeedRepository {
   }
 }
 
+/// Serves a fixed catalogue list; the browse screen only reads it.
+class FakeCatalogRepository implements CatalogRepository {
+  final List<Catalog> catalogs;
+  FakeCatalogRepository(this.catalogs);
+
+  @override
+  Future<List<Catalog>> getAll() async => catalogs;
+
+  @override
+  Future<Catalog> add(String title, Uri rootUrl) async =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> update(Catalog catalog) async => throw UnimplementedError();
+
+  @override
+  Future<void> delete(int catalogId) async => throw UnimplementedError();
+}
+
 class FakeFavoritesRepository implements FavoritesRepository {
   final List<Favorite> _data;
   var _nextId = 1;
@@ -190,6 +209,8 @@ Widget buildApp({
   List<Favorite> favorites = const [],
   CachedFeed? refreshFeed,
   int catalogId = 1,
+  List<Catalog>? catalogs,
+  void Function(GoRouterState)? onSearch,
   Uri? url,
   String? navTitle,
   String? navSubtitle,
@@ -225,12 +246,22 @@ Widget buildApp({
         path: '/folder-scan',
         builder: (_, _) => const Scaffold(body: Text('scan')),
       ),
+      GoRoute(
+        path: '/search',
+        builder: (_, state) {
+          onSearch?.call(state);
+          return const Scaffold(body: Text('search screen'));
+        },
+      ),
     ],
   );
   return ProviderScope(
     overrides: [
       feedRepositoryProvider.overrideWithValue(feedRepo),
       favoritesRepositoryProvider.overrideWithValue(favRepo),
+      catalogRepositoryProvider.overrideWithValue(
+        FakeCatalogRepository(catalogs ?? const []),
+      ),
       folderDownloadProvider.overrideWith(() => _FolderJobStub(folderJobState)),
       settingsProvider.overrideWith(
         () => settingsNotifier ?? FakeSettingsNotifier(),
@@ -644,6 +675,95 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Nothing on this page matches.'), findsOneWidget);
+  });
+
+  group('the root Search row', () {
+    final rootUrl = Uri.parse('https://example.com/opds');
+    final catalogue = Catalog(
+      id: 1,
+      title: 'Example',
+      rootUrl: rootUrl,
+      protocol: 'opds1',
+    );
+    final searchable = [
+      SearchLink(
+        url: Uri.parse('https://example.com/s?q={searchTerms}'),
+        type: 'application/atom+xml',
+      ),
+    ];
+
+    CachedFeed rootFeed({List<SearchLink> links = const []}) => CachedFeed(
+      feed: ParsedFeed(
+        title: 'Example',
+        entries: [navEntry(title: 'Authors')],
+        searchLinks: links,
+      ),
+      fetchedAt: DateTime(2026, 8, 30),
+      fromCache: true,
+    );
+
+    testWidgets('a searchable root offers it, with its one caveat', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildApp(
+          feed: rootFeed(links: searchable),
+          url: rootUrl,
+          catalogs: [catalogue],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Search'), findsOneWidget);
+      expect(find.text('Every book in the catalogue · slow'), findsOneWidget);
+    });
+
+    testWidgets('a root advertising no search does not offer it', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildApp(feed: rootFeed(), url: rootUrl, catalogs: [catalogue]),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Search'), findsNothing);
+    });
+
+    testWidgets('a level below the root does not offer it', (tester) async {
+      // Catalogues repeat rel="search" on every feed. Keying off the link
+      // alone would put the row on every level, which is not the design.
+      await tester.pumpWidget(
+        buildApp(
+          feed: rootFeed(links: searchable),
+          url: Uri.parse('https://example.com/opds/authors'),
+          catalogs: [catalogue],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Search'), findsNothing);
+    });
+
+    testWidgets('tapping it opens the search screen for this catalogue', (
+      tester,
+    ) async {
+      GoRouterState? seen;
+      await tester.pumpWidget(
+        buildApp(
+          feed: rootFeed(links: searchable),
+          url: rootUrl,
+          catalogs: [catalogue],
+          onSearch: (s) => seen = s,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Search'));
+      await tester.pumpAndSettle();
+
+      expect(seen?.uri.queryParameters['catalogId'], '1');
+      expect(seen?.uri.queryParameters['rootUrl'], 'https://example.com/opds');
+    });
   });
 
   testWidgets('navigation entry renders subtitle when present', (tester) async {

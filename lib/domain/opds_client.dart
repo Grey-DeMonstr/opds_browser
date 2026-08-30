@@ -6,6 +6,14 @@ abstract interface class OpdsClient {
   /// Returns true if [url] responds with a valid OPDS feed, false if reachable
   /// but not OPDS. Throws [NetworkException] on connection failure.
   Future<bool> probe(Uri url);
+
+  /// The absolute search template behind [link], or null when the link leads
+  /// nowhere the app can substitute a query into.
+  ///
+  /// A link that already carries the macro costs nothing; one pointing at an
+  /// OpenSearch description document is fetched. Transport failures propagate,
+  /// so a caller can tell "cannot be searched" from "could not be reached".
+  Future<String?> resolveSearchTemplate(SearchLink link);
 }
 
 sealed class OpdsException implements Exception {

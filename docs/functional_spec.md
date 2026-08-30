@@ -20,18 +20,20 @@ favourites, the feed cache) or in a folder on the device the user picks once.
 
 1. Registering OPDS catalogues by URL, and editing or deleting them later.
 2. Walking a catalogue's folder hierarchy, with instant back-navigation.
-3. Downloading one book, or picking through a whole folder tree and downloading a
+3. Searching a whole catalogue, where the catalogue offers a search.
+4. Downloading one book, or picking through a whole folder tree and downloading a
    selection of it.
-4. Bookmarking any folder as a favourite, reachable in one tap from the home screen.
-5. Keeping the downloaded library tidy — checking that files sit in folders matching
+5. Bookmarking any folder as a favourite, reachable in one tap from the home screen.
+6. Keeping the downloaded library tidy — checking that files sit in folders matching
    their own metadata, and correcting either side when they do not.
 
 ### 1.2 Out of scope
 
 - **OPDS 2.0.** Only OPDS 1.x (Atom/XML) catalogues work. A 2.0-only catalogue fails
   when added.
-- **Catalogue search.** The browse screen's **Filter** narrows the page you are looking
-  at; it does not query the server. OpenSearch is not implemented.
+- **Searching inside a folder.** The protocol has no such notion: a query goes to the
+  catalogue as a whole (§5.6). The browse screen's **Filter** narrows the page in front of
+  you without asking the server anything (§5.1). There is nothing in between.
 - **Authentication.** No HTTP Basic, no OAuth. A catalogue that demands credentials
   reports that it is unsupported.
 - **Reading.** No reader, no reading progress, no bookshelf of what you have read.
@@ -139,7 +141,7 @@ Chips sit above the list:
 
 All of them act on the folder already loaded; none sends anything to the server. The word
 is **Filter** rather than Search for that reason: it narrows the rows in front of you and
-nothing else, and the app has no catalogue-wide search to be mistaken for (§1.2).
+nothing else, where **Search** (§5.6) leaves the page and asks the catalogue.
 
 **Filter is offered only on a page holding more than five rows** — folders, books or
 both. Below that the list is short enough to read as it stands. The count is taken over
@@ -188,6 +190,43 @@ carried down into sub-folders and used when naming downloaded files.
 
 With debug mode on (see §9), a black strip above the list shows the current URL decoded,
 one query parameter per line. Tapping it copies the full URL.
+
+### 5.6 Searching the whole catalogue
+
+**Where it is.** A catalogue's root page opens with a **Search** row — the first row,
+accented, subtitled *"Every book in the catalogue · slow"*. It is not a folder the
+catalogue published; it is one more way in, so it takes the same shape as the rows beneath
+it.
+
+The row appears only on a catalogue's root, and only when that catalogue says it can be
+searched. A catalogue that advertises no search simply has no row, rather than a dead one.
+Levels below the root have no Search row even though most catalogues repeat the offer on
+every page they serve.
+
+**Asking.** The screen opens with the field focused, above one sentence saying what a
+query costs: it searches all of the named catalogue, *not the folder you came from*, and
+results arrive one page at a time and can take a while. The field asks for a title, author
+or series.
+
+**Results.** The header carries the catalogue's name, how many results have arrived, and
+which page that took — *"Example · 40 loaded · page 2"*. That is a count of what has
+arrived and not a total: the protocol never sends one, and the app does not invent it.
+
+Pages are fetched one at a time with a pause between them, and each lands on screen as it
+arrives rather than after the last. While a page is in flight the foot of the list says
+so — *"Fetching page 3…"* — with **Stop** beside it, because the wait has no known end.
+Stopping keeps everything already found and offers **Continue**; a page that was in flight
+when Stop was pressed is discarded rather than half-shown.
+
+Where a catalogue answers in a single page and offers no next one, there is no footer at
+all: nothing is fetching and there is nothing to continue to.
+
+**What comes back.** Usually books, listed as they are anywhere else. Some catalogues
+answer a query with a menu — *search authors*, *search series*, *search titles* — and
+those rows open like any folder, so the search continues by tapping rather than by typing.
+
+A query matching nothing says *"Nothing found for that."* A failure says what went wrong
+and offers **Retry**, keeping whatever had already arrived.
 
 ---
 
@@ -411,4 +450,9 @@ Recorded so the absences are deliberate rather than forgotten:
   anywhere, and there is no way to clear the cache from Settings.
 - Feed-loading and refresh errors are not mapped to friendly wording (§12).
 - Recursive download of an entire series is known to misbehave.
+- Search has no history: recent queries are not kept, so a repeated search is retyped.
+- The Filter's empty state does not offer the catalogue-wide search as a way out, because
+  Search lives on the catalogue root and a filtered page is usually somewhere below it.
+- Search results are not cached. Leaving the screen discards them, and the same query
+  asked again is fetched again.
 - No translations; the interface is English only.
