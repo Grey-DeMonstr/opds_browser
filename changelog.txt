@@ -1,0 +1,39 @@
+OPDS Browser - Changelog
+
+
+0.2.1
+
+- The app now opens straight onto your catalogue list. It asks for a download folder only the first
+  time it actually needs one - when you download a book or a folder, or open the local library -
+  and then carries on with whatever you were doing.
+
+
+0.2.0
+
+- A new look. Every screen has been redesigned, in matching light and dark themes that still follow
+  your system setting.
+- Fresh installs arrive with a Project Gutenberg catalogue already in the list, so there is
+  something to browse before you add a server.
+- Downloads are now filed into a folder per author and a folder per series by default. Both can
+  still be turned off in Settings.
+- Book rows show a line of the description, so several editions of the same title are no longer
+  indistinguishable.
+- The book page has been rebuilt around the catalogue's own description: cover, title, author and
+  subject tags, one download button naming the format it will fetch, and the remaining formats
+  beside it. The format picker dialog is gone.
+- The details panel can be dragged open and shows the full description.
+- Browse chips narrow a listing to real entries, or filter the folder you have open.
+- A folder that holds a single book is now shown as that book, so a series no longer reads as a
+  column of folders with one row each.
+- When choosing books to download, each folder is its own card and repeated editions of a title
+  fold into one row that says how many it stands for.
+- The debug panel is no longer limited to debug builds: double-tap the Version row in Settings to
+  switch it on or off. Tapping the panel copies the current address.
+- Fixed: deleting a catalogue now also clears its favourites from the start screen, instead of
+  leaving entries that failed to open.
+- Fixed: "Download folder" works again after you cancel a scan.
+
+
+0.1.0
+
+- Initial release.
