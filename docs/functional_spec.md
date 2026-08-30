@@ -132,7 +132,12 @@ second line.
 
 ### 5.1 Filtering
 
-Chips sit above the list:
+Chips sit above the list, **on a page holding more than five rows** — folders, books or
+both. Below that the list is short enough to read as it stands and there is nothing for
+them to do, so the whole row stays away; a catalogue's root of a handful of sections
+carries no chips at all.
+
+The three are:
 
 - **All** — everything the catalogue sent.
 - **Entries only** — hides prefix buckets.
@@ -143,10 +148,8 @@ All of them act on the folder already loaded; none sends anything to the server.
 is **Filter** rather than Search for that reason: it narrows the rows in front of you and
 nothing else, where **Search** (§5.6) leaves the page and asks the catalogue.
 
-**Filter is offered only on a page holding more than five rows** — folders, books or
-both. Below that the list is short enough to read as it stands. The count is taken over
-everything the catalogue sent, before **All** or **Entries only** narrows it, so the chip
-does not appear and vanish as those are switched.
+The count is taken over everything the catalogue sent, before **All** or **Entries only**
+narrows it, so the chips do not appear and vanish as those are switched.
 
 When a filter empties the list, the screen says *"Nothing on this page matches."*; a folder
 that is genuinely empty says *"This folder is empty."*

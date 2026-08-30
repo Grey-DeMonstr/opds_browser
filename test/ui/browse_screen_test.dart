@@ -566,6 +566,7 @@ void main() {
       entries: [
         navEntry(title: 'DIC~', url: 'http://example.com/a'),
         navEntry(title: 'Dickens, Charles', url: 'http://example.com/b'),
+        ...numberedNav(4),
       ],
     );
     await tester.pumpWidget(buildApp(feed: feed));
@@ -579,7 +580,12 @@ void main() {
   });
 
   testWidgets('"All" brings the hidden buckets back', (tester) async {
-    final feed = makeFeed(entries: [navEntry(title: 'DIC~')]);
+    final feed = makeFeed(
+      entries: [
+        navEntry(title: 'DIC~', url: 'http://example.com/bucket'),
+        ...numberedNav(5),
+      ],
+    );
     await tester.pumpWidget(buildApp(feed: feed));
     await tester.pumpAndSettle();
 
@@ -641,14 +647,27 @@ void main() {
     expect(find.text('Filter'), findsOneWidget);
   });
 
-  testWidgets('Filter is withheld from a folder of five rows or fewer', (
+  testWidgets('a page of five rows or fewer carries no chips at all', (
     tester,
   ) async {
+    // Nothing on a short page needs narrowing, so the whole bar stays away
+    // rather than sitting there doing nothing — the catalogue root in the
+    // design has no chip row above its handful of sections.
     await tester.pumpWidget(buildApp(feed: makeFeed(entries: numberedNav(5))));
     await tester.pumpAndSettle();
 
     expect(find.text('Filter'), findsNothing);
+    expect(find.text('All'), findsNothing);
+    expect(find.text('Entries only'), findsNothing);
+  });
+
+  testWidgets('a longer page carries the whole bar', (tester) async {
+    await tester.pumpWidget(buildApp(feed: makeFeed(entries: numberedNav(6))));
+    await tester.pumpAndSettle();
+
     expect(find.text('All'), findsOneWidget);
+    expect(find.text('Entries only'), findsOneWidget);
+    expect(find.text('Filter'), findsOneWidget);
   });
 
   testWidgets('the field names the page it narrows', (tester) async {

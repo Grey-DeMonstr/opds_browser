@@ -250,14 +250,14 @@ class _BrowseContentState extends ConsumerState<_BrowseContent> {
           children: [
             if (debugMode) _DebugUrlPanel(url: url),
             if (state.isRefreshing) const LinearProgressIndicator(),
-            _FilterBar(
-              bucketsHidden: _bucketsHidden,
-              filterAvailable: filterAvailable,
-              filterOpen: filterOpen,
-              onShowAll: () => setState(() => _bucketsHidden = false),
-              onHideBuckets: () => setState(() => _bucketsHidden = true),
-              onToggleFilter: _toggleFilter,
-            ),
+            if (filterAvailable)
+              _FilterBar(
+                bucketsHidden: _bucketsHidden,
+                filterOpen: filterOpen,
+                onShowAll: () => setState(() => _bucketsHidden = false),
+                onHideBuckets: () => setState(() => _bucketsHidden = true),
+                onToggleFilter: _toggleFilter,
+              ),
             if (filterOpen)
               Padding(
                 padding: const EdgeInsets.fromLTRB(_gutter, 0, _gutter, 10),
@@ -431,9 +431,12 @@ const _filterMinRows = 5;
 ///
 /// The filter is a filter and not a search: it narrows the rows already on
 /// screen and never asks the catalogue anything.
+///
+/// Whether the bar appears at all is the caller's decision, and it is the same
+/// question as whether the filter is worth offering — a page short enough to
+/// read whole has no use for any of these.
 class _FilterBar extends StatelessWidget {
   final bool bucketsHidden;
-  final bool filterAvailable;
   final bool filterOpen;
   final VoidCallback onShowAll;
   final VoidCallback onHideBuckets;
@@ -441,7 +444,6 @@ class _FilterBar extends StatelessWidget {
 
   const _FilterBar({
     required this.bucketsHidden,
-    required this.filterAvailable,
     required this.filterOpen,
     required this.onShowAll,
     required this.onHideBuckets,
@@ -465,15 +467,13 @@ class _FilterBar extends StatelessWidget {
             selected: bucketsHidden,
             onTap: onHideBuckets,
           ),
-          if (filterAvailable) ...[
-            const SizedBox(width: 7),
-            NocturneChip(
-              label: 'Filter',
-              icon: Icons.filter_alt_outlined,
-              selected: filterOpen,
-              onTap: onToggleFilter,
-            ),
-          ],
+          const SizedBox(width: 7),
+          NocturneChip(
+            label: 'Filter',
+            icon: Icons.filter_alt_outlined,
+            selected: filterOpen,
+            onTap: onToggleFilter,
+          ),
         ],
       ),
     );

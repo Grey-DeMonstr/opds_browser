@@ -262,4 +262,59 @@ void main() {
       expect(result.feed.entries, hasLength(5000));
     });
   });
+  group('search links', () {
+    final searchable = [
+      SearchLink(
+        url: Uri.parse('https://example.com/s?q={searchTerms}'),
+        type: 'application/atom+xml',
+      ),
+    ];
+
+    test('a merged feed keeps the links the first page advertised', () async {
+      // Merging pages rebuilds the feed. Dropping the links here made every
+      // catalogue look unsearchable, however plainly its root said so.
+      final client = _FakeOpdsClient([
+        ParsedFeed(
+          title: 'Root',
+          entries: [
+            NavigationEntry(
+              title: 'Authors',
+              url: Uri.parse('https://example.com/a'),
+            ),
+          ],
+          nextPageUrl: Uri.parse('https://example.com/opds?page=2'),
+          searchLinks: searchable,
+        ),
+        ParsedFeed(
+          title: 'Root',
+          entries: [
+            NavigationEntry(
+              title: 'Series',
+              url: Uri.parse('https://example.com/s'),
+            ),
+          ],
+        ),
+      ]);
+      final repo = CachingFeedRepository(db, client);
+
+      final result = await repo.getFeed(catalogId, url);
+
+      expect(result.feed.entries, hasLength(2));
+      expect(result.feed.searchLinks, hasLength(1));
+      expect(result.feed.searchLinks.single.type, 'application/atom+xml');
+    });
+
+    test('they survive the round trip through the cache', () async {
+      final client = _FakeOpdsClient([
+        ParsedFeed(title: 'Root', entries: const [], searchLinks: searchable),
+      ]);
+      final repo = CachingFeedRepository(db, client);
+      await repo.getFeed(catalogId, url);
+
+      final again = await repo.getFeed(catalogId, url);
+
+      expect(again.fromCache, isTrue);
+      expect(again.feed.searchLinks, hasLength(1));
+    });
+  });
 }

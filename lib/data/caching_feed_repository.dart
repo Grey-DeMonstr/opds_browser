@@ -60,12 +60,18 @@ class CachingFeedRepository implements FeedRepository {
   Future<ParsedFeed> _fetchAllPages(Uri startUrl) async {
     final allEntries = <FeedEntry>[];
     var title = '';
+    // The catalogue advertises its search on the first page. Later pages
+    // repeat it, but only the first is the feed the reader asked for.
+    var searchLinks = const <SearchLink>[];
     var pageUrl = startUrl;
     var pageCount = 0;
 
     while (true) {
       final feed = await _client.fetchFeed(pageUrl);
-      if (pageCount == 0) title = feed.title;
+      if (pageCount == 0) {
+        title = feed.title;
+        searchLinks = feed.searchLinks;
+      }
       allEntries.addAll(feed.entries);
       pageCount++;
       if (feed.nextPageUrl == null) break;
@@ -74,6 +80,11 @@ class CachingFeedRepository implements FeedRepository {
       pageUrl = feed.nextPageUrl!;
     }
 
-    return ParsedFeed(title: title, entries: allEntries, nextPageUrl: null);
+    return ParsedFeed(
+      title: title,
+      entries: allEntries,
+      nextPageUrl: null,
+      searchLinks: searchLinks,
+    );
   }
 }
