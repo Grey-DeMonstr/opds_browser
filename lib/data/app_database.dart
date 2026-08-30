@@ -27,7 +27,7 @@ class AppDatabase {
     return _factory.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 4,
+        version: 5,
         onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
         onCreate: (db, _) async {
           await _createV1Schema(db);
@@ -47,6 +47,12 @@ class AppDatabase {
           // looked", so the catalogue would look unsearchable until something
           // else refreshed it.
           if (oldVersion < 4) await db.delete('feed_cache');
+          // v5 discards them again, for a bug rather than a new field: the
+          // page merge that wrote these rows dropped the search links off the
+          // feed it rebuilt. A root cached by that build says the catalogue
+          // cannot be searched, and cache-forever means nothing would ever
+          // ask again.
+          if (oldVersion < 5) await db.delete('feed_cache');
         },
       ),
     );
