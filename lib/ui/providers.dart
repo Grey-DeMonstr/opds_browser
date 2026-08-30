@@ -159,7 +159,7 @@ typedef BrowseArgs = (int, Uri);
 /// bursts, so the walk is deliberately unhurried; it is only ever tidying up
 /// rows the reader can already use.
 final browseProbeDelayProvider = Provider<Duration>(
-  (ref) => const Duration(seconds: 1),
+  (ref) => const Duration(milliseconds: 1),
 );
 
 class BrowseNotifier extends AsyncNotifier<BrowseState> {
