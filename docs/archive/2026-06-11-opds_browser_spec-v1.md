@@ -1,3 +1,15 @@
+> **Superseded — archived 2026-08-30.**
+>
+> This is the original v1 specification, written before implementation began and
+> approved on 2026-06-11. It is kept for the record of what was decided up front;
+> large parts of it no longer describe the app. The default download target, the
+> folder-download flow, the browse header, the database schema and the dependency
+> list have all moved on, and the local library, the book page and the browse
+> filters did not exist when it was written.
+>
+> For the app as it stands, read [../functional_spec.md](../functional_spec.md)
+> and [../technical_spec.md](../technical_spec.md).
+
 # OPDS Catalogue Browser — Functional & Technical Specification
 
 **Version:** 1.0 (2026-06-11)

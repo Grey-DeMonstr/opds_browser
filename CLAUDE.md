@@ -75,4 +75,14 @@ test/
 
 ## Project spec
 
-Full spec: `docs/opds_browser_spec.md`
+Two documents, both describing the app as built:
+
+- `docs/functional_spec.md` — what the app does. No code.
+- `docs/technical_spec.md` — how it is built. All code examples live here.
+
+The pre-implementation v1 spec is archived at
+`docs/archive/2026-06-11-opds_browser_spec-v1.md` and is largely out of date — do
+not treat it as current.
+
+All noticeable features should be added to these specs before implementation to keep them
+consistent.
