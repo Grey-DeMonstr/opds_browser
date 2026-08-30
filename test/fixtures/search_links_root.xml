@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <id>root</id>
+  <title>Example Catalogue</title>
+  <link href="/opds/opensearch" rel="search" type="application/opensearchdescription+xml"/>
+  <link href="/opds/search?term={searchTerms}" rel="search" type="application/atom+xml"/>
+  <link href="/opds" rel="start" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+  <entry>
+    <id>authors</id>
+    <title>Authors</title>
+    <link href="/opds/author" rel="subsection" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+  </entry>
+</feed>

@@ -202,4 +202,75 @@ void main() {
       expect(rows.map((r) => r['title']), isNot(contains('Project Gutenberg')));
     });
   });
+
+  group('AppDatabase upgrade from v3', () {
+    /// Builds a database as version 3 left it: the current schema, holding one
+    /// cached feed written before search links were kept.
+    Future<String> makeV3Database() async {
+      final dir = Directory.systemTemp.createTempSync('opds_v3_test');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final path = join(dir.path, 'v3.db');
+
+      final db = await databaseFactoryFfi.openDatabase(
+        path,
+        options: OpenDatabaseOptions(
+          version: 3,
+          onCreate: (d, _) async {
+            await d.execute('''
+              CREATE TABLE catalogs (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                title      TEXT    NOT NULL,
+                root_url   TEXT    NOT NULL,
+                protocol   TEXT    NOT NULL DEFAULT 'opds1',
+                created_at INTEGER NOT NULL
+              )
+            ''');
+            await d.execute('''
+              CREATE TABLE feed_cache (
+                catalog_id INTEGER NOT NULL REFERENCES catalogs(id) ON DELETE CASCADE,
+                url        TEXT    NOT NULL,
+                feed_json  TEXT    NOT NULL,
+                fetched_at INTEGER NOT NULL,
+                PRIMARY KEY (catalog_id, url)
+              )
+            ''');
+          },
+        ),
+      );
+      final catalogId = await db.insert('catalogs', {
+        'title': 'Existing',
+        'root_url': 'https://example.com/opds',
+        'protocol': 'opds1',
+        'created_at': 0,
+      });
+      await db.insert('feed_cache', {
+        'catalog_id': catalogId,
+        'url': 'https://example.com/opds',
+        'feed_json': '{"title":"stale","entries":[]}',
+        'fetched_at': 0,
+      });
+      await db.close();
+      return path;
+    }
+
+    test('roots cached before the upgrade are dropped', () async {
+      final path = await makeV3Database();
+      final db = AppDatabase(factory: databaseFactoryFfi, path: path);
+      addTearDown(db.close);
+
+      // A root cached by v3 carries no search links, and nothing in the row
+      // says so — the catalogue would look unsearchable until something else
+      // happened to refresh it.
+      expect(await (await db.database).query('feed_cache'), isEmpty);
+    });
+
+    test('the upgrade keeps the catalogues the user added', () async {
+      final path = await makeV3Database();
+      final db = AppDatabase(factory: databaseFactoryFfi, path: path);
+      addTearDown(db.close);
+
+      final rows = await (await db.database).query('catalogs');
+      expect(rows.map((r) => r['title']), ['Existing']);
+    });
+  });
 }

@@ -97,6 +97,10 @@ Three fields are load-bearing in ways their names do not reveal:
 - **`BookEntry.summary`** — the same description, tags stripped. List rows need text,
   not structure. Keep both; deriving one from the other at render time reintroduces the
   cost that separating them avoided.
+- **`ParsedFeed.searchLinks`** — every feed-level `rel="search"`, verbatim, with the
+  declared `type`. Empty means two different things that the model deliberately does not
+  distinguish: a catalogue that advertises no search, and a row cached before the field
+  existed. The schema bump in §4 is what keeps the second case from happening.
 
 `CachedFeed` carries `fetchedAt` and `fromCache`. **`fromCache` is not diagnostic** —
 the single-book probe walk uses it to decide whether it owes the catalogue a pause (§7).
@@ -125,7 +129,42 @@ Other standing constraints:
   match wins. New catalogue conventions are added there, with fixtures — not inline at a
   call site.
 
-### 3.1 Format labels are identifiers
+### 3.1 Search links, and how a query becomes a URL
+
+Finding the search URL is a three-step rule, and the steps are ordered by what they cost:
+
+1. **The feed's own templated link.** A `rel="search"` whose href already carries
+   `{searchTerms}` is the template. Substitute and fetch — no extra round trip.
+2. **The description document.** A `rel="search"` typed
+   `application/opensearchdescription+xml` points at an OpenSearch description; fetch it
+   once per catalogue and read its `<Url template>`. A document may list several, one per
+   output type, and a browser-facing `text/html` one is often listed first — prefer an
+   Atom one, because the feed parser cannot read HTML.
+3. **Neither.** The catalogue cannot be searched and the app says so. **It must never
+   guess a search URL**; a fabricated one produces an error the user cannot act on.
+
+`preferredSearchLink` implements the ordering and `parseOpenSearchTemplate` step 2. Both
+are pure and tested directly.
+
+**Templates do not survive as `Uri` unexamined.** Resolving an href against the feed's
+base yields a `Uri`, and `Uri` normalises `{` and `}` to `%7B` and `%7D`. Every check and
+substitution therefore goes through `searchTemplateOf`, which decodes first. Reading
+`SearchLink.url` directly and looking for a literal `{searchTerms}` silently finds
+nothing — this is a bug that has already been written once.
+
+**Terms are percent-encoded as UTF-8**, whatever encoding the catalogue serves its feeds
+in; `windows-1251` catalogues accept UTF-8 query strings. Every macro other than
+`{searchTerms}` is emptied rather than left in place, since the app supplies none of them
+and a brace-wrapped name reaching the server as a literal is worse than a blank.
+
+**A result feed is an ordinary feed** — paginated with `rel="next"`, with no total count,
+no relevance order worth trusting, and no way to scope a query to anything but the whole
+catalogue. The protocol has no notion of searching inside a folder, which is the whole
+reason the in-page narrowing is called **Filter** and this is called **Search**
+(functional §5.1). Some catalogues answer a query with a *navigation* feed of scopes
+rather than results, so a search result must render both entry kinds.
+
+### 3.2 Format labels are identifiers
 
 The MIME-to-label mapping produces values that are switched on elsewhere:
 

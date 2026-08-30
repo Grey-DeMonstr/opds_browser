@@ -177,6 +177,56 @@ void main() {
     });
   });
 
+  group('Opds1FeedParser.parse — search links', () {
+    final parser = Opds1FeedParser();
+    final base = Uri.parse('https://example.com/opds');
+
+    ParsedFeed parseFixture(String name) =>
+        parser.parse(File('test/fixtures/$name').readAsBytesSync(), base);
+
+    test('keeps every feed-level rel="search", resolved against the base', () {
+      final feed = parseFixture('search_links_root.xml');
+
+      expect(feed.searchLinks.length, 2);
+      expect(
+        feed.searchLinks.map((l) => l.url.toString()),
+        containsAll(<String>[
+          'https://example.com/opds/opensearch',
+          'https://example.com/opds/search?term=%7BsearchTerms%7D',
+        ]),
+      );
+    });
+
+    test("keeps each link's declared type", () {
+      final feed = parseFixture('search_links_root.xml');
+      final description = feed.searchLinks.firstWhere(
+        (l) => l.url.path.endsWith('opensearch'),
+      );
+      expect(description.type, 'application/opensearchdescription+xml');
+    });
+
+    test('a feed advertising no search yields an empty list', () {
+      final feed = parseFixture('minimal_navigation_feed.xml');
+      expect(feed.searchLinks, isEmpty);
+    });
+
+    test("entry-level links are not mistaken for the feed's own", () {
+      // rel="search" on an entry addresses that entry, not the catalogue.
+      final feed = parser.parse(
+        utf8.encode(
+          '<feed xmlns="http://www.w3.org/2005/Atom"><title>t</title>'
+          '<entry><title>e</title>'
+          '<link href="/e/search" rel="search" type="application/atom+xml"/>'
+          '<link href="/e" rel="subsection" '
+          'type="application/atom+xml;profile=opds-catalog"/>'
+          '</entry></feed>',
+        ),
+        base,
+      );
+      expect(feed.searchLinks, isEmpty);
+    });
+  });
+
   group('Opds1FeedParser.parse — navigation feeds', () {
     final parser = Opds1FeedParser();
     final base = Uri.parse('https://example.com/opds');

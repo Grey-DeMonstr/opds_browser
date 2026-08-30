@@ -143,21 +143,54 @@ class BookEntry extends FeedEntry {
   );
 }
 
+/// A feed-level `rel="search"` link, verbatim.
+///
+/// Two shapes reach us and they are told apart by [type] and by the href
+/// itself, never by guessing: an href already carrying `{searchTerms}` is a
+/// template to substitute into, while an OpenSearch description document must
+/// be fetched to learn the template it holds. A catalogue may advertise both.
+/// See `domain/opds_search.dart`, which does the telling apart.
+class SearchLink {
+  final Uri url;
+
+  /// The link's declared `type`, verbatim; null when it declared none.
+  final String? type;
+
+  const SearchLink({required this.url, this.type});
+
+  Map<String, dynamic> toJson() => {
+    'url': url.toString(),
+    if (type != null) 'type': type,
+  };
+
+  factory SearchLink.fromJson(Map<String, dynamic> json) => SearchLink(
+    url: Uri.parse(json['url'] as String),
+    type: json['type'] as String?,
+  );
+}
+
 class ParsedFeed {
   final String title;
   final List<FeedEntry> entries;
   final Uri? nextPageUrl;
 
+  /// Every `rel="search"` the feed advertised. Empty for a feed that
+  /// advertised none, and for feeds cached before this was kept.
+  final List<SearchLink> searchLinks;
+
   const ParsedFeed({
     required this.title,
     required this.entries,
     this.nextPageUrl,
+    this.searchLinks = const [],
   });
 
   Map<String, dynamic> toJson() => {
     'title': title,
     'entries': entries.map((e) => e.toJson()).toList(),
     if (nextPageUrl != null) 'nextPageUrl': nextPageUrl.toString(),
+    if (searchLinks.isNotEmpty)
+      'searchLinks': searchLinks.map((l) => l.toJson()).toList(),
   };
 
   factory ParsedFeed.fromJson(Map<String, dynamic> json) => ParsedFeed(
@@ -168,6 +201,11 @@ class ParsedFeed {
     nextPageUrl: json['nextPageUrl'] != null
         ? Uri.parse(json['nextPageUrl'] as String)
         : null,
+    searchLinks:
+        (json['searchLinks'] as List<dynamic>?)
+            ?.map((l) => SearchLink.fromJson(l as Map<String, dynamic>))
+            .toList() ??
+        const [],
   );
 }
 

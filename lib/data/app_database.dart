@@ -27,7 +27,7 @@ class AppDatabase {
     return _factory.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 3,
+        version: 4,
         onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
         onCreate: (db, _) async {
           await _createV1Schema(db);
@@ -41,6 +41,12 @@ class AppDatabase {
           // nothing in them says so, so a book page built from one would be
           // quietly bare. They cost a single re-fetch to replace.
           if (oldVersion < 3) await db.delete('feed_cache');
+          // v4 widened it again — a feed now carries the search links it
+          // advertises. A root cached by v3 has none, and nothing in the row
+          // says whether that means "not searchable" or "written before we
+          // looked", so the catalogue would look unsearchable until something
+          // else refreshed it.
+          if (oldVersion < 4) await db.delete('feed_cache');
         },
       ),
     );

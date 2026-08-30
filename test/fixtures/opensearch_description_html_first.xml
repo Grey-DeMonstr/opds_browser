@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
+  <ShortName>Example</ShortName>
+  <Url type="text/html" template="https://example.com/search?q={searchTerms}"/>
+  <Url type="application/atom+xml" template="https://example.com/opds/find?q={searchTerms}&amp;page={startPage?}"/>
+</OpenSearchDescription>

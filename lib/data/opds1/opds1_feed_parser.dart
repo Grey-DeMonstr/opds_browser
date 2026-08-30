@@ -95,6 +95,7 @@ const _xmlNs = 'http://www.w3.org/XML/1998/namespace';
 const _acqRelPrefix = 'http://opds-spec.org/acquisition';
 const _thumbRel = 'http://opds-spec.org/image/thumbnail';
 const _imageRel = 'http://opds-spec.org/image';
+const _searchRel = 'search';
 
 /// Extracts series name and index from an OPDS entry element.
 /// Checks Calibre namespace first, then dcterms:isPartOf.
@@ -159,15 +160,24 @@ class Opds1FeedParser implements OpdsFeedParser {
         .firstOrNull;
     final title = titleEl?.innerText.trim() ?? '';
 
-    // Feed-level rel="next" link → nextPageUrl.
+    // Feed-level links: rel="next" → nextPageUrl, rel="search" → searchLinks.
+    // Only the feed's own children are read; a rel="search" inside an <entry>
+    // addresses that entry, not the catalogue.
     Uri? nextPageUrl;
+    final searchLinks = <SearchLink>[];
     for (final link in feed.childElements.where((e) => e.localName == 'link')) {
-      if (link.getAttribute('rel') == 'next') {
-        final href = link.getAttribute('href');
-        if (href != null) {
-          nextPageUrl = resolveHref(href, base);
-          break;
-        }
+      final rel = link.getAttribute('rel');
+      final href = link.getAttribute('href');
+      if (href == null) continue;
+      if (rel == 'next') {
+        nextPageUrl ??= resolveHref(href, base);
+      } else if (rel == _searchRel) {
+        searchLinks.add(
+          SearchLink(
+            url: resolveHref(href, base),
+            type: link.getAttribute('type'),
+          ),
+        );
       }
     }
 
@@ -179,7 +189,12 @@ class Opds1FeedParser implements OpdsFeedParser {
       if (parsed != null) entries.add(parsed);
     }
 
-    return ParsedFeed(title: title, entries: entries, nextPageUrl: nextPageUrl);
+    return ParsedFeed(
+      title: title,
+      entries: entries,
+      nextPageUrl: nextPageUrl,
+      searchLinks: searchLinks,
+    );
   }
 
   FeedEntry? _parseEntry(XmlElement entry, Uri base) {

@@ -243,6 +243,35 @@ void main() {
       );
     });
 
+    test('search links round-trip through JSON', () {
+      final feed = ParsedFeed(
+        title: 'Root',
+        entries: const [],
+        searchLinks: [
+          SearchLink(
+            url: Uri.parse('https://example.com/o'),
+            type: 'application/opensearchdescription+xml',
+          ),
+          SearchLink(url: Uri.parse('https://example.com/s?q={searchTerms}')),
+        ],
+      );
+      final restored = ParsedFeed.fromJson(feed.toJson());
+
+      expect(restored.searchLinks.length, 2);
+      expect(restored.searchLinks[0].url, Uri.parse('https://example.com/o'));
+      expect(
+        restored.searchLinks[0].type,
+        'application/opensearchdescription+xml',
+      );
+      expect(restored.searchLinks[1].type, isNull);
+    });
+
+    test('a feed with no search links omits the key entirely', () {
+      final feed = ParsedFeed(title: 'Root', entries: const []);
+      expect(feed.toJson().containsKey('searchLinks'), isFalse);
+      expect(ParsedFeed.fromJson(feed.toJson()).searchLinks, isEmpty);
+    });
+
     test('toJson omits nextPageUrl when null; fromJson restores null', () {
       final feed = ParsedFeed(
         title: 'Last Page',
