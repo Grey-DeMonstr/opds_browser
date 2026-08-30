@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:opds_browser/domain/models.dart';
-import 'package:opds_browser/ui/browse_screen.dart';
 import 'package:opds_browser/ui/providers.dart';
 import 'package:opds_browser/ui/theme.dart';
+import 'package:opds_browser/ui/widgets/entry_rows.dart';
 import 'package:opds_browser/ui/widgets/filter_chip_bar.dart';
-
-const _gutter = 16.0;
 
 /// One catalogue-wide query and its results.
 ///
@@ -174,7 +172,7 @@ class _QueryForm extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(_gutter, 14, _gutter, 0),
+      padding: const EdgeInsets.fromLTRB(gutter, 14, gutter, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -232,7 +230,7 @@ class _Results extends StatelessWidget {
 
     return Column(
       children: [
-        const FadingRule(margin: EdgeInsets.symmetric(horizontal: _gutter)),
+        const FadingRule(margin: EdgeInsets.symmetric(horizontal: gutter)),
         Expanded(
           child: empty
               ? const Center(child: Text('Nothing found for that.'))
@@ -311,7 +309,7 @@ class _Footer extends StatelessWidget {
     if (line == null) return const SizedBox.shrink();
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(_gutter, 10, _gutter, 12),
+      padding: const EdgeInsets.fromLTRB(gutter, 10, gutter, 12),
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: palette.hairline)),
       ),

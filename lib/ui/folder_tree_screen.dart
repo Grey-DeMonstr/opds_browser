@@ -25,9 +25,6 @@ class FolderTreeScreen extends ConsumerWidget {
 
 // ── Selection view ───────────────────────────────────────────
 
-/// Horizontal inset of the header and the bottom bar.
-const _gutter = 16.0;
-
 class _SelectionView extends ConsumerStatefulWidget {
   const _SelectionView({required this.state});
   final FolderJobTreeReady state;
@@ -88,7 +85,7 @@ class _SelectionViewState extends ConsumerState<_SelectionView> {
           children: [
             if (state.stoppedAtLimit)
               Padding(
-                padding: const EdgeInsets.fromLTRB(_gutter, 0, _gutter, 8),
+                padding: const EdgeInsets.fromLTRB(gutter, 0, gutter, 8),
                 child: Text(
                   'Large catalogue — some content may not be shown'
                   ' (size limit reached).',
@@ -99,7 +96,7 @@ class _SelectionViewState extends ConsumerState<_SelectionView> {
                 ),
               ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(_gutter, 0, _gutter, 12),
+              padding: const EdgeInsets.fromLTRB(gutter, 0, gutter, 12),
               child: Row(
                 children: [
                   NocturneChip(
@@ -412,7 +409,7 @@ class _SelectionBottomBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(_gutter, 12, _gutter, 12),
+          padding: const EdgeInsets.fromLTRB(gutter, 12, gutter, 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,

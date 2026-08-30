@@ -245,6 +245,13 @@ class AppPalette extends ThemeExtension<AppPalette> {
 AppPalette appPaletteOf(BuildContext context) =>
     Theme.of(context).extension<AppPalette>()!;
 
+/// The horizontal inset a screen's content keeps from the edge.
+///
+/// Shared by the headers, the chips and every row, so that a title on one
+/// screen lines up with a title on the next. The home screen keeps its own,
+/// wider, inset — see `start_screen.dart`.
+const gutter = 16.0;
+
 ThemeData buildDarkTheme() {
   final scheme =
       ColorScheme.fromSeed(
