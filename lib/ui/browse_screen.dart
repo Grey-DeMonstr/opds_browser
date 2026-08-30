@@ -16,6 +16,7 @@ import 'package:opds_browser/ui/require_library_folder.dart';
 import 'package:opds_browser/ui/theme.dart';
 import 'package:opds_browser/ui/widgets/entry_rows.dart';
 import 'package:opds_browser/ui/widgets/filter_chip_bar.dart';
+import 'package:opds_browser/ui/widgets/mark_row.dart';
 
 class BrowseScreen extends ConsumerStatefulWidget {
   final int catalogId;
@@ -376,103 +377,49 @@ class _DebugUrlPanel extends StatelessWidget {
   }
 }
 
-/// The tile that carries a root row's glyph.
+/// The metrics every root row shares. The root reads as a short list of ways
+/// into the catalogue rather than a feed of entries, so its rows are set the
+/// way the home screen sets a catalogue — one square, one glyph, the title and
+/// its count beside it — on this screen's own inset.
+const _rootRowPadding = EdgeInsets.symmetric(horizontal: gutter, vertical: 13);
+const _rootRowGap = 13.0;
+
+/// The glyph a root section is marked with.
 ///
-/// The root reads as a short list of ways into the catalogue rather than a
-/// feed of entries, so its rows are marked the way the home screen marks a
-/// catalogue: one square, one glyph, the title and its count beside it.
-class _RootMark extends StatelessWidget {
-  final IconData icon;
-  final Color background;
-  final Color border;
-  final Color foreground;
+/// A switch rather than a map, so that adding an [EntryGlyph] is a compile
+/// error here instead of a null at the moment the row is drawn.
+IconData _iconFor(EntryGlyph glyph) => switch (glyph) {
+  EntryGlyph.author => Icons.person_outline,
+  EntryGlyph.series => Icons.layers_outlined,
+  EntryGlyph.title => Icons.menu_book_outlined,
+  EntryGlyph.genre => Icons.sell_outlined,
+  EntryGlyph.popular => Icons.trending_up,
+  EntryGlyph.newest => Icons.history,
+  EntryGlyph.random => Icons.shuffle,
+  EntryGlyph.folder => Icons.folder_outlined,
+};
 
-  const _RootMark({
-    required this.icon,
-    required this.background,
-    required this.border,
-    required this.foreground,
-  });
+/// The quieter line under a root section's title — what the catalogue said is
+/// inside it. Absent when the catalogue said nothing.
+class _RootSubtitle extends StatelessWidget {
+  final String? text;
 
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 38,
-    height: 38,
-    decoration: BoxDecoration(
-      color: background,
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: border),
-    ),
-    child: Icon(icon, size: 18, color: foreground),
-  );
-}
-
-/// The shared shape of a root row: mark, title, subtitle, caret.
-class _RootRow extends StatelessWidget {
-  final Widget mark;
-  final String title;
-  final String? subtitle;
-  final Color titleColor;
-  final Color caretColor;
-  final Color? background;
-  final VoidCallback onTap;
-
-  const _RootRow({
-    required this.mark,
-    required this.title,
-    required this.subtitle,
-    required this.titleColor,
-    required this.caretColor,
-    required this.onTap,
-    this.background,
-  });
+  const _RootSubtitle(this.text);
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        color: background,
-        padding: const EdgeInsets.symmetric(horizontal: gutter, vertical: 13),
-        child: Row(
-          children: [
-            mark,
-            const SizedBox(width: 13),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 15.5,
-                      height: 1.3,
-                      color: titleColor,
-                    ),
-                  ),
-                  if (subtitle != null && subtitle!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text(
-                        subtitle!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          height: 1.4,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right, size: 18, color: caretColor),
-          ],
+    final text = this.text;
+    if (text == null || text.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 11.5,
+          height: 1.4,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
       ),
     );
@@ -490,17 +437,6 @@ class _RootSectionRow extends StatelessWidget {
     super.key,
   });
 
-  static const _icons = {
-    EntryGlyph.author: Icons.person_outline,
-    EntryGlyph.series: Icons.layers_outlined,
-    EntryGlyph.title: Icons.menu_book_outlined,
-    EntryGlyph.genre: Icons.sell_outlined,
-    EntryGlyph.popular: Icons.trending_up,
-    EntryGlyph.newest: Icons.history,
-    EntryGlyph.random: Icons.shuffle,
-    EntryGlyph.folder: Icons.folder_outlined,
-  };
-
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -509,17 +445,21 @@ class _RootSectionRow extends StatelessWidget {
         ? '&subtitle=${Uri.encodeComponent(entry.subtitle!)}'
         : '';
 
-    return _RootRow(
-      mark: _RootMark(
-        icon: _icons[glyphForEntryUrl(entry.url)]!,
+    return MarkRow(
+      mark: Mark(
         background: palette.catalogMarkSurface,
         border: scheme.outlineVariant,
-        foreground: scheme.primary,
+        child: Icon(
+          _iconFor(glyphForEntryUrl(entry.url)),
+          size: 18,
+          color: scheme.primary,
+        ),
       ),
       title: entry.title,
-      subtitle: entry.subtitle,
-      titleColor: scheme.onSurface,
-      caretColor: palette.dim,
+      subtitle: _RootSubtitle(entry.subtitle),
+      padding: _rootRowPadding,
+      gap: _rootRowGap,
+      trailing: Icon(Icons.chevron_right, size: 18, color: palette.dim),
       onTap: () => context.push(
         '/browse?catalogId=$catalogId'
         '&url=${Uri.encodeComponent(entry.url.toString())}'
@@ -547,17 +487,17 @@ class _SearchRow extends StatelessWidget {
 
     return Column(
       children: [
-        _RootRow(
-          mark: _RootMark(
-            icon: Icons.search,
+        MarkRow(
+          mark: Mark(
             background: palette.accentFill,
             border: palette.accentStrong,
-            foreground: scheme.primary,
+            child: Icon(Icons.search, size: 18, color: scheme.primary),
           ),
           title: 'Search',
-          subtitle: null,
           titleColor: scheme.primary,
-          caretColor: scheme.primary,
+          padding: _rootRowPadding,
+          gap: _rootRowGap,
+          trailing: Icon(Icons.chevron_right, size: 18, color: scheme.primary),
           background: scheme.primary.withValues(alpha: 0.06),
           onTap: () => context.push(
             '/search?catalogId=$catalogId'

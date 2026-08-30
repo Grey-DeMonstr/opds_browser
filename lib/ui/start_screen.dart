@@ -7,8 +7,10 @@ import 'package:opds_browser/ui/providers.dart';
 import 'package:opds_browser/ui/require_library_folder.dart';
 import 'package:opds_browser/ui/theme.dart';
 import 'package:opds_browser/ui/widgets/add_edit_catalog_dialog.dart';
+import 'package:opds_browser/ui/widgets/mark_row.dart';
 
 /// Horizontal inset shared by the section rules and every row.
+/// The home screen sits on a wider inset than the screens below it.
 const _gutter = 18.0;
 
 class StartScreen extends ConsumerWidget {
@@ -180,87 +182,6 @@ class _SectionHeader extends StatelessWidget {
 }
 
 /// The shared row shape: a 38px mark, a two-line stack, an overflow menu.
-class _Row extends StatelessWidget {
-  final Widget mark;
-  final String title;
-  final Widget subtitle;
-  final Widget trailing;
-  final VoidCallback onTap;
-
-  const _Row({
-    super.key,
-    required this.mark,
-    required this.title,
-    required this.subtitle,
-    required this.trailing,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(_gutter, 11, 6, 11),
-        child: Row(
-          children: [
-            mark,
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 15.5,
-                      height: 1.3,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  subtitle,
-                ],
-              ),
-            ),
-            trailing,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// The 38px rounded square that opens every row.
-class _Mark extends StatelessWidget {
-  final Color background;
-  final Color border;
-  final Widget child;
-
-  const _Mark({
-    required this.background,
-    required this.border,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 38,
-      height: 38,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: background,
-        border: Border.all(color: border),
-        borderRadius: const BorderRadius.all(Radius.circular(8)),
-      ),
-      child: child,
-    );
-  }
-}
-
 /// The overflow affordance, sized so its glyph lands on the gutter while the
 /// tap target stays comfortable.
 class _RowMenu<T> extends StatelessWidget {
@@ -289,9 +210,9 @@ class _CatalogRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
 
-    return _Row(
+    return MarkRow(
       key: Key('catalog-${catalog.id}'),
-      mark: _Mark(
+      mark: Mark(
         background: appPaletteOf(context).catalogMarkSurface,
         border: scheme.outlineVariant,
         child: Icon(Icons.rss_feed, size: 18, color: scheme.primary),
@@ -308,6 +229,8 @@ class _CatalogRow extends ConsumerWidget {
           color: scheme.onSurfaceVariant,
         ),
       ),
+      padding: const EdgeInsets.fromLTRB(_gutter, 11, 6, 11),
+      gap: 12,
       onTap: () => context.push(
         '/browse?catalogId=${catalog.id}&url=${Uri.encodeComponent(catalog.rootUrl.toString())}',
       ),
@@ -362,9 +285,9 @@ class _FavoriteRow extends ConsumerWidget {
             .firstOrNull ??
         '';
 
-    return _Row(
+    return MarkRow(
       key: Key('favorite-${favorite.id}'),
-      mark: _Mark(
+      mark: Mark(
         background: scheme.primaryContainer,
         border: appPaletteOf(context).favoriteMarkBorder,
         child: Text(
@@ -387,6 +310,8 @@ class _FavoriteRow extends ConsumerWidget {
           color: scheme.onSurfaceVariant,
         ),
       ),
+      padding: const EdgeInsets.fromLTRB(_gutter, 11, 6, 11),
+      gap: 12,
       onTap: () => context.push(
         '/browse?catalogId=${favorite.catalogId}&url=${Uri.encodeComponent(favorite.url.toString())}',
       ),
