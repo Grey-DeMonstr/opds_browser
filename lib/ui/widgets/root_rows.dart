@@ -12,7 +12,7 @@ import 'package:go_router/go_router.dart';
 import 'package:opds_browser/domain/entry_icon.dart';
 import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/ui/theme.dart';
-import 'package:opds_browser/ui/widgets/filter_chip_bar.dart';
+import 'package:opds_browser/ui/widgets/fading_rule.dart';
 import 'package:opds_browser/ui/widgets/mark_row.dart';
 
 /// The metrics every root row shares, on the browse screen's inset.

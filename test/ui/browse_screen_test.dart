@@ -15,7 +15,7 @@ import 'package:opds_browser/ui/book_details_sheet.dart';
 import 'package:opds_browser/ui/browse_screen.dart';
 import 'package:opds_browser/ui/providers.dart';
 import 'package:opds_browser/ui/theme.dart';
-import 'package:opds_browser/ui/widgets/filter_chip_bar.dart';
+import 'package:opds_browser/ui/widgets/fading_rule.dart';
 import 'package:opds_browser/ui/widgets/root_rows.dart';
 
 // ── Fakes ────────────────────────────────────────────────────────────────────

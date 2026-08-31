@@ -9,7 +9,7 @@ import 'package:opds_browser/domain/repositories.dart';
 import 'package:opds_browser/ui/providers.dart';
 import 'package:opds_browser/ui/start_screen.dart';
 import 'package:opds_browser/ui/theme.dart';
-import 'package:opds_browser/ui/widgets/filter_chip_bar.dart';
+import 'package:opds_browser/ui/widgets/fading_rule.dart';
 
 // ── Fakes ──────────────────────────────────────────────────────────────────
 

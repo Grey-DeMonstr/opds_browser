@@ -7,7 +7,7 @@ import 'package:opds_browser/ui/providers.dart';
 import 'package:opds_browser/ui/require_library_folder.dart';
 import 'package:opds_browser/ui/theme.dart';
 import 'package:opds_browser/ui/widgets/add_edit_catalog_dialog.dart';
-import 'package:opds_browser/ui/widgets/filter_chip_bar.dart';
+import 'package:opds_browser/ui/widgets/fading_rule.dart';
 import 'package:opds_browser/ui/widgets/mark_row.dart';
 
 /// Horizontal inset shared by the section rules and every row.

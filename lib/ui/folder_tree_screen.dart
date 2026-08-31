@@ -5,8 +5,8 @@ import 'package:opds_browser/data/download_selection.dart';
 import 'package:opds_browser/data/folder_download_job.dart';
 import 'package:opds_browser/ui/providers.dart';
 import 'package:opds_browser/ui/theme.dart';
-import 'package:opds_browser/ui/widgets/filter_chip_bar.dart';
 import 'package:opds_browser/ui/widgets/nocturne_checkbox.dart';
+import 'package:opds_browser/ui/widgets/nocturne_chip.dart';
 
 class FolderTreeScreen extends ConsumerWidget {
   const FolderTreeScreen({super.key});

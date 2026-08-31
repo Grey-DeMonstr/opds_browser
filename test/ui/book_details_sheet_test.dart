@@ -12,7 +12,7 @@ import 'package:opds_browser/domain/repositories.dart';
 import 'package:opds_browser/ui/book_details_sheet.dart';
 import 'package:opds_browser/ui/providers.dart';
 import 'package:opds_browser/ui/theme.dart';
-import 'package:opds_browser/ui/widgets/filter_chip_bar.dart';
+import 'package:opds_browser/ui/widgets/fading_rule.dart';
 
 // ── Fake storage ──────────────────────────────────────────────────────────────
 

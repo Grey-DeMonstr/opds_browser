@@ -8,7 +8,7 @@ import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/ui/providers.dart';
 import 'package:opds_browser/ui/require_library_folder.dart';
 import 'package:opds_browser/ui/theme.dart';
-import 'package:opds_browser/ui/widgets/filter_chip_bar.dart';
+import 'package:opds_browser/ui/widgets/fading_rule.dart';
 
 /// Presents [BookDetailsSheet] as a draggable panel that can grow to the full
 /// screen. Descriptions vary wildly in length between catalogues — Project

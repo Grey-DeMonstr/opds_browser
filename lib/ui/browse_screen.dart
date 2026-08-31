@@ -14,7 +14,8 @@ import 'package:opds_browser/ui/providers.dart';
 import 'package:opds_browser/ui/require_library_folder.dart';
 import 'package:opds_browser/ui/theme.dart';
 import 'package:opds_browser/ui/widgets/entry_rows.dart';
-import 'package:opds_browser/ui/widgets/filter_chip_bar.dart';
+import 'package:opds_browser/ui/widgets/fading_rule.dart';
+import 'package:opds_browser/ui/widgets/nocturne_chip.dart';
 import 'package:opds_browser/ui/widgets/root_rows.dart';
 
 class BrowseScreen extends ConsumerStatefulWidget {

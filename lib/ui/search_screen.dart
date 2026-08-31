@@ -5,7 +5,7 @@ import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/ui/providers.dart';
 import 'package:opds_browser/ui/theme.dart';
 import 'package:opds_browser/ui/widgets/entry_rows.dart';
-import 'package:opds_browser/ui/widgets/filter_chip_bar.dart';
+import 'package:opds_browser/ui/widgets/fading_rule.dart';
 
 /// One catalogue-wide query and its results.
 ///
