@@ -41,7 +41,13 @@ abstract final class Nocturne {
   /// Numerals in the browse list's count column.
   static const countText = Color(0xFFC9C9D1);
 
+  /// Separates one row from the next.
   static const hairline = Color(0x0DE9E9ED);
+
+  /// Separates a zone from the zone below it — the head of a screen from the
+  /// list that scrolls under it. Around 2.8x [hairline]'s weight over [bg].
+  static final rule = text.withValues(alpha: 0.14);
+
   static const cardBorder = Color(0x17E9E9ED);
 }
 
@@ -72,6 +78,8 @@ abstract final class NocturneLight {
   /// App-bar leading icons. On paper both icon roles read the same.
   static const iconStrong = Color(0xFF585A68);
 
+  /// Separates a zone from the zone below it — the light counterpart of
+  /// [Nocturne.rule], and the step above [hairline].
   static const edge = Color(0xFFE0E0E6);
 
   /// A catalogue mark sits on paper white, above the ground.
@@ -83,7 +91,9 @@ abstract final class NocturneLight {
   /// Numerals in the browse list's count column.
   static const countText = Color(0xFF3A3C4A);
 
+  /// Separates one row from the next.
   static const hairline = Color(0xFFEBEBF0);
+
   static const cardBorder = Color(0xFFE2E2E8);
 }
 
@@ -102,6 +112,10 @@ class AppPalette extends ThemeExtension<AppPalette> {
 
   /// Rules between rows, and between the books inside a selection card.
   final Color hairline;
+
+  /// The heavier rule: a zone boundary, where [hairline] is a row separator.
+  /// The head of a screen meets its scrolling list on this one.
+  final Color rule;
 
   /// The ground a selection card sits on.
   final Color cardSurface;
@@ -128,6 +142,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.catalogMarkSurface,
     required this.dim,
     required this.hairline,
+    required this.rule,
     required this.cardSurface,
     required this.cardBorder,
     required this.accentStrong,
@@ -141,6 +156,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     catalogMarkSurface: Nocturne.markSurface,
     dim: Nocturne.dim,
     hairline: Nocturne.hairline,
+    rule: Nocturne.rule,
     cardSurface: Nocturne.cardSurface,
     cardBorder: Nocturne.cardBorder,
     accentStrong: Nocturne.accent,
@@ -154,6 +170,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     catalogMarkSurface: NocturneLight.markSurface,
     dim: NocturneLight.dim,
     hairline: NocturneLight.hairline,
+    rule: NocturneLight.edge,
     cardSurface: NocturneLight.cardSurface,
     cardBorder: NocturneLight.cardBorder,
     accentStrong: NocturneLight.accent,
@@ -168,6 +185,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     Color? catalogMarkSurface,
     Color? dim,
     Color? hairline,
+    Color? rule,
     Color? cardSurface,
     Color? cardBorder,
     Color? accentStrong,
@@ -179,6 +197,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     catalogMarkSurface: catalogMarkSurface ?? this.catalogMarkSurface,
     dim: dim ?? this.dim,
     hairline: hairline ?? this.hairline,
+    rule: rule ?? this.rule,
     cardSurface: cardSurface ?? this.cardSurface,
     cardBorder: cardBorder ?? this.cardBorder,
     accentStrong: accentStrong ?? this.accentStrong,
@@ -203,6 +222,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
       )!,
       dim: Color.lerp(dim, other.dim, t)!,
       hairline: Color.lerp(hairline, other.hairline, t)!,
+      rule: Color.lerp(rule, other.rule, t)!,
       cardSurface: Color.lerp(cardSurface, other.cardSurface, t)!,
       cardBorder: Color.lerp(cardBorder, other.cardBorder, t)!,
       accentStrong: Color.lerp(accentStrong, other.accentStrong, t)!,
@@ -219,6 +239,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
       other.catalogMarkSurface == catalogMarkSurface &&
       other.dim == dim &&
       other.hairline == hairline &&
+      other.rule == rule &&
       other.cardSurface == cardSurface &&
       other.cardBorder == cardBorder &&
       other.accentStrong == accentStrong &&
@@ -232,6 +253,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     catalogMarkSurface,
     dim,
     hairline,
+    rule,
     cardSurface,
     cardBorder,
     accentStrong,

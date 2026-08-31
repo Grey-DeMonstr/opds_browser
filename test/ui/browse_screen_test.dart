@@ -15,6 +15,8 @@ import 'package:opds_browser/ui/book_details_sheet.dart';
 import 'package:opds_browser/ui/browse_screen.dart';
 import 'package:opds_browser/ui/providers.dart';
 import 'package:opds_browser/ui/theme.dart';
+import 'package:opds_browser/ui/widgets/filter_chip_bar.dart';
+import 'package:opds_browser/ui/widgets/root_rows.dart';
 
 // ── Fakes ────────────────────────────────────────────────────────────────────
 
@@ -737,6 +739,41 @@ void main() {
         findsNothing,
         reason: 'the row is just Search',
       );
+    });
+
+    testWidgets('the rule below it is the shared one, tinted by the accent', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildApp(
+          feed: rootFeed(links: searchable),
+          url: rootUrl,
+          catalogs: [catalogue],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Scoped to the search row: the screen's own head-to-list rule is a
+      // FadingRule too, and is the plain one.
+      final container = tester.widget<Container>(
+        find.descendant(
+          of: find.descendant(
+            of: find.byType(RootSearchRow),
+            matching: find.byType(FadingRule),
+          ),
+          matching: find.byType(Container),
+        ),
+      );
+      final gradient =
+          (container.decoration! as BoxDecoration).gradient! as LinearGradient;
+
+      // Accented to mark the one row the catalogue did not itself publish,
+      // and anchored under it rather than floating free of both ends.
+      expect(
+        gradient.colors.first,
+        buildLightTheme().extension<AppPalette>()!.accentStrong,
+      );
+      expect(gradient.colors.last.a, 0);
     });
 
     testWidgets('a root advertising no search does not offer it', (

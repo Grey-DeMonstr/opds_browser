@@ -8,6 +8,7 @@ import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/ui/providers.dart';
 import 'package:opds_browser/ui/require_library_folder.dart';
 import 'package:opds_browser/ui/theme.dart';
+import 'package:opds_browser/ui/widgets/filter_chip_bar.dart';
 
 /// Presents [BookDetailsSheet] as a draggable panel that can grow to the full
 /// screen. Descriptions vary wildly in length between catalogues — Project
@@ -100,7 +101,7 @@ class _BookDetailsSheetState extends ConsumerState<BookDetailsSheet> {
                   onDownload: _startDownload,
                 ),
               ),
-            const _FadingRule(),
+            const FadingRule(margin: EdgeInsets.fromLTRB(18, 18, 18, 0)),
             ..._buildContent(context),
             const SizedBox(height: 20),
           ],
@@ -404,32 +405,6 @@ class _FormatChip extends StatelessWidget {
         child: Text(
           link.formatLabel,
           style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
-        ),
-      ),
-    );
-  }
-}
-
-/// The Nocturne rule: a hairline that fades out at both ends.
-class _FadingRule extends StatelessWidget {
-  const _FadingRule();
-
-  @override
-  Widget build(BuildContext context) {
-    final line = appPaletteOf(context).hairline;
-
-    return Container(
-      height: 1,
-      margin: const EdgeInsets.fromLTRB(18, 18, 18, 0),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          stops: const [0, 0.15, 0.85, 1],
-          colors: [
-            line.withValues(alpha: 0),
-            line,
-            line,
-            line.withValues(alpha: 0),
-          ],
         ),
       ),
     );

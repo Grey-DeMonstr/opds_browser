@@ -79,4 +79,52 @@ void main() {
     final light = buildLightTheme().extension<AppPalette>()!;
     expect(dark.lerp(light, 1), light);
   });
+
+  /// The two rules the design uses, in ascending weight: [AppPalette.hairline]
+  /// separates one row from the next, [AppPalette.rule] separates a zone from
+  /// the zone below it. Both are declared, so neither is a magic alpha at the
+  /// point of use.
+  group('the two rule weights', () {
+    /// How far [color] lands from [ground] once composited over it — the only
+    /// thing that decides which of the two rules reads heavier on screen.
+    double weightOver(Color color, Color ground) {
+      final a = color.a;
+      double channel(double c, double g) => (g + (c - g) * a - g).abs();
+      return channel(color.r, ground.r) +
+          channel(color.g, ground.g) +
+          channel(color.b, ground.b);
+    }
+
+    test(
+      'the dark rule is the text at 14%, as the chip bar always drew it',
+      () {
+        expect(
+          buildDarkTheme().extension<AppPalette>()!.rule,
+          const Color(0xFFE9E9ED).withValues(alpha: 0.14),
+        );
+      },
+    );
+
+    test(
+      'the light rule is a chosen token, not one derived from onSurface',
+      () {
+        expect(
+          buildLightTheme().extension<AppPalette>()!.rule,
+          const Color(0xFFE0E0E6),
+        );
+      },
+    );
+
+    test('a rule outweighs a hairline in both themes', () {
+      for (final theme in [buildDarkTheme(), buildLightTheme()]) {
+        final palette = theme.extension<AppPalette>()!;
+        final ground = theme.colorScheme.surface;
+        expect(
+          weightOver(palette.rule, ground),
+          greaterThan(weightOver(palette.hairline, ground)),
+          reason: 'a zone boundary must read heavier than a row separator',
+        );
+      }
+    });
+  });
 }

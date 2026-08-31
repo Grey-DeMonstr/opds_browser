@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import 'package:opds_browser/domain/entry_icon.dart';
 import 'package:opds_browser/domain/models.dart';
 import 'package:opds_browser/ui/theme.dart';
+import 'package:opds_browser/ui/widgets/filter_chip_bar.dart';
 import 'package:opds_browser/ui/widgets/mark_row.dart';
 
 /// The metrics every root row shares, on the browse screen's inset.
@@ -143,18 +144,12 @@ class RootSearchRow extends StatelessWidget {
           ),
         ),
         // Sets the one row that is not a published section apart from them,
-        // fading out rather than ruling all the way across.
-        Container(
-          height: 1,
+        // fading out rather than ruling all the way across, and accented
+        // rather than drawn at the palette's own rule weight.
+        FadingRule(
           margin: const EdgeInsets.fromLTRB(gutter, 6, gutter, 6),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                palette.accentStrong,
-                palette.accentStrong.withValues(alpha: 0),
-              ],
-            ),
-          ),
+          color: palette.accentStrong,
+          fade: RuleFade.trailing,
         ),
       ],
     );

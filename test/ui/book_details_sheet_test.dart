@@ -12,6 +12,7 @@ import 'package:opds_browser/domain/repositories.dart';
 import 'package:opds_browser/ui/book_details_sheet.dart';
 import 'package:opds_browser/ui/providers.dart';
 import 'package:opds_browser/ui/theme.dart';
+import 'package:opds_browser/ui/widgets/filter_chip_bar.dart';
 
 // ── Fake storage ──────────────────────────────────────────────────────────────
 
@@ -717,6 +718,77 @@ void main() {
 
       expect(notifier.pickCalls, 1);
       expect(find.textContaining('Download failed'), findsOneWidget);
+    });
+  });
+
+  /// The sheet draws two rules, and they are not the same rule. The one under
+  /// the actions is a zone boundary — the fixed head of the sheet against the
+  /// description scrolling below it — and reads at the weight browse and
+  /// search give that same boundary. The Details border is a rule inside a
+  /// zone, and stays the lighter of the two.
+  group('the sheet keeps the two rule weights apart', () {
+    BookEntry entryWithDetails() => BookEntry(
+      title: 'Book Title',
+      authors: ['Jane Doe'],
+      summary: 'A summary.',
+      acquisitionLinks: [_link('FB2')],
+    );
+
+    testWidgets('the boundary under the actions carries the heavier rule', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildApp(
+          entry: entryWithDetails(),
+          mockClient: MockClient((_) async => http.Response('', 404)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final container = tester.widget<Container>(
+        find.descendant(
+          of: find.byType(FadingRule),
+          matching: find.byType(Container),
+        ),
+      );
+      final gradient =
+          (container.decoration! as BoxDecoration).gradient! as LinearGradient;
+
+      expect(
+        gradient.colors[1],
+        buildLightTheme().extension<AppPalette>()!.rule,
+      );
+    });
+
+    testWidgets('the Details border stays the lighter one', (tester) async {
+      // Details appears only when the description carries headings to split
+      // the facts out of, so this one needs the richer fixture.
+      await tester.pumpWidget(
+        _buildApp(
+          entry: BookEntry(
+            title: 'Book Title',
+            authors: ['Jane Doe'],
+            contentHtml: File(
+              'test/fixtures/content_with_headings.html',
+            ).readAsStringSync(),
+            acquisitionLinks: [_link('FB2')],
+          ),
+          mockClient: MockClient((_) async => http.Response('', 404)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final palette = buildLightTheme().extension<AppPalette>()!;
+      final bordered = tester
+          .widgetList<Container>(find.byType(Container))
+          .where(
+            (c) =>
+                c.decoration is BoxDecoration &&
+                (c.decoration! as BoxDecoration).border?.top.color ==
+                    palette.hairline,
+          );
+
+      expect(bordered, isNotEmpty, reason: 'the Details rule is a hairline');
     });
   });
 }

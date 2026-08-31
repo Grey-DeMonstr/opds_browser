@@ -9,6 +9,7 @@ import 'package:opds_browser/domain/repositories.dart';
 import 'package:opds_browser/ui/providers.dart';
 import 'package:opds_browser/ui/start_screen.dart';
 import 'package:opds_browser/ui/theme.dart';
+import 'package:opds_browser/ui/widgets/filter_chip_bar.dart';
 
 // ── Fakes ──────────────────────────────────────────────────────────────────
 
@@ -700,4 +701,63 @@ void main() {
       expect(find.text('LIBRARY'), findsOneWidget);
     },
   );
+
+  /// Both section headers draw the same rule; only the favourites one tints it,
+  /// to match its accented label. Neither carries a weight of its own.
+  group('the section header rules', () {
+    LinearGradient ruleUnder(WidgetTester tester, String label) {
+      final container = tester.widget<Container>(
+        find.descendant(
+          of: find
+              .ancestor(of: find.text(label), matching: find.byType(Row))
+              .first,
+          matching: find.descendant(
+            of: find.byType(FadingRule),
+            matching: find.byType(Container),
+          ),
+        ),
+      );
+      return (container.decoration! as BoxDecoration).gradient!
+          as LinearGradient;
+    }
+
+    testWidgets('the catalogues rule is the shared one, not a third weight', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildApp(catalogs: [_gutenberg], favorites: [_science]),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        ruleUnder(tester, 'CATALOGUES').colors.first,
+        buildLightTheme().extension<AppPalette>()!.rule,
+      );
+    });
+
+    testWidgets('the favourites rule keeps its accent tint', (tester) async {
+      await tester.pumpWidget(
+        buildApp(catalogs: [_gutenberg], favorites: [_science]),
+      );
+      await tester.pumpAndSettle();
+
+      final accent = buildLightTheme().colorScheme.primary.withValues(
+        alpha: 0.35,
+      );
+      expect(ruleUnder(tester, 'FAVOURITES').colors.first, accent);
+    });
+
+    testWidgets('a header rule is anchored at its label and fades away', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildApp(catalogs: [_gutenberg], favorites: [_science]),
+      );
+      await tester.pumpAndSettle();
+
+      final gradient = ruleUnder(tester, 'CATALOGUES');
+      expect(gradient.colors.first.a, greaterThan(0));
+      expect(gradient.colors.last.a, 0);
+    });
+  });
 }

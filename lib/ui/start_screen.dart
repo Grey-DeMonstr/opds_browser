@@ -7,6 +7,7 @@ import 'package:opds_browser/ui/providers.dart';
 import 'package:opds_browser/ui/require_library_folder.dart';
 import 'package:opds_browser/ui/theme.dart';
 import 'package:opds_browser/ui/widgets/add_edit_catalog_dialog.dart';
+import 'package:opds_browser/ui/widgets/filter_chip_bar.dart';
 import 'package:opds_browser/ui/widgets/mark_row.dart';
 
 /// Horizontal inset shared by the section rules and every row.
@@ -105,7 +106,6 @@ class _StartScreenContent extends ConsumerWidget {
                 child: _SectionHeader(
                   label: 'CATALOGUES',
                   labelColor: scheme.onSurfaceVariant,
-                  ruleColor: scheme.onSurface.withValues(alpha: 0.18),
                   first: favorites.isEmpty,
                 ),
               ),
@@ -135,17 +135,20 @@ class _StartScreenContent extends ConsumerWidget {
 
 /// A section label followed by a rule that fades out to the right — the
 /// Nocturne rule treatment, anchored at the label instead of centred.
+///
+/// The rule is the palette's, unless the header is accented and [ruleColor]
+/// tints it to match its label.
 class _SectionHeader extends StatelessWidget {
   final String label;
   final Color labelColor;
-  final Color ruleColor;
+  final Color? ruleColor;
   final bool first;
 
   const _SectionHeader({
     required this.label,
     required this.labelColor,
-    required this.ruleColor,
     required this.first,
+    this.ruleColor,
   });
 
   @override
@@ -166,14 +169,7 @@ class _SectionHeader extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Container(
-              height: 1,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [ruleColor, ruleColor.withValues(alpha: 0)],
-                ),
-              ),
-            ),
+            child: FadingRule(color: ruleColor, fade: RuleFade.trailing),
           ),
         ],
       ),
