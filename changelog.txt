@@ -1,6 +1,15 @@
 OPDS Browser - Changelog
 
 
+0.3.0
+
+- Search catalogue feature. Available from the catalogue main page.
+- A catalogue's main page is completely redesigned.
+- The browse chip that narrows what is on screen is now called "Filter" to avoid misunderstanding.
+- Downloading a folder of books no longer pauses between books.
+- Fixed: the "download finished" notice no longer appears several times over.
+
+
 0.2.1
 
 - The app now opens straight onto your catalogue list. It asks for a download folder only the first
