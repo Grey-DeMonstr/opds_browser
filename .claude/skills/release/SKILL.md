@@ -55,6 +55,9 @@ X.Y.Z
 - Fixed: one user-visible fix.
 ```
 
+Most bullets fit on one line. A second line is the exception, not the shape to
+aim for.
+
 Blank line between the version number and its bullets, two blank lines between
 sections, wrap at 100 characters with a two-space continuation indent, plain
 ASCII - no markdown.
@@ -73,7 +76,29 @@ ASCII - no markdown.
   app now does.
 - **Never write a real catalogue URL or a filesystem path.** These are personal
   data. Project Gutenberg is the only URL or catalogue name that may appear.
-- Keep it short. A bullet is one or two sentences.
+- **One short sentence per bullet.** Name the change and where to find it, then
+  stop. A second sentence needs a reason to exist.
+- Say *what* changed, never *how* it works or *why* it was done. No mechanism,
+  no rationale, no "instead of", no list of the cases covered. The commit
+  message already explains itself to whoever needs that.
+- A fix must be recognisable to someone who hit it. If you cannot describe the
+  symptom in a few words a user would use, the fix is internal - leave it out.
+
+Good:
+
+```
+- Search catalogue feature. Available from the catalogue main page
+- A catalogue's main page is completely redesigned.
+- Downloading a folder of books no longer pauses between books.
+```
+
+Too long - mechanism, scope and rationale a user did not ask for:
+
+```
+- You can now search a whole catalogue. A Search row opens a catalogue's first screen, where the
+  catalogue says it can be searched, and a query goes to the server rather than to the page in
+  front of you. Results arrive a page at a time and can be stopped or continued.
+```
 
 ### 4. Show it and wait
 
